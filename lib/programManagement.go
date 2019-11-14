@@ -28,43 +28,19 @@ type HandlePrograms struct {
 func (h HandlePrograms) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pid := r.URL.Path[len("/programs/"):]
 
-	switch (r.Method) {
+	switch r.Method {
 	case http.MethodGet:
 		h.getProgram(w, r, pid)
 
 	case http.MethodPost:
-		h.updatePrograms(w, r, pid)
+		h.createProgram(w, r, pid)
 
 	case http.MethodPut:
-		h.createProgram(w, r, pid)
+		h.updatePrograms(w, r, pid)
 
 	case http.MethodDelete:
 		h.deletePrograms(w, r, pid)
 	}
-}
-
-/* createProgram
- * POST /programs
- * Creates and returns a program document.
- */
-func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request, pid string) {
-	http.Error(w, "", http.StatusNotImplemented)
-}
-
-/* updatePrograms
- * PUT /programs/:uid
- * Updates the programs for the current user.
- */
-func (h *HandlePrograms) updatePrograms(w http.ResponseWriter, r *http.Request, pid string) {
-	http.Error(w, "", http.StatusNotImplemented)
-}
-
-/* deletePrograms
- * DELETE /programs/:uid
- * Deletes the program with given uid.
- */
-func (h *HandlePrograms) deletePrograms(w http.ResponseWriter, r *http.Request, pid string) {
-	http.Error(w, "", http.StatusNotImplemented)
 }
 
 /* getProgram
@@ -72,5 +48,29 @@ func (h *HandlePrograms) deletePrograms(w http.ResponseWriter, r *http.Request, 
  * Returns the requested document, if it exists.
  */
 func (h *HandlePrograms) getProgram(w http.ResponseWriter, r *http.Request, pid string) {
-	http.Error(w, "", http.StatusNotImplemented)
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+/* createProgram
+ * POST /programs
+ * Creates and returns a program document.
+ */
+func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request, pid string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+/* updatePrograms
+ * PUT /programs/:uid
+ * Updates the programs for the current user.
+ */
+func (h *HandlePrograms) updatePrograms(w http.ResponseWriter, r *http.Request, pid string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+/* deletePrograms
+ * DELETE /programs/:uid
+ * Deletes the program with given uid.
+ */
+func (h *HandlePrograms) deletePrograms(w http.ResponseWriter, r *http.Request, pid string) {
+	w.WriteHeader(http.StatusNotImplemented)
 }

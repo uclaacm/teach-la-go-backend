@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"io"
 
 	"cloud.google.com/go/firestore"
 )
@@ -26,33 +25,29 @@ type HandleUsers struct {
 // HandleUsers.ServeHTTP
 // Handle requests appropriately based on request type.
 func (h HandleUsers) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// parse the /:uid field
 	uid := r.URL.Path[len("/userData/"):]
 
-	switch (r.Method) {
+	// handle based on request method
+	switch r.Method {
 	case http.MethodGet:
 		h.getUserData(w, r, uid)
 
-	case http.MethodPost:
-		h.updateUserData(w, r, uid)
-		
 	case http.MethodPut:
+		h.updateUserData(w, r, uid)
+
+	case http.MethodPost:
 		h.initializeUserData(w, r)
 	}
 }
 
-// InitializeUserData
-// router.GET("/initializeUserData/:uid", ...)
-func (h *HandleUsers) initializeUserData(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, string(http.StatusNotImplemented))
-}
-
-// GetUserData
-// router.GET("/getUserData/:uid", ...)
-// Used to retrieve a user object as JSON.
+// getUserData
+// GET /userData/:uid
+// Used to retrieve a user data object as JSON.
 func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid string) {
 	// acquire userdoc corresponding to uid
 	userDoc, err := h.Client.Collection("users").Doc(uid).Get(context.Background())
-	
+
 	if err != nil {
 		log.Printf("error occurred in document retrieval: %s", err)
 		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
@@ -60,7 +55,7 @@ func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid st
 	}
 
 	if !userDoc.Exists() {
-		http.Error(w, "document does not exist.", http.StatusBadRequest)
+		http.Error(w, "document does not exist.", http.StatusNotFound)
 		return
 	}
 
@@ -70,7 +65,7 @@ func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid st
 	var u UserData
 	if err = userDoc.DataTo(&u); err != nil {
 		log.Printf("error occurred in writing document to %T object: %s", u, err)
-		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -79,7 +74,7 @@ func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid st
 	userJSON, err = json.MarshalIndent(u, "", "    ")
 	if err != nil {
 		log.Printf("error occurred in writing document to %T object.", u)
-		w.WriteHeader(http.StatusNotImplemented)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -89,8 +84,14 @@ func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid st
 	w.Write(userJSON)
 }
 
-// UpdateUserData
-// router.POST("/updateUserData/:uid", ...)
+// updateUserData
+// PUT /updateUserData/:uid
 func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid string) {
-	io.WriteString(w, string(http.StatusNotImplemented))
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// initializeUserData
+// POST /userData
+func (h *HandleUsers) initializeUserData(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
 }

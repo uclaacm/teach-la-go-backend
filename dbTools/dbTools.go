@@ -15,7 +15,7 @@ Returns a pointer to a firestore Client based on the
 JSON credentials pointed to by the environment variable
 $CFGPATH.
 */
-func GetDB() (*firestore.Client) {
+func GetDB() *firestore.Client {
 	// get client config. Fails early
 	// if we cannot find our config.
 	configPath := os.Getenv("CFGPATH")
