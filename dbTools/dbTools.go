@@ -20,7 +20,7 @@ func GetDB() (*firestore.Client) {
 	// if we cannot find our config.
 	configPath := os.Getenv("CFGPATH")
 	if _, err := os.Stat(configPath); err != nil {
-		log.Fatalf("could not find firebase config file! %s", err)
+		log.Fatalf("could not find firebase config file! Did you set your CFGPATH variable? %s", err)
 	}
 	log.Printf("using application credentials located at %s", configPath)
 

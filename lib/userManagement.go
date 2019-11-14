@@ -52,9 +52,15 @@ func (h *HandleUsers) initializeUserData(w http.ResponseWriter, r *http.Request)
 func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid string) {
 	// acquire userdoc corresponding to uid
 	userDoc, err := h.Client.Collection("users").Doc(uid).Get(context.Background())
-	if err != nil || !userDoc.Exists() {
+	
+	if err != nil {
 		log.Printf("error occurred in document retrieval: %s", err)
 		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
+		return
+	}
+
+	if !userDoc.Exists() {
+		http.Error(w, "document does not exist.", http.StatusBadRequest)
 		return
 	}
 
@@ -68,7 +74,7 @@ func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid st
 		return
 	}
 
-	// convert to JSON. TODO: handle err
+	// convert to JSON.
 	var userJSON []byte
 	userJSON, err = json.MarshalIndent(u, "", "    ")
 	if err != nil {
