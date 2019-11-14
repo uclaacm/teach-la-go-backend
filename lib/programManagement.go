@@ -2,22 +2,75 @@ package lib
 
 import (
 	"net/http"
+	"time"
 
-	"github.com/labstack/echo"
+	"cloud.google.com/go/firestore"
 )
 
-func (h *Handler) CreateProgram(c echo.Context) error {
-	return c.String(http.StatusNotImplemented, "")
+// Program
+// Go representation of a program document.
+type Program struct {
+	Code        string    `json:"code"`
+	DateCreated time.Time `json:"dateCreated"`
+	Language    string    `json:"language"`
+	Name        string    `json:"name"`
+	Thumbnail   uint16    `json:"thumbnail"`
 }
 
-func (h *Handler) UpdatePrograms(c echo.Context) error {
-	return c.String(http.StatusNotImplemented, "")
+// HandlePrograms
+// Manages all requests pertaining to program information.
+type HandlePrograms struct {
+	Client *firestore.Client
 }
 
-func (h *Handler) DeletePrograms(c echo.Context) error {
-	return c.String(http.StatusNotImplemented, "")
+// HandlePrograms.ServeHTTP
+// Handle requests appropriately based on request type.
+func (h HandlePrograms) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	pid := r.URL.Path[len("/programs/"):]
+
+	switch (r.Method) {
+	case http.MethodGet:
+		h.getProgram(w, r, pid)
+
+	case http.MethodPost:
+		h.updatePrograms(w, r, pid)
+
+	case http.MethodPut:
+		h.createProgram(w, r, pid)
+
+	case http.MethodDelete:
+		h.deletePrograms(w, r, pid)
+	}
 }
 
-func (h *Handler) GetProgram(c echo.Context) error {
-	return c.String(http.StatusNotImplemented, "")
+/* createProgram
+ * POST /programs
+ * Creates and returns a program document.
+ */
+func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request, pid string) {
+	http.Error(w, "", http.StatusNotImplemented)
+}
+
+/* updatePrograms
+ * PUT /programs/:uid
+ * Updates the programs for the current user.
+ */
+func (h *HandlePrograms) updatePrograms(w http.ResponseWriter, r *http.Request, pid string) {
+	http.Error(w, "", http.StatusNotImplemented)
+}
+
+/* deletePrograms
+ * DELETE /programs/:uid
+ * Deletes the program with given uid.
+ */
+func (h *HandlePrograms) deletePrograms(w http.ResponseWriter, r *http.Request, pid string) {
+	http.Error(w, "", http.StatusNotImplemented)
+}
+
+/* getProgram
+ * GET /programs/:docid
+ * Returns the requested document, if it exists.
+ */
+func (h *HandlePrograms) getProgram(w http.ResponseWriter, r *http.Request, pid string) {
+	http.Error(w, "", http.StatusNotImplemented)
 }
