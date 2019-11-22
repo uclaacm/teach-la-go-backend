@@ -14,20 +14,27 @@ import (
 // UserData
 // Go representation of a user document.
 type UserData struct {
-	DisplayName 	  string   `firestore:"displayName" json:"displayName"`
-	PhotoName 	      string   `firestore:"photoName" json:"photoName"`
+	DisplayName       string   `firestore:"displayName" json:"displayName"`
+	PhotoName         string   `firestore:"photoName" json:"photoName"`
 	MostRecentProgram string   `firestore:"mostRecentProgram" json:"mostRecentProgram"`
 	Programs          []string `firestore:"programs" json:"programs"`
 	Classes           []string `firestore:"classes" json:"classes"`
 }
 
+// defaultUserData
+// Factory function for default user data objects.
+func defaultUserData() *UserData {
+	u := UserData{DisplayName: "J Bruin"}
+	return &u
+}
+
 // ToFirebaseUpdate
 // Returns the Firebase update representation of this struct.
-func (u *UserData) ToFirebaseUpdate() ([]firestore.Update) {
+func (u *UserData) ToFirebaseUpdate() []firestore.Update {
 	f := []firestore.Update{
-								{Path: "mostRecentProgram", Value: u.MostRecentProgram},
-								{Path: "programs", Value: u.Programs},
-							}
+		{Path: "mostRecentProgram", Value: u.MostRecentProgram},
+		{Path: "programs", Value: u.Programs},
+	}
 	return f
 }
 
@@ -110,7 +117,7 @@ func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid st
 func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid string) {
 	// get userDoc
 	userDoc := h.Client.Collection("users").Doc(uid)
-	
+
 	// parse data into object.
 	requestData, err := ioutil.ReadAll(r.Body)
 
@@ -137,7 +144,7 @@ func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid
 	}
 
 	_, err = userDoc.Update(r.Context(), updateData)
-	
+
 	// check for errors.
 	if status.Code(err) == codes.NotFound {
 		log.Printf("document does not exist.")
@@ -148,7 +155,7 @@ func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid
 		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
 		return
 	}
-	
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -158,7 +165,7 @@ func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid
 func (h *HandleUsers) initializeUserData(w http.ResponseWriter, r *http.Request) {
 	newDoc := h.Client.Collection("users").NewDoc()
 
-	newUser := DEFAULT_USER_DATA()
+	newUser := defaultUserData()
 
 	newDoc.Set(r.Context(), newUser)
 
