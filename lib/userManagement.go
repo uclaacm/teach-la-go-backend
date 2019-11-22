@@ -154,5 +154,21 @@ func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid
 
 // initializeUserData
 // POST /userData
+// Creates a new user in the database and returns their data.
 func (h *HandleUsers) initializeUserData(w http.ResponseWriter, r *http.Request) {
+	newDoc := h.Client.Collection("users").NewDoc()
+
+	newUser := DEFAULT_USER_DATA()
+
+	newDoc.Set(r.Context(), newUser)
+
+	result, err := json.Marshal(newUser)
+	if err != nil {
+		log.Printf("error: failed marshalling new user object: %s", err)
+		http.Error(w, "failed to initialize user data.", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(result)
 }
