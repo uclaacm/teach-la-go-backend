@@ -2,6 +2,7 @@ package lib
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -13,8 +14,21 @@ import (
 // UserData
 // Go representation of a user document.
 type UserData struct {
-	MostRecentProgram string   `firestore:"mostRecentProgram"`
-	Programs          []string `firestore:"programs"`
+	DisplayName 	  string   `firestore:"displayName" json:"displayName"`
+	PhotoName 	      string   `firestore:"photoName" json:"photoName"`
+	MostRecentProgram string   `firestore:"mostRecentProgram" json:"mostRecentProgram"`
+	Programs          []string `firestore:"programs" json:"programs"`
+	Classes           []string `firestore:"classes" json:"classes"`
+}
+
+// ToFirebaseUpdate
+// Returns the Firebase update representation of this struct.
+func (u *UserData) ToFirebaseUpdate() ([]firestore.Update) {
+	f := []firestore.Update{
+								{Path: "mostRecentProgram", Value: u.MostRecentProgram},
+								{Path: "programs", Value: u.Programs},
+							}
+	return f
 }
 
 // HandleUsers
@@ -91,13 +105,54 @@ func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid st
 }
 
 // updateUserData
-// PUT /updateUserData/:uid
+// PUT /userData/:uid {Body: JSON user data}
+// Merges user data with the JSON passed to it in the request body.
 func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid string) {
-	w.WriteHeader(http.StatusNotImplemented)
+	// get userDoc
+	userDoc := h.Client.Collection("users").Doc(uid)
+	
+	// parse data into object.
+	requestData, err := ioutil.ReadAll(r.Body)
+
+	// check for errors.
+	if err != nil {
+		log.Printf("failed in reading request body: %s", err)
+		http.Error(w, "error occurred in reading request body.", http.StatusInternalServerError)
+		return
+	}
+	if requestData == nil {
+		http.Error(w, "nothing to update.", http.StatusBadRequest)
+		return
+	}
+
+	// unmarshal into an UserData struct.
+	requestObj := UserData{}
+	json.Unmarshal(requestData, &requestObj)
+
+	// ensure all fields were filled.
+	updateData := requestObj.ToFirebaseUpdate()
+
+	if len(updateData) == 0 {
+		http.Error(w, "missing fields from request.", http.StatusBadRequest)
+	}
+
+	_, err = userDoc.Update(r.Context(), updateData)
+	
+	// check for errors.
+	if status.Code(err) == codes.NotFound {
+		log.Printf("document does not exist.")
+		http.Error(w, "document does not exist.", http.StatusNotFound)
+		return
+	} else if err != nil {
+		log.Printf("error occurred in document retrieval: %s", err)
+		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
+		return
+	}
+	
+	w.WriteHeader(http.StatusOK)
 }
 
 // initializeUserData
 // POST /userData
 func (h *HandleUsers) initializeUserData(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
 }
