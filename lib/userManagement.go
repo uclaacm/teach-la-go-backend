@@ -11,8 +11,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// UserData
-// Go representation of a user document.
+// UserData is a struct representation of a user document.
+// It provides functions for converting the struct
+// to firebase-digestible types.
 type UserData struct {
 	DisplayName       string   `firestore:"displayName" json:"displayName"`
 	PhotoName         string   `firestore:"photoName" json:"photoName"`
@@ -21,16 +22,16 @@ type UserData struct {
 	Classes           []string `firestore:"classes" json:"classes"`
 }
 
-// defaultUserData
-// Factory function for default user data objects.
+// defaultUserData is the factory function
+// for constructing default UserData structs.
 func defaultUserData() *UserData {
 	u := UserData{DisplayName: "J Bruin"}
 	return &u
 }
 
-// ToFirebaseUpdate
-// Returns the Firebase update representation of this struct.
-func (u *UserData) ToFirebaseUpdate() []firestore.Update {
+// ToUpdate returns the database update
+// representation of its UserData struct.
+func (u *UserData) ToUpdate() []firestore.Update {
 	f := []firestore.Update{
 		{Path: "mostRecentProgram", Value: u.MostRecentProgram},
 		{Path: "programs", Value: u.Programs},
@@ -38,14 +39,16 @@ func (u *UserData) ToFirebaseUpdate() []firestore.Update {
 	return f
 }
 
-// HandleUsers
-// Manages all requests pertaining to user information.
+// HandleUsers manages all requests pertaining to
+// user information.
 type HandleUsers struct {
 	Client *firestore.Client
 }
 
-// HandleUsers.ServeHTTP
-// Handle requests appropriately based on request type.
+// HandleUsers.ServeHTTP is used by net/http to serve
+// endpoints in accordance with the handler.
+// Requests are handled appropriately based on request
+// type.
 func (h HandleUsers) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// parse the /:uid field
 	uid := r.URL.Path[len("/userData/"):]
@@ -69,9 +72,12 @@ func (h HandleUsers) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// getUserData
-// GET /userData/:uid
-// Used to retrieve a user data object as JSON.
+/**
+ * getUserData
+ * GET /userData/:uid
+ *
+ * Returns the UserData object for user {uid} in JSON.
+ */
 func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid string) {
 	// acquire userdoc corresponding to uid
 	userDoc, err := h.Client.Collection("users").Doc(uid).Get(r.Context())
@@ -111,9 +117,13 @@ func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid st
 	w.Write(userJSON)
 }
 
-// updateUserData
-// PUT /userData/:uid {Body: JSON user data}
-// Merges user data with the JSON passed to it in the request body.
+/**
+ * updateUserData
+ * PUT /userData/:uid {Body: JSON user data}
+ *
+ * Merges the JSON passed to it in the request body
+ * with userDoc :uid
+ */
 func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid string) {
 	// get userDoc
 	userDoc := h.Client.Collection("users").Doc(uid)
@@ -137,7 +147,7 @@ func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid
 	json.Unmarshal(requestData, &requestObj)
 
 	// ensure all fields were filled.
-	updateData := requestObj.ToFirebaseUpdate()
+	updateData := requestObj.ToUpdate()
 
 	if len(updateData) == 0 {
 		http.Error(w, "missing fields from request.", http.StatusBadRequest)
@@ -159,9 +169,12 @@ func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid
 	w.WriteHeader(http.StatusOK)
 }
 
-// initializeUserData
-// POST /userData
-// Creates a new user in the database and returns their data.
+/**
+ * initializeUserData
+ * POST /userData
+ *
+ * Creates a new user in the database and returns their data.
+ */
 func (h *HandleUsers) initializeUserData(w http.ResponseWriter, r *http.Request) {
 	newDoc := h.Client.Collection("users").NewDoc()
 
