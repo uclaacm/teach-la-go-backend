@@ -29,10 +29,10 @@ func main() {
 	log.Printf("server initialized.")
 
 	// user management
-	router.Handle("/userData/", m.LogRequest(userMgr))
+	router.Handle("/userData/", m.LogRequest(m.WithCORS(userMgr)))
 
 	// program management
-	router.Handle("/programs/", m.LogRequest(progMgr))
+	router.Handle("/programs/", m.LogRequest(m.WithCORS(progMgr)))
 
 	// fallback route
 	router.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
