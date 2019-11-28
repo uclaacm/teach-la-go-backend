@@ -1,33 +1,38 @@
 package lib
 
 import (
+	"encoding/json"
+	"log"
 	"net/http"
-	"time"
 
 	"cloud.google.com/go/firestore"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-// Program
-// Go representation of a program document.
+// Program is a representation of a program document.
 type Program struct {
-	Code        string    `json:"code"`
-	DateCreated time.Time `json:"dateCreated"`
-	Language    string    `json:"language"`
-	Name        string    `json:"name"`
-	Thumbnail   uint16    `json:"thumbnail"`
+	Code        string `json:"code"`
+	DateCreated string `json:"dateCreated"`
+	Language    string `json:"language"`
+	Name        string `json:"name"`
+	Thumbnail   uint16 `json:"thumbnail"`
 }
 
-// HandlePrograms
-// Manages all requests pertaining to program information.
+// HandlePrograms manages all requests pertaining to
+// program information.
 type HandlePrograms struct {
 	Client *firestore.Client
 }
 
-// HandlePrograms.ServeHTTP
-// Handle requests appropriately based on request type.
+// HandlePrograms.ServeHTTP is used by net/http to serve
+// endpoints in accordance with the handler.
+// Requests are handled appropriately based on request
+// type.
 func (h HandlePrograms) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pid := r.URL.Path[len("/programs/"):]
 
+	// handle based on method.
 	switch r.Method {
 	case http.MethodGet:
 		h.getProgram(w, r, pid)
@@ -43,12 +48,47 @@ func (h HandlePrograms) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/* getProgram
+/**
+ * getProgram
  * GET /programs/:docid
- * Returns the requested document, if it exists.
+ *
+ * Returns the requested document by its {docid}, if it exists,
+ * in JSON.
  */
 func (h *HandlePrograms) getProgram(w http.ResponseWriter, r *http.Request, pid string) {
-	w.WriteHeader(http.StatusNotImplemented)
+	// acquire program doc corresponding to its ID.
+	progDoc, err := h.Client.Collection("programs").Doc(pid).Get(r.Context())
+
+	// catch errors.
+	if status.Code(err) == codes.NotFound {
+		http.Error(w, "document does not exist.", http.StatusNotFound)
+		return
+	} else if err != nil {
+		log.Printf("error occurred in document retrieval: %s", err)
+		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
+		return
+	}
+
+	// move doc data to struct representation.
+	var p Program
+	if err = progDoc.DataTo(&p); err != nil {
+		log.Printf("error occurred in writing document to %T struct: %s", p, err)
+		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
+		return
+	}
+
+	// move to JSON.
+	var progJSON []byte
+	if progJSON, err = json.Marshal(p); err != nil {
+		log.Printf("failed marshalling struct to JSON: %s", err)
+		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
+		return
+	}
+
+	// return result.
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(progJSON)
 }
 
 /* createProgram
