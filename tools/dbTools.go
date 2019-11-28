@@ -1,4 +1,4 @@
-package dbTools
+package tools
 
 import (
 	"context"

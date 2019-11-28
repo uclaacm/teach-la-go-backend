@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"./lib"
-	"./dbTools"
+	"./tools"
 	m "./middleware"
 )
 
@@ -16,7 +16,7 @@ const PORT = ":8081"
 func main() {
 	// acquire firestore client.
 	// fails early if we cannot acquire one.
-	client := dbTools.GetDB()
+	client := tools.GetDB()
 	defer client.Close()
 
 	// establish handlers.
