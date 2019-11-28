@@ -10,6 +10,7 @@ import (
 	m "./middleware"
 )
 
+// PORT defines where we serve the backend.
 const PORT = ":8081"
 
 func main() {
@@ -29,10 +30,10 @@ func main() {
 	log.Printf("server initialized.")
 
 	// user management
-	router.Handle("/userData/", m.LogRequest(m.WithCORS(userMgr)))
+	router.Handle("/userData/", m.WithCORS(userMgr))
 
 	// program management
-	router.Handle("/programs/", m.LogRequest(m.WithCORS(progMgr)))
+	router.Handle("/programs/", m.WithCORS(progMgr))
 
 	// fallback route
 	router.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
@@ -44,7 +45,7 @@ func main() {
 	// server configuration
 	s := &http.Server{
 		Addr:           PORT,
-		Handler:        router,
+		Handler:        m.LogRequest(router),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
