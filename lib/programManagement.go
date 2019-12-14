@@ -140,44 +140,49 @@ func (h *HandlePrograms) getProgram(w http.ResponseWriter, r *http.Request, pid 
 }
 
 /**
-* createProgram
-* POST /programs
-*
-* Creates and returns a program document. Takes the following
-* parameters inside of the request body:
-* uid: string representing which user we should be updating
-* name: name of the new document
-* thumbnail: index of the thumbnail picture
-* language: language the program will use
-*
-* uid, name are required.
+ * createProgram
+ * POST /programs/
+ *
+ * Creates and returns a program document. Takes the following
+ * parameters inside of the request's JSON body:
+ * uid: string representing which user we should be updating
+ * name: name of the new document
+ * language: language the program will use
+ * thumbnail: index of the thumbnail picture
+ *
+ * uid, name, language are required.
  */
 func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
-	var err error
-
 	// get JSON body from request.
 	var bytesBody []byte
 	var body CreateProgramRequest
+	var err error
 	if bytesBody, err = ioutil.ReadAll(r.Body); err == nil {
-		json.Unmarshal(bytesBody, &body)
+		if err = json.Unmarshal(bytesBody, &body); err != nil {
+			log.Printf("error: failed to unmarshal request body into struct. %s.", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	} else {
 		log.Printf("error: could not read from request body properly.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	// check params.
+	// if missing a required field, fail.
 	var missingFields []string
 	if body.UID == "" {
 		missingFields = append(missingFields, "UID")
 	} else if body.Name == "" {
 		missingFields = append(missingFields, "name")
+	} else if body.Language == "" {
+		missingFields = append(missingFields, "language")
 	} else if body.Thumbnail >= ThumbnailCount {
 		missingFields = append(missingFields, "thumbnail")
 	}
 
 	if len(missingFields) != 0 {
-		log.Printf("error: request missing %s fields.", missingFields)
+		log.Printf("error: request missing field(s) %s.", missingFields)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -190,7 +195,7 @@ func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if err != nil {
 		log.Printf("error: failed to acquire userdoc. %s.", err)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -199,13 +204,20 @@ func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
 	programData := defaultProgram(body.Language)
 	json.Unmarshal(bytesBody, &programData)
 
+	// catch unsupported language.
+	if programData.Code == "" {
+		log.Printf("error: received request to create program with unknown language")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	// create the new program document.
 	programDoc := h.Client.Collection("programs").NewDoc()
 
-	// marshal our merged program data into bytes once
-	// more and set the doc to it.
-	// write to programDoc and update associated user.
+	// write the new program to the new doc.
 	programDoc.Set(r.Context(), &programData)
+
+	// update associated user's program list.
 	h.Client.Collection("users").Doc(body.UID).Update(r.Context(), []firestore.Update{{Path: "programs", Value: firestore.ArrayUnion(programDoc.ID)}})
 	log.Printf("created new program doc {%s} associated to user {%s}.", programDoc.ID, body.UID)
 
@@ -218,7 +230,7 @@ func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write(updateData)
 	} else {
-		log.Printf("error: failed to marshal createProgram response, %s", err)
+		log.Printf("error: failed to marshal createProgram response. %s.", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
