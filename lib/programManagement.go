@@ -2,21 +2,69 @@ package lib
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
+// ThumbnailCount describes the number of program
+// thumbnails available to choose from.
+const ThumbnailCount = 58
+
 // Program is a representation of a program document.
 type Program struct {
-	Code        string `json:"code"`
-	DateCreated string `json:"dateCreated"`
-	Language    string `json:"language"`
-	Name        string `json:"name"`
-	Thumbnail   uint16 `json:"thumbnail"`
+	Code        string    `json:"code" firestore:"code"`
+	DateCreated time.Time `json:"dateCreated" firestore:"dateCreated"`
+	Language    string    `json:"language" firestore:"language"`
+	Name        string    `json:"name" firestore:"name"`
+	Thumbnail   uint16    `json:"thumbnail" firestore:"thumbnail"`
+}
+
+// defaultProgram returns a Program struct initialized to
+// default values for a given language.
+func defaultProgram(language string) Program {
+	var defaultCode string
+
+	defaultProg := Program{
+		DateCreated: time.Now().UTC(),
+		Language:    language,
+	}
+
+	switch language {
+	case "python":
+		defaultCode = "import turtle\n\nt = turtle.Turtle()\n\nt.color('red')\nt.forward(75)\nt.left(90)\n\n\nt.color('blue')\nt.forward(75)\nt.left(90)\n"
+	case "processing":
+		defaultCode = "function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(220);\n  ellipse(mouseX, mouseY, 100, 100);\n}"
+	case "html":
+		defaultCode = "<html>\n  <head>\n  </head>\n  <body>\n    <div style='width: 100px; height: 100px; background-color: black'>\n    </div>\n  </body>\n</html>"
+	default:
+		log.Printf("received request to create default program for unsupported language: %s.", language)
+	}
+
+	defaultProg.Code = defaultCode
+
+	return defaultProg
+}
+
+// CreateProgramRequest describes the anticipated JSON of
+// a request to the POST /programs/ endpoint.
+type CreateProgramRequest struct {
+	UID       string `json:"uid"`
+	Name      string `json:"name"`
+	Thumbnail uint16 `json:"thumbnail"`
+	Language  string `json:"language"`
+}
+
+// CreateProgramResponse describes the anticipated JSON of
+// a response from the POST /programs/ endpoint.
+type CreateProgramResponse struct {
+	ProgramData Program `json:"programData"`
+	UID         string  `json:"key"`
 }
 
 // HandlePrograms manages all requests pertaining to
@@ -38,7 +86,7 @@ func (h HandlePrograms) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.getProgram(w, r, pid)
 
 	case http.MethodPost:
-		h.createProgram(w, r, pid)
+		h.createProgram(w, r)
 
 	case http.MethodPut:
 		h.updatePrograms(w, r, pid)
@@ -91,25 +139,106 @@ func (h *HandlePrograms) getProgram(w http.ResponseWriter, r *http.Request, pid 
 	w.Write(progJSON)
 }
 
-/* createProgram
- * POST /programs
- * Creates and returns a program document.
+/**
+* createProgram
+* POST /programs
+*
+* Creates and returns a program document. Takes the following
+* parameters inside of the request body:
+* uid: string representing which user we should be updating
+* name: name of the new document
+* thumbnail: index of the thumbnail picture
+* language: language the program will use
+*
+* uid, name are required.
  */
-func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request, pid string) {
-	w.WriteHeader(http.StatusNotImplemented)
+func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	// get JSON body from request.
+	var bytesBody []byte
+	var body CreateProgramRequest
+	if bytesBody, err = ioutil.ReadAll(r.Body); err == nil {
+		json.Unmarshal(bytesBody, &body)
+	} else {
+		log.Printf("error: could not read from request body properly.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// check params.
+	var missingFields []string
+	if body.UID == "" {
+		missingFields = append(missingFields, "UID")
+	} else if body.Name == "" {
+		missingFields = append(missingFields, "name")
+	} else if body.Thumbnail >= ThumbnailCount {
+		missingFields = append(missingFields, "thumbnail")
+	}
+
+	if len(missingFields) != 0 {
+		log.Printf("error: request missing %s fields.", missingFields)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// ensure that corresponding userdoc exists.
+	userDoc, err := h.Client.Collection("users").Doc(body.UID).Get(r.Context())
+	if !userDoc.Exists() {
+		log.Printf("bad request: user with UID %s does not exist.", body.UID)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	} else if err != nil {
+		log.Printf("error: failed to acquire userdoc. %s.", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// initialize a program to match params supplied,
+	// filling in default values when applicable.
+	programData := defaultProgram(body.Language)
+	json.Unmarshal(bytesBody, &programData)
+
+	// create the new program document.
+	programDoc := h.Client.Collection("programs").NewDoc()
+
+	// marshal our merged program data into bytes once
+	// more and set the doc to it.
+	// write to programDoc and update associated user.
+	programDoc.Set(r.Context(), &programData)
+	h.Client.Collection("users").Doc(body.UID).Update(r.Context(), []firestore.Update{{Path: "programs", Value: firestore.ArrayUnion(programDoc.ID)}})
+	log.Printf("created new program doc {%s} associated to user {%s}.", programDoc.ID, body.UID)
+
+	// write response, return OK if nominal.
+	response := CreateProgramResponse{
+		ProgramData: programData,
+		UID:         programDoc.ID,
+	}
+	if updateData, err := json.Marshal(response); err == nil {
+		w.WriteHeader(http.StatusOK)
+		w.Write(updateData)
+	} else {
+		log.Printf("error: failed to marshal createProgram response, %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
-/* updatePrograms
+/**
+ * updatePrograms
  * PUT /programs/:uid
- * Updates the programs for the current user.
+ *
+ * Updates the programs for the current user with {uid}.
  */
 func (h *HandlePrograms) updatePrograms(w http.ResponseWriter, r *http.Request, pid string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-/* deletePrograms
+/**
+ * deletePrograms
  * DELETE /programs/:uid
- * Deletes the program with given uid.
+ *
+ * Deletes the program with given {uid}.
  */
 func (h *HandlePrograms) deletePrograms(w http.ResponseWriter, r *http.Request, pid string) {
 	w.WriteHeader(http.StatusNotImplemented)
