@@ -1,6 +1,6 @@
 package middleware
 
-import(
+import (
 	"net/http"
 	"strings"
 )
@@ -12,7 +12,7 @@ type CORSConfig struct {
 	AllowedOrigins []string
 	AllowedMethods []string
 	AllowedHeaders string
-	MaxAge 		   string
+	MaxAge         string
 }
 
 // GetOriginsStr returns the comma delimited
@@ -35,6 +35,13 @@ func WithCORSConfig(next http.Handler, c CORSConfig) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// handle preflight request.
 		if r.Method == http.MethodOptions {
+			// if missing required CORS headers, return invalid response.
+			if r.Method != c.GetMethodsStr() {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			// return response if matches.
 			w.Header().Set("Access-Control-Allow-Origin", c.GetOriginsStr())
 			w.Header().Set("Access-Control-Allow-Methods", c.GetMethodsStr())
 			w.Header().Set("Access-Control-Allow-Headers", c.AllowedHeaders)
@@ -57,19 +64,19 @@ func WithCORS(next http.Handler) http.Handler {
 	defaultCfg := CORSConfig{
 		AllowedHeaders: "Content-Type",
 		AllowedMethods: []string{
-						http.MethodConnect,
-						http.MethodDelete,
-						http.MethodGet,
-						http.MethodHead,
-						http.MethodOptions,
-						http.MethodPatch,
-						http.MethodPost,
-						http.MethodPut,
-						http.MethodTrace,
-						},
+			http.MethodConnect,
+			http.MethodDelete,
+			http.MethodGet,
+			http.MethodHead,
+			http.MethodOptions,
+			http.MethodPatch,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodTrace,
+		},
 		AllowedOrigins: []string{"*"},
-		MaxAge: "72800",
-		}
-	
+		MaxAge:         "72800",
+	}
+
 	return WithCORSConfig(next, defaultCfg)
 }

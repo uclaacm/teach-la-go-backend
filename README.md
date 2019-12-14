@@ -15,6 +15,10 @@ To get coding:
 git clone git@github.com:uclaacm/teach-la-go-backend.git
 cd teach-la-go-backend
 
+# set up the pre-commit hook for coding style enforcement
+chmod +x hooks/pre-commit
+cp hooks/pre-commit .git/hooks/pre-commit
+
 # go get dependencies
 go get -d ./...
 

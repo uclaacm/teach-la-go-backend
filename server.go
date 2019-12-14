@@ -6,9 +6,12 @@ import (
 	"time"
 
 	"./lib"
-	"./tools"
 	m "./middleware"
+	"./tools"
 )
+
+// TODO for Leo: commit all formatting changes straight to master, and programManagement
+// things to program-management.
 
 // PORT defines where we serve the backend.
 const PORT = ":8081"
@@ -36,7 +39,7 @@ func main() {
 	router.Handle("/programs/", m.WithCORS(progMgr))
 
 	// fallback route
-	router.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusNotFound)
 	})
 
