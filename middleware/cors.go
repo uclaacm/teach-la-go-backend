@@ -144,6 +144,12 @@ func WithCORSConfig(next http.Handler, c CORSConfig) http.Handler {
 				w.Header().Set("Access-Control-Max-Age", string(c.MaxAge))
 			}
 
+			// list Access-Control-Allow-Methods.
+			w.Header().Set("Access-Control-Allow-Methods", strings.Join(c.AllowedMethods, ", "))
+
+			// list Access-Control-Allow-Headers.
+			w.Header().Set("Access-Control-Allow-Headers", strings.Join(c.AllowedHeaders, ", "))
+
 			w.WriteHeader(http.StatusOK)
 			return
 		}
