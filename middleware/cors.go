@@ -49,7 +49,9 @@ func (c *CORSConfig) OriginSupported(requestOrigin string) bool {
 	// the value of the Origin header must be a case-sensitive
 	// match for a supported origin.
 	for _, o := range c.AllowedOrigins {
-		if requestOrigin == o {
+		// if using a wildcard, permit any origin.
+		// otherwise check.
+		if o == "*" || requestOrigin == o {
 			return true
 		}
 	}
@@ -77,8 +79,8 @@ func (c *CORSConfig) MethodSupported(requestMethod string) bool {
 // HeadersSupported returns whether each member of a list of request header field names
 // has an ASCII case-insensitive match for any AllowedHeaders value in a given CORSConfig.
 func (c *CORSConfig) HeadersSupported(requestHeaderFieldNames []string) bool {
-	// the empty list is permissible.
-	if len(requestHeaderFieldNames) == 0 {
+	// it is permissible to omit this header.
+	if len(requestHeaderFieldNames) == 1 && requestHeaderFieldNames[0] == "" {
 		return true
 	}
 
