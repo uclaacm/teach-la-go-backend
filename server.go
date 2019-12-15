@@ -10,9 +10,6 @@ import (
 	"./tools"
 )
 
-// TODO for Leo: commit all formatting changes straight to master, and programManagement
-// things to program-management.
-
 // PORT defines where we serve the backend.
 const PORT = ":8081"
 
@@ -26,24 +23,32 @@ func main() {
 	userMgr := lib.HandleUsers{Client: client}
 	progMgr := lib.HandlePrograms{Client: client}
 
-	log.Printf("successfully initialized firestore client and route handlers")
+	log.Printf("initialized firestore client and route handlers.")
 
-	// set up basic server
+	// set up multiplexer.
 	router := http.NewServeMux()
-	log.Printf("server initialized.")
+	log.Printf("multiplexer initialized.")
 
 	// user management
-	router.Handle("/userData/", m.WithCORS(userMgr))
+	userCORS := m.CORSConfig{
+		AllowedHeaders: []string{"Content-Type"},
+		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut},
+	}
+	router.Handle("/userData/", m.WithCORSConfig(userMgr, userCORS))
 
 	// program management
-	router.Handle("/programs/", m.WithCORS(progMgr))
+	progCORS := m.CORSConfig{
+		AllowedHeaders: []string{"Content-Type"},
+		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+	}
+	router.Handle("/programs/", m.WithCORSConfig(progMgr, progCORS))
 
 	// fallback route
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusNotFound)
 	})
 
-	log.Printf("endpoints initialized, serving.")
+	log.Printf("endpoints initialized.")
 
 	// server configuration
 	s := &http.Server{
