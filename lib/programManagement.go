@@ -241,8 +241,57 @@ func (h *HandlePrograms) updatePrograms(w http.ResponseWriter, r *http.Request, 
  * deletePrograms
  * DELETE /programs/:uid
  *
- * Deletes the program with given {uid}.
+ * Deletes the program with {name} from user {uid}.
  */
 func (h *HandlePrograms) deletePrograms(w http.ResponseWriter, r *http.Request, pid string) {
-	w.WriteHeader(http.StatusNotImplemented)
+	// acquire userdoc
+	userDoc := h.Client.Collection("users").Doc(pid)
+	userData, err := userDoc.Get(r.Context())
+	if err != nil {
+		log.Printf("error: failed to acquire user doc. %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// parse body to map, failing request if server fails any step.
+	body := make(map[string]string)
+	if bodyBytes, err := ioutil.ReadAll(r.Body); err == nil {
+		if err = json.Unmarshal(bodyBytes, &body); err != nil {
+			log.Printf("error: failed to parse body")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// "name" field is required.
+	programID := body["name"]
+	if programID == "" {
+		log.Printf("bad request: body missing program name.")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// acquire progdoc.
+	progDoc := h.Client.Collection("programs").Doc(programID)
+	progData, err := progDoc.Get(r.Context())
+	if err != nil {
+		log.Printf("error: failed to acquire program doc.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// check that both userdoc and progdoc exist.
+	if !userData.Exists() || !progData.Exists() {
+		log.Printf("bad request: userDoc or progDoc do not exist.")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// delete the program from userdoc program list.
+	userDoc.Update(r.Context(), []firestore.Update{{Path: "programs", Value: firestore.ArrayRemove(programID)}})
+
+	// delete the program from the programs collection.
+	progDoc.Delete(r.Context())
+
+	w.WriteHeader(http.StatusOK)
 }
