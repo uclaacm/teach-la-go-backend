@@ -5,8 +5,7 @@ import (
 	"strings"
 )
 
-/*
- * CORS
+/* CORS
  * This is middleware written in accordance with the W3C
  * Cross-Origin Resource Sharing specification.
  * Specifically, this is written along with the request
@@ -14,28 +13,16 @@ import (
  * https://www.w3.org/TR/cors/#resource-requests
  */
 
-// CORSConfig is a struct holding all relevant
-// information for a proper CORS configuration.
-// Fields correspond to CORS headers.
+// CORSConfig describes all relevant information
+// pertaining to a proper CORS configuration.
+// Fields correspond to CORS headers. Setting
+// OPTIONS as an allowed method is not necessary.
 type CORSConfig struct {
 	AllowedOrigins      []string
 	AllowedMethods      []string
 	AllowedHeaders      []string
 	SupportsCredentials bool
 	MaxAge              uint32
-}
-
-// GetOriginsStr returns the comma delimited
-// string array of a CORSConfig struct's
-// AllowedOrigins field.
-func (c *CORSConfig) GetOriginsStr() string {
-	return strings.Join(c.AllowedOrigins[:], ",")
-}
-
-// GetMethodsStr returns the comma delimited string
-// array of a CORSConfig struct's AllowedMethods field.
-func (c *CORSConfig) GetMethodsStr() string {
-	return strings.Join(c.AllowedMethods[:], ",")
 }
 
 // OriginSupported returns whether the provided request origin resides
@@ -46,12 +33,17 @@ func (c *CORSConfig) OriginSupported(requestOrigin string) bool {
 		return false
 	}
 
+	// if we have an empty allowed origins list or wildcard, return true.
+	if len(c.AllowedOrigins) == 0 ||
+		(len(c.AllowedOrigins) == 1 && c.AllowedOrigins[0] == "*") {
+		return true
+	}
+
 	// the value of the Origin header must be a case-sensitive
 	// match for a supported origin.
 	for _, o := range c.AllowedOrigins {
-		// if using a wildcard, permit any origin.
-		// otherwise check.
-		if o == "*" || requestOrigin == o {
+		// check that the origin is permitted.
+		if requestOrigin == o {
 			return true
 		}
 	}
@@ -80,7 +72,9 @@ func (c *CORSConfig) MethodSupported(requestMethod string) bool {
 // has an ASCII case-insensitive match for any AllowedHeaders value in a given CORSConfig.
 func (c *CORSConfig) HeadersSupported(requestHeaderFieldNames []string) bool {
 	// it is permissible to omit this header.
-	if len(requestHeaderFieldNames) == 1 && requestHeaderFieldNames[0] == "" {
+	// also, if we have an empty header list, default to permitting all headers.
+	if len(requestHeaderFieldNames) == 1 && requestHeaderFieldNames[0] == "" ||
+		len(c.AllowedHeaders) == 0 {
 		return true
 	}
 
@@ -147,7 +141,7 @@ func WithCORSConfig(next http.Handler, c CORSConfig) http.Handler {
 			}
 
 			// list Access-Control-Allow-Methods.
-			w.Header().Set("Access-Control-Allow-Methods", strings.Join(c.AllowedMethods, ", "))
+			w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(c.AllowedMethods, http.MethodOptions), ", "))
 
 			// list Access-Control-Allow-Headers.
 			w.Header().Set("Access-Control-Allow-Headers", strings.Join(c.AllowedHeaders, ", "))
@@ -166,25 +160,20 @@ func WithCORSConfig(next http.Handler, c CORSConfig) http.Handler {
 // verbosity, please wrap it with some sort of request logging middleware.
 func WithCORS(next http.Handler) http.Handler {
 	// by default we allow all methods, all origins,
-	// and Content-Type headers.
+	// and all headers.
 	// MaxAge is omitted, and credentials are not
 	// supported.
 	defaultCfg := CORSConfig{
-		AllowedHeaders: []string{
-			"Content-Type",
-		},
 		AllowedMethods: []string{
 			http.MethodConnect,
 			http.MethodDelete,
 			http.MethodGet,
 			http.MethodHead,
-			http.MethodOptions,
 			http.MethodPatch,
 			http.MethodPost,
 			http.MethodPut,
 			http.MethodTrace,
 		},
-		AllowedOrigins: []string{"*"},
 	}
 
 	return WithCORSConfig(next, defaultCfg)
