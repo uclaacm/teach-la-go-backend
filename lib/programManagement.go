@@ -23,6 +23,26 @@ type Program struct {
 	Thumbnail   uint16    `json:"thumbnail" firestore:"thumbnail"`
 }
 
+// ToFirestoreUpdate returns the []firestore.Update representation
+// of this struct. Any fields that are non-zero valued are included
+// in the update, save for the date of creation.
+func (p *Program) ToFirestoreUpdate() (up []firestore.Update) {
+	if p.Code != "" {
+		up = append(up, firestore.Update{Path: "code", Value: p.Code})
+	}
+	if p.Language != "" {
+		up = append(up, firestore.Update{Path: "language", Value: p.Language})
+	}
+	if p.Name != "" {
+		up = append(up, firestore.Update{Path: "name", Value: p.Name})
+	}
+	if p.Thumbnail != 0 {
+		up = append(up, firestore.Update{Path: "thumbnail", Value: p.Thumbnail})
+	}
+
+	return
+}
+
 // defaultProgram returns a Program struct initialized to
 // default values for a given language.
 func defaultProgram(language string) Program {
@@ -239,9 +259,54 @@ func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
  * PUT /programs/:uid
  *
  * Updates the programs for the current user with {uid}.
+ * Takes a map of program IDs to program data within the
+ * request body. For example:
+ * {
+ *   "programID1": { PROGRAM DATA },
+ *   "programID2": { PROGRAM DATA }
+ * }
  */
 func (h *HandlePrograms) updatePrograms(w http.ResponseWriter, r *http.Request, pid string) {
-	w.WriteHeader(http.StatusNotImplemented)
+	// acquire userdoc
+	userDoc := h.Client.Collection("users").Doc(pid)
+	userData, err := userDoc.Get(r.Context())
+	if err != nil || !userData.Exists() {
+		log.Printf("error: failed to acquire user doc. %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// parse body into map[String]Program.
+	body := make(map[string]Program)
+	if bytesBody, err := ioutil.ReadAll(r.Body); err == nil {
+		if err := json.Unmarshal(bytesBody, &body); err != nil {
+			log.Printf("error: failed in unmarshaling request body into map[string]Program. %s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	} else {
+		log.Printf("error: failed in reading request body. %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// merge documents as appropriate.
+	for id, programData := range body {
+		// acquire program doc.
+		programDoc := h.Client.Collection("programs").Doc(id)
+
+		// check for existence.
+		if data, err := programDoc.Get(r.Context()); err != nil || !data.Exists() {
+			log.Printf("error: failed to acquire program doc.")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// update data.
+		programDoc.Update(r.Context(), programData.ToFirestoreUpdate())
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 /**
