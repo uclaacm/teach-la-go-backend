@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // ThumbnailCount describes the number of program
@@ -92,7 +90,7 @@ func (h *HandlePrograms) getProgram(w http.ResponseWriter, r *http.Request, pid 
 	progDoc, err := h.Client.Collection("programs").Doc(pid).Get(r.Context())
 
 	// catch errors.
-	if status.Code(err) == codes.NotFound {
+	if !progDoc.Exists() {
 		http.Error(w, "document does not exist.", http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -124,17 +122,17 @@ func (h *HandlePrograms) getProgram(w http.ResponseWriter, r *http.Request, pid 
 }
 
 /**
-* createProgram
-* POST /programs/
-*
-* Creates and returns a program document. Takes the following
-* parameters inside of the request's JSON body:
-* uid: string representing which user we should be updating
-* name: name of the new document
-* language: language the program will use
-* thumbnail: index of the thumbnail picture
-*
-* uid, name, language are required.
+ * createProgram
+ * POST /programs/
+ *
+ * Creates and returns a program document. Takes the following
+ * parameters inside of the request's JSON body:
+ * uid: string representing which user we should be updating
+ * name: name of the new document
+ * language: language the program will use
+ * thumbnail: index of the thumbnail picture
+ *
+ * uid, name, language are required.
  */
 func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
 	// createProgramRequest describes the anticipated JSON of
@@ -184,8 +182,9 @@ func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ensure that corresponding userdoc exists.
-	userDoc, err := h.Client.Collection("users").Doc(body.UID).Get(r.Context())
-	if !userDoc.Exists() {
+	userDoc := h.Client.Collection("users").Doc(body.UID)
+	userDocSnap, err := userDoc.Get(r.Context())
+	if !userDocSnap.Exists() {
 		log.Printf("bad request: user with UID %s does not exist.", body.UID)
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -208,8 +207,16 @@ func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
 	programDoc := h.Client.Collection("programs").NewDoc()
 
 	// write to programDoc and update associated user.
-	programDoc.Set(r.Context(), &programData)
-	h.Client.Collection("users").Doc(body.UID).Update(r.Context(), []firestore.Update{{Path: "programs", Value: firestore.ArrayUnion(programDoc.ID)}})
+	if _, err := programDoc.Set(r.Context(), &programData); err != nil {
+		log.Printf("error: failed to write to new program document. %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if _, err := userDoc.Update(r.Context(), []firestore.Update{{Path: "programs", Value: firestore.ArrayUnion(programDoc.ID)}}); err != nil {
+		log.Printf("error: failed to update user document. %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	log.Printf("created new program doc {%s} associated to user {%s}.", programDoc.ID, body.UID)
 
 	// write response, return OK if nominal.
@@ -288,10 +295,18 @@ func (h *HandlePrograms) deletePrograms(w http.ResponseWriter, r *http.Request, 
 	}
 
 	// delete the program from userdoc program list.
-	userDoc.Update(r.Context(), []firestore.Update{{Path: "programs", Value: firestore.ArrayRemove(programID)}})
+	if _, err := userDoc.Update(r.Context(), []firestore.Update{{Path: "programs", Value: firestore.ArrayRemove(programID)}}); err != nil {
+		log.Printf("error: failed to update userDoc.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	// delete the program from the programs collection.
-	progDoc.Delete(r.Context())
+	if _, err := progDoc.Delete(r.Context()); err != nil {
+		log.Printf("error: failed to delete progDoc.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
