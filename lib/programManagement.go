@@ -51,22 +51,6 @@ func defaultProgram(language string) Program {
 	return defaultProg
 }
 
-// CreateProgramRequest describes the anticipated JSON of
-// a request to the POST /programs/ endpoint.
-type CreateProgramRequest struct {
-	UID       string `json:"uid"`
-	Name      string `json:"name"`
-	Thumbnail uint16 `json:"thumbnail"`
-	Language  string `json:"language"`
-}
-
-// CreateProgramResponse describes the anticipated JSON of
-// a response from the POST /programs/ endpoint.
-type CreateProgramResponse struct {
-	ProgramData Program `json:"programData"`
-	UID         string  `json:"key"`
-}
-
 // HandlePrograms manages all requests pertaining to
 // program information.
 type HandlePrograms struct {
@@ -140,36 +124,48 @@ func (h *HandlePrograms) getProgram(w http.ResponseWriter, r *http.Request, pid 
 }
 
 /**
- * createProgram
- * POST /programs/
- *
- * Creates and returns a program document. Takes the following
- * parameters inside of the request's JSON body:
- * uid: string representing which user we should be updating
- * name: name of the new document
- * language: language the program will use
- * thumbnail: index of the thumbnail picture
- *
- * uid, name, language are required.
+* createProgram
+* POST /programs/
+*
+* Creates and returns a program document. Takes the following
+* parameters inside of the request's JSON body:
+* uid: string representing which user we should be updating
+* name: name of the new document
+* language: language the program will use
+* thumbnail: index of the thumbnail picture
+*
+* uid, name, language are required.
  */
 func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
+	// createProgramRequest describes the anticipated JSON of
+	// a request to the POST /programs/ endpoint.
+	type createProgramRequest struct {
+		UID       string `json:"uid"`
+		Name      string `json:"name"`
+		Thumbnail uint16 `json:"thumbnail"`
+		Language  string `json:"language"`
+	}
+
+	// createProgramResponse describes the anticipated JSON of
+	// a response from the POST /programs/ endpoint.
+	type createProgramResponse struct {
+		ProgramData Program `json:"programData"`
+		UID         string  `json:"key"`
+	}
+
 	// get JSON body from request.
-	var bytesBody []byte
-	var body CreateProgramRequest
 	var err error
+	var bytesBody []byte
+	var body createProgramRequest
 	if bytesBody, err = ioutil.ReadAll(r.Body); err == nil {
-		if err = json.Unmarshal(bytesBody, &body); err != nil {
-			log.Printf("error: failed to unmarshal request body into struct. %s.", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		json.Unmarshal(bytesBody, &body)
 	} else {
 		log.Printf("error: could not read from request body properly.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	// if missing a required field, fail.
+	// check params.
 	var missingFields []string
 	if body.UID == "" {
 		missingFields = append(missingFields, "UID")
@@ -182,7 +178,7 @@ func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(missingFields) != 0 {
-		log.Printf("error: request missing field(s) %s.", missingFields)
+		log.Printf("error: request missing %s fields.", missingFields)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -194,35 +190,30 @@ func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	} else if err != nil {
-		log.Printf("error: failed to acquire userdoc. %s.", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("error: failed to acquire userdoc. %s", err)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// initialize a program to match params supplied,
 	// filling in default values when applicable.
 	programData := defaultProgram(body.Language)
-	json.Unmarshal(bytesBody, &programData)
-
-	// catch unsupported language.
-	if programData.Code == "" {
-		log.Printf("error: received request to create program with unknown language")
-		w.WriteHeader(http.StatusBadRequest)
+	if err := json.Unmarshal(bytesBody, &programData); err != nil {
+		log.Printf("error: failed to unmarshal programData. %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// create the new program document.
 	programDoc := h.Client.Collection("programs").NewDoc()
 
-	// write the new program to the new doc.
+	// write to programDoc and update associated user.
 	programDoc.Set(r.Context(), &programData)
-
-	// update associated user's program list.
 	h.Client.Collection("users").Doc(body.UID).Update(r.Context(), []firestore.Update{{Path: "programs", Value: firestore.ArrayUnion(programDoc.ID)}})
 	log.Printf("created new program doc {%s} associated to user {%s}.", programDoc.ID, body.UID)
 
 	// write response, return OK if nominal.
-	response := CreateProgramResponse{
+	response := createProgramResponse{
 		ProgramData: programData,
 		UID:         programDoc.ID,
 	}
@@ -230,7 +221,7 @@ func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write(updateData)
 	} else {
-		log.Printf("error: failed to marshal createProgram response. %s.", err)
+		log.Printf("error: failed to marshal createProgram response. %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
