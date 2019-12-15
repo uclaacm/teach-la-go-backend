@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"time"
 
 	"./lib"
@@ -14,9 +17,12 @@ import (
 const PORT = ":8081"
 
 func main() {
+	// set up context for main routine.
+	mainContext := context.Background()
+
 	// acquire firestore client.
 	// fails early if we cannot acquire one.
-	client := tools.GetDB()
+	client := tools.GetDB(&mainContext)
 	defer client.Close()
 
 	// establish handlers.
@@ -59,8 +65,21 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	log.Printf("serving on %s", PORT)
+	// serve backend via anonymous goroutine, cancelling on
+	// system interrupt.
+	kill := make(chan os.Signal, 1)
+	signal.Notify(kill, os.Interrupt)
+	go func() {
+		log.Printf("serving on %s", PORT)
+		log.Fatal(s.ListenAndServe())
+	}()
 
-	// finally, serve the backend
-	log.Fatal(s.ListenAndServe())
+	// wait for system interrupt to call shutdown on the server.
+	<-kill
+	log.Printf("received kill signal, attempting to gracefully shut down.")
+
+	// server has 10 seconds from interrupt to gracefully shutdown.
+	timeout, terminate := context.WithDeadline(mainContext, time.Now().Add(10*time.Second))
+	defer terminate()
+	s.Shutdown(timeout)
 }

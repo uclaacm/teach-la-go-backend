@@ -13,7 +13,7 @@ import (
 // GetDB returns a pointer to a firestore *Client based on the
 // JSON credentials pointed to by the environment variable
 // $CFGPATH.
-func GetDB() (client *firestore.Client) {
+func GetDB(ctx *context.Context) (client *firestore.Client) {
 	// load environment variable $CFGPATH as a string: the path to our config.
 	configPath := os.Getenv("CFGPATH")
 
@@ -26,17 +26,17 @@ func GetDB() (client *firestore.Client) {
 	// set up the app through which our client will be
 	// acquired.
 	opt := option.WithCredentialsFile(configPath)
-	app, err := firebase.NewApp(context.Background(), nil, opt)
+	app, err := firebase.NewApp(*ctx, nil, opt)
 	if err != nil {
 		log.Fatalf("failed to create client: %s", err)
 	}
 
 	// acquire the firestore client, fail if we cannot.
-	client, err = app.Firestore(context.Background())
+	client, err = app.Firestore(*ctx)
 	if err != nil {
 		log.Fatalf("failed to create client: %s", err)
 	}
 
-	// naked return of "client" if successful.
+	// naked return of client if successful.
 	return
 }
