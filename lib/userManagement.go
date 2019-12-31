@@ -1,7 +1,9 @@
 package lib
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -25,6 +27,22 @@ func (h HandleUsers) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// parse the /:uid field
 	uid := r.URL.Path[len("/userData/"):]
 
+	// parse the response body into a map[string]string
+	var (
+		bytesBody []byte
+		err       error
+	)
+	body := make(map[string]string)
+	if bytesBody, err = ioutil.ReadAll(r.Body); err != nil {
+		log.Printf("error: failed to read request body.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else if err := json.Unmarshal(bytesBody, &body); len(bytesBody) > 0 && err != nil {
+		log.Printf("error: failed to marshal request body. %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	// catch bad requests
 	if uid == "" && r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusBadRequest)
@@ -32,16 +50,29 @@ func (h HandleUsers) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// handle based on request method
+	var (
+		response string
+		code     int
+	)
 	switch r.Method {
 	case http.MethodGet:
-		h.getUserData(w, r, uid)
+		response, code = h.getUserData(uid)
 
 	case http.MethodPut:
-		h.updateUserData(w, r, uid)
+		response, code = h.updateUserData(uid, bytesBody)
 
 	case http.MethodPost:
-		h.initializeUserData(w, r)
+		response, code = h.initializeUserData()
 	}
+
+	// handle errors.
+	if code != http.StatusOK {
+		log.Println(response)
+	}
+
+	w.WriteHeader(code)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(response))
 }
 
 /**
@@ -50,26 +81,21 @@ func (h HandleUsers) ServeHTTP(w http.ResponseWriter, r *http.Request) {
  *
  * Returns the UserData object for user {uid} in JSON.
  */
-func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid string) {
+func (h *HandleUsers) getUserData(uid string) (string, int) {
 	// acquire userdoc corresponding to uid
-	userDoc, err := h.Client.Collection("users").Doc(uid).Get(r.Context())
+	userDoc, err := h.Client.Collection(UserEndpt).Doc(uid).Get(context.Background())
 
 	// catch document errors.
 	if status.Code(err) == codes.NotFound {
-		http.Error(w, "document does not exist.", http.StatusNotFound)
-		return
+		return "document does not exist.", http.StatusNotFound
 	} else if err != nil {
-		log.Printf("error occurred in document retrieval: %s", err)
-		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
-		return
+		return fmt.Sprintf("error occurred in document retrieval: %s", err), http.StatusInternalServerError
 	}
 
 	// acquire only desired fields for response.
 	var u UserData
 	if err = userDoc.DataTo(&u); err != nil {
-		log.Printf("error occurred in writing document to %T object: %s", u, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return "error occurred in reading document.", http.StatusInternalServerError
 	}
 
 	// convert to JSON.
@@ -78,15 +104,11 @@ func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid st
 	// optional: pretty print our JSON response.
 	userJSON, err = json.MarshalIndent(u, "", "    ")
 	if err != nil {
-		log.Printf("error occurred in writing document to %T object.", u)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return "error occurred in reading document.", http.StatusInternalServerError
 	}
 
 	// return the user data as JSON.
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(userJSON)
+	return string(userJSON), http.StatusOK
 }
 
 /**
@@ -96,49 +118,31 @@ func (h *HandleUsers) getUserData(w http.ResponseWriter, r *http.Request, uid st
  * Merges the JSON passed to it in the request body
  * with userDoc :uid
  */
-func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid string) {
+func (h *HandleUsers) updateUserData(uid string, bytesBody []byte) (string, int) {
 	// get userDoc
-	userDoc := h.Client.Collection("users").Doc(uid)
-
-	// parse data into object.
-	requestData, err := ioutil.ReadAll(r.Body)
-
-	// check for errors.
-	if err != nil {
-		log.Printf("failed in reading request body: %s", err)
-		http.Error(w, "error occurred in reading request body.", http.StatusInternalServerError)
-		return
-	}
-	if requestData == nil {
-		http.Error(w, "nothing to update.", http.StatusBadRequest)
-		return
-	}
+	userDoc := h.Client.Collection(UserEndpt).Doc(uid)
 
 	// unmarshal into an UserData struct.
 	requestObj := UserData{}
-	json.Unmarshal(requestData, &requestObj)
+	json.Unmarshal(bytesBody, &requestObj)
 
 	// ensure all fields were filled.
 	updateData := requestObj.ToFirestoreUpdate()
 
 	if len(updateData) == 0 {
-		http.Error(w, "missing fields from request.", http.StatusBadRequest)
+		return "missing fields from request.", http.StatusBadRequest
 	}
 
-	_, err = userDoc.Update(r.Context(), updateData)
+	_, err := userDoc.Update(context.Background(), updateData)
 
 	// check for errors.
 	if status.Code(err) == codes.NotFound {
-		log.Printf("document does not exist.")
-		http.Error(w, "document does not exist.", http.StatusNotFound)
-		return
+		return "document does not exist.", http.StatusNotFound
 	} else if err != nil {
-		log.Printf("error occurred in document retrieval: %s", err)
-		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
-		return
+		return fmt.Sprintf("error occurred in document retrieval: %s", err), http.StatusInternalServerError
 	}
 
-	w.WriteHeader(http.StatusOK)
+	return "", http.StatusOK
 }
 
 /**
@@ -147,8 +151,8 @@ func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid
  *
  * Creates a new user in the database and returns their data.
  */
-func (h *HandleUsers) initializeUserData(w http.ResponseWriter, r *http.Request) {
-	newDoc := h.Client.Collection("users").NewDoc()
+func (h *HandleUsers) initializeUserData() (string, int) {
+	newDoc := h.Client.Collection(UserEndpt).NewDoc()
 
 	newUser, newProgs := defaultData()
 
@@ -156,22 +160,19 @@ func (h *HandleUsers) initializeUserData(w http.ResponseWriter, r *http.Request)
 	for _, prog := range newProgs {
 		// create program in database.
 		newProg := h.Client.Collection(UserEndpt).NewDoc()
-		newProg.Set(r.Context(), prog)
+		newProg.Set(context.Background(), prog)
 
 		// establish association in user doc.
 		newUser.Programs = append(newUser.Programs, newProg.ID)
 	}
 
 	// create user doc.
-	newDoc.Set(r.Context(), newUser)
+	newDoc.Set(context.Background(), newUser)
 
 	result, err := json.Marshal(newUser)
 	if err != nil {
-		log.Printf("error: failed marshalling new user object: %s", err)
-		http.Error(w, "failed to initialize user data.", http.StatusInternalServerError)
-		return
+		return "failed to initialize user data.", http.StatusInternalServerError
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
+	return string(result), http.StatusOK
 }
