@@ -1,73 +1,16 @@
 package lib
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
+	"strconv"
 
 	"cloud.google.com/go/firestore"
 )
-
-// ThumbnailCount describes the number of program
-// thumbnails available to choose from.
-const ThumbnailCount = 58
-
-// Program is a representation of a program document.
-type Program struct {
-	Code        string    `json:"code" firestore:"code"`
-	DateCreated time.Time `json:"dateCreated" firestore:"dateCreated"`
-	Language    string    `json:"language" firestore:"language"`
-	Name        string    `json:"name" firestore:"name"`
-	Thumbnail   uint16    `json:"thumbnail" firestore:"thumbnail"`
-}
-
-// ToFirestoreUpdate returns the []firestore.Update representation
-// of this struct. Any fields that are non-zero valued are included
-// in the update, save for the date of creation.
-func (p *Program) ToFirestoreUpdate() (up []firestore.Update) {
-	if p.Code != "" {
-		up = append(up, firestore.Update{Path: "code", Value: p.Code})
-	}
-	if p.Language != "" {
-		up = append(up, firestore.Update{Path: "language", Value: p.Language})
-	}
-	if p.Name != "" {
-		up = append(up, firestore.Update{Path: "name", Value: p.Name})
-	}
-	if p.Thumbnail != 0 {
-		up = append(up, firestore.Update{Path: "thumbnail", Value: p.Thumbnail})
-	}
-
-	return
-}
-
-// defaultProgram returns a Program struct initialized to
-// default values for a given language.
-func defaultProgram(language string) Program {
-	var defaultCode string
-
-	defaultProg := Program{
-		DateCreated: time.Now().UTC(),
-		Language:    language,
-	}
-
-	switch language {
-	case "python":
-		defaultCode = "import turtle\n\nt = turtle.Turtle()\n\nt.color('red')\nt.forward(75)\nt.left(90)\n\n\nt.color('blue')\nt.forward(75)\nt.left(90)\n"
-	case "processing":
-		defaultCode = "function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(220);\n  ellipse(mouseX, mouseY, 100, 100);\n}"
-	case "html":
-		defaultCode = "<html>\n  <head>\n  </head>\n  <body>\n    <div style='width: 100px; height: 100px; background-color: black'>\n    </div>\n  </body>\n</html>"
-	default:
-		log.Printf("received request to create default program for unsupported language: %s.", language)
-	}
-
-	defaultProg.Code = defaultCode
-
-	return defaultProg
-}
 
 // HandlePrograms manages all requests pertaining to
 // program information.
@@ -80,22 +23,55 @@ type HandlePrograms struct {
 // Requests are handled appropriately based on request
 // type.
 func (h HandlePrograms) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// acquire pid.
 	pid := r.URL.Path[len("/programs/"):]
 
 	// handle based on method.
+	var (
+		response string
+		code     int
+	)
+
 	switch r.Method {
 	case http.MethodGet:
-		h.getProgram(w, r, pid)
+		response, code = h.getProgram(pid)
 
 	case http.MethodPost:
-		h.createProgram(w, r)
+		// body is map[string]string for create requests.
+		body := make(map[string]string)
+		if bytesBody, err := ioutil.ReadAll(r.Body); err == nil {
+			json.Unmarshal(bytesBody, body)
+		}
+
+		response, code = h.createProgram(body)
 
 	case http.MethodPut:
-		h.updatePrograms(w, r, pid)
+		// body is map[string]Program for update requests.
+		body := make(map[string]Program)
+		if bytesBody, err := ioutil.ReadAll(r.Body); err == nil {
+			json.Unmarshal(bytesBody, body)
+		}
+
+		response, code = h.updatePrograms(pid, body)
 
 	case http.MethodDelete:
-		h.deletePrograms(w, r, pid)
+		// body is map[string]string for deletion requests.
+		body := make(map[string]string)
+		if bytesBody, err := ioutil.ReadAll(r.Body); err == nil {
+			json.Unmarshal(bytesBody, body)
+		}
+
+		response, code = h.deletePrograms(pid, body["uid"])
 	}
+
+	// log only if an error occurred.
+	if code != http.StatusOK {
+		log.Println(response)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(response))
+	w.WriteHeader(code)
 }
 
 /**
@@ -105,40 +81,32 @@ func (h HandlePrograms) ServeHTTP(w http.ResponseWriter, r *http.Request) {
  * Returns the requested document by its {docid}, if it exists,
  * in JSON.
  */
-func (h *HandlePrograms) getProgram(w http.ResponseWriter, r *http.Request, pid string) {
+func (h *HandlePrograms) getProgram(pid string) (string, int) {
 	// acquire program doc corresponding to its ID.
-	progDoc, err := h.Client.Collection("programs").Doc(pid).Get(r.Context())
+	progDoc, err := h.Client.Collection(ProgEndpt).Doc(pid).Get(context.Background())
 
 	// catch errors.
 	if !progDoc.Exists() {
-		http.Error(w, "document does not exist.", http.StatusNotFound)
-		return
+		return "document does not exist.", http.StatusNotFound
 	} else if err != nil {
-		log.Printf("error occurred in document retrieval: %s", err)
-		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
-		return
+		return "error occurred in document retrieval.", http.StatusInternalServerError
 	}
 
 	// move doc data to struct representation.
 	var p Program
 	if err = progDoc.DataTo(&p); err != nil {
 		log.Printf("error occurred in writing document to %T struct: %s", p, err)
-		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
-		return
+		return "error occurred in document retrieval.", http.StatusInternalServerError
 	}
 
 	// move to JSON.
 	var progJSON []byte
 	if progJSON, err = json.Marshal(p); err != nil {
 		log.Printf("failed marshalling struct to JSON: %s", err)
-		http.Error(w, "error occurred in document retrieval.", http.StatusInternalServerError)
-		return
+		return "error occurred in document retrieval.", http.StatusInternalServerError
 	}
 
-	// return result.
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(progJSON)
+	return string(progJSON), http.StatusOK
 }
 
 /**
@@ -154,104 +122,77 @@ func (h *HandlePrograms) getProgram(w http.ResponseWriter, r *http.Request, pid 
  *
  * uid, name, language are required.
  */
-func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
-	// createProgramRequest describes the anticipated JSON of
-	// a request to the POST /programs/ endpoint.
-	type createProgramRequest struct {
-		UID       string `json:"uid"`
-		Name      string `json:"name"`
-		Thumbnail uint16 `json:"thumbnail"`
-		Language  string `json:"language"`
-	}
-
-	// createProgramResponse describes the anticipated JSON of
-	// a response from the POST /programs/ endpoint.
-	type createProgramResponse struct {
-		ProgramData Program `json:"programData"`
-		UID         string  `json:"key"`
-	}
-
-	// get JSON body from request.
-	var err error
-	var bytesBody []byte
-	var body createProgramRequest
-	if bytesBody, err = ioutil.ReadAll(r.Body); err == nil {
-		json.Unmarshal(bytesBody, &body)
-	} else {
-		log.Printf("error: could not read from request body properly.")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
+func (h *HandlePrograms) createProgram(body map[string]string) (string, int) {
 	// check params.
+	uid := body["uid"]
+	name := body["name"]
+	language := body["language"]
+	thumbnail, err := strconv.ParseInt(body["thumbnail"], 10, 64)
+	if err != nil {
+		return fmt.Sprintf("error: improper thumbnail value."), http.StatusBadRequest
+	}
+
 	var missingFields []string
-	if body.UID == "" {
+	if uid == "" {
 		missingFields = append(missingFields, "UID")
-	} else if body.Name == "" {
+	} else if name == "" {
 		missingFields = append(missingFields, "name")
-	} else if body.Language == "" {
+	} else if _, err := LanguageCode(language); language == "" || err != nil {
 		missingFields = append(missingFields, "language")
-	} else if body.Thumbnail >= ThumbnailCount {
+	} else if thumbnail >= ThumbnailCount { // TODO FIX
 		missingFields = append(missingFields, "thumbnail")
 	}
 
 	if len(missingFields) != 0 {
-		log.Printf("error: request missing %s fields.", missingFields)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return fmt.Sprintf("error: request missing valid %s fields.", missingFields), http.StatusBadRequest
 	}
 
 	// ensure that corresponding userdoc exists.
-	userDoc := h.Client.Collection("users").Doc(body.UID)
-	userDocSnap, err := userDoc.Get(r.Context())
+	userDoc := h.Client.Collection(UserEndpt).Doc(uid)
+	userDocSnap, err := userDoc.Get(context.Background())
 	if !userDocSnap.Exists() {
-		log.Printf("bad request: user with UID %s does not exist.", body.UID)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return fmt.Sprintf("bad request: user with UID %s does not exist.", uid), http.StatusBadRequest
 	} else if err != nil {
-		log.Printf("error: failed to acquire userdoc. %s", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return fmt.Sprintf("error: failed to acquire userdoc. %s", err), http.StatusBadRequest
 	}
 
 	// initialize a program to match params supplied,
 	// filling in default values when applicable.
-	programData := defaultProgram(body.Language)
-	if err := json.Unmarshal(bytesBody, &programData); err != nil {
-		log.Printf("error: failed to unmarshal programData. %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	langCode, _ := LanguageCode(language)
+	programData := defaultProgram(langCode)
+	if name != "" {
+		programData.Name = name
+	}
+	if language != "" {
+		programData.Language = language
+	}
+	if thumbnail >= 0 {
+		programData.Thumbnail = thumbnail
 	}
 
 	// create the new program document.
-	programDoc := h.Client.Collection("programs").NewDoc()
+	programDoc := h.Client.Collection(ProgEndpt).NewDoc()
 
 	// write to programDoc and update associated user.
-	if _, err := programDoc.Set(r.Context(), &programData); err != nil {
-		log.Printf("error: failed to write to new program document. %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if _, err := programDoc.Set(context.Background(), &programData); err != nil {
+		return fmt.Sprintf("error: failed to write to new program document. %s", err), http.StatusInternalServerError
 	}
-	if _, err := userDoc.Update(r.Context(), []firestore.Update{{Path: "programs", Value: firestore.ArrayUnion(programDoc.ID)}}); err != nil {
-		log.Printf("error: failed to update user document. %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if _, err := userDoc.Update(context.Background(), []firestore.Update{{Path: "programs", Value: firestore.ArrayUnion(programDoc.ID)}}); err != nil {
+		return fmt.Sprintf("error: failed to update user document. %s", err), http.StatusInternalServerError
 	}
-	log.Printf("created new program doc {%s} associated to user {%s}.", programDoc.ID, body.UID)
+
+	log.Printf("created new program doc {%s} associated to user {%s}.", programDoc.ID, uid)
 
 	// write response, return OK if nominal.
-	response := createProgramResponse{
-		ProgramData: programData,
-		UID:         programDoc.ID,
+	response := map[string]interface{}{
+		"ProgramData": programData,
+		"UID":         uid,
 	}
 	if updateData, err := json.Marshal(response); err == nil {
-		w.WriteHeader(http.StatusOK)
-		w.Write(updateData)
-	} else {
-		log.Printf("error: failed to marshal createProgram response. %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return string(updateData), http.StatusOK
 	}
+
+	return "error: failed to marshal createProgram response.", http.StatusInternalServerError
 }
 
 /**
@@ -266,112 +207,72 @@ func (h *HandlePrograms) createProgram(w http.ResponseWriter, r *http.Request) {
  *   "programID2": { PROGRAM DATA }
  * }
  */
-func (h *HandlePrograms) updatePrograms(w http.ResponseWriter, r *http.Request, pid string) {
+func (h *HandlePrograms) updatePrograms(pid string, body map[string]Program) (string, int) {
 	// acquire userdoc
-	userDoc := h.Client.Collection("users").Doc(pid)
-	userData, err := userDoc.Get(r.Context())
+	userDoc := h.Client.Collection(UserEndpt).Doc(pid)
+	userData, err := userDoc.Get(context.Background())
 	if err != nil || !userData.Exists() {
-		log.Printf("error: failed to acquire user doc. %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// parse body into map[String]Program.
-	body := make(map[string]Program)
-	if bytesBody, err := ioutil.ReadAll(r.Body); err == nil {
-		if err := json.Unmarshal(bytesBody, &body); err != nil {
-			log.Printf("error: failed in unmarshaling request body into map[string]Program. %s", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	} else {
-		log.Printf("error: failed in reading request body. %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return fmt.Sprintf("error: failed to acquire user doc. %s", err), http.StatusInternalServerError
 	}
 
 	// merge documents as appropriate.
 	for id, programData := range body {
 		// acquire program doc.
-		programDoc := h.Client.Collection("programs").Doc(id)
+		programDoc := h.Client.Collection(ProgEndpt).Doc(id)
 
 		// check for existence.
-		if data, err := programDoc.Get(r.Context()); err != nil || !data.Exists() {
-			log.Printf("error: failed to acquire program doc.")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
+		if data, err := programDoc.Get(context.Background()); err != nil || !data.Exists() {
+			return fmt.Sprintf("error: failed to acquire program doc."), http.StatusInternalServerError
 		}
 
 		// update data.
-		programDoc.Update(r.Context(), programData.ToFirestoreUpdate())
+		programDoc.Update(context.Background(), programData.ToFirestoreUpdate())
 	}
 
-	w.WriteHeader(http.StatusOK)
+	return "", http.StatusOK
 }
 
 /**
  * deletePrograms
- * DELETE /programs/:uid
+ * DELETE /programs/:pid
  *
- * Deletes the program with {name} from user {uid}.
+ * Deletes the program identified by {pid} from user {uid}. {uid} must
+ * be provided in the request body.
  */
-func (h *HandlePrograms) deletePrograms(w http.ResponseWriter, r *http.Request, pid string) {
+func (h *HandlePrograms) deletePrograms(uid string, pid string) (string, int) {
 	// acquire userdoc
-	userDoc := h.Client.Collection("users").Doc(pid)
-	userData, err := userDoc.Get(r.Context())
+	userDoc := h.Client.Collection(UserEndpt).Doc(pid)
+	userData, err := userDoc.Get(context.Background())
 	if err != nil {
-		log.Printf("error: failed to acquire user doc. %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return fmt.Sprintf("error: failed to acquire user doc. %s", err), http.StatusInternalServerError
 	}
 
-	// parse body to map, failing request if server fails any step.
-	body := make(map[string]string)
-	if bodyBytes, err := ioutil.ReadAll(r.Body); err == nil {
-		if err = json.Unmarshal(bodyBytes, &body); err != nil {
-			log.Printf("error: failed to parse body")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	}
-
-	// "name" field is required.
-	programID := body["name"]
-	if programID == "" {
-		log.Printf("bad request: body missing program name.")
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	// the pid and uid are required.
+	if pid == "" || uid == "" {
+		return "bad request: body missing parameter.", http.StatusBadRequest
 	}
 
 	// acquire progdoc.
-	progDoc := h.Client.Collection("programs").Doc(programID)
-	progData, err := progDoc.Get(r.Context())
+	progDoc := h.Client.Collection(ProgEndpt).Doc(pid)
+	progData, err := progDoc.Get(context.Background())
 	if err != nil {
-		log.Printf("error: failed to acquire program doc.")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return "error: failed to acquire program doc.", http.StatusInternalServerError
 	}
 
 	// check that both userdoc and progdoc exist.
 	if !userData.Exists() || !progData.Exists() {
-		log.Printf("bad request: userDoc or progDoc do not exist.")
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return "bad request: userDoc or progDoc do not exist.", http.StatusBadRequest
 	}
 
 	// delete the program from userdoc program list.
-	if _, err := userDoc.Update(r.Context(), []firestore.Update{{Path: "programs", Value: firestore.ArrayRemove(programID)}}); err != nil {
-		log.Printf("error: failed to update userDoc.")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if _, err := userDoc.Update(context.Background(), []firestore.Update{{Path: "programs", Value: firestore.ArrayRemove(pid)}}); err != nil {
+		return "error: failed to update userDoc.", http.StatusInternalServerError
 	}
 
 	// delete the program from the programs collection.
-	if _, err := progDoc.Delete(r.Context()); err != nil {
-		log.Printf("error: failed to delete progDoc.")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if _, err := progDoc.Delete(context.Background()); err != nil {
+		return "error: failed to delete progDoc.", http.StatusInternalServerError
 	}
 
-	w.WriteHeader(http.StatusOK)
+	return "", http.StatusOK
 }

@@ -11,34 +11,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// UserData is a struct representation of a user document.
-// It provides functions for converting the struct
-// to firebase-digestible types.
-type UserData struct {
-	DisplayName       string   `firestore:"displayName" json:"displayName"`
-	PhotoName         string   `firestore:"photoName" json:"photoName"`
-	MostRecentProgram string   `firestore:"mostRecentProgram" json:"mostRecentProgram"`
-	Programs          []string `firestore:"programs" json:"programs"`
-	Classes           []string `firestore:"classes" json:"classes"`
-}
-
-// defaultUserData is the factory function
-// for constructing default UserData structs.
-func defaultUserData() *UserData {
-	u := UserData{DisplayName: "J Bruin"}
-	return &u
-}
-
-// ToUpdate returns the database update
-// representation of its UserData struct.
-func (u *UserData) ToUpdate() []firestore.Update {
-	f := []firestore.Update{
-		{Path: "mostRecentProgram", Value: u.MostRecentProgram},
-		{Path: "programs", Value: u.Programs},
-	}
-	return f
-}
-
 // HandleUsers manages all requests pertaining to
 // user information.
 type HandleUsers struct {
@@ -147,7 +119,7 @@ func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid
 	json.Unmarshal(requestData, &requestObj)
 
 	// ensure all fields were filled.
-	updateData := requestObj.ToUpdate()
+	updateData := requestObj.ToFirestoreUpdate()
 
 	if len(updateData) == 0 {
 		http.Error(w, "missing fields from request.", http.StatusBadRequest)
@@ -178,8 +150,19 @@ func (h *HandleUsers) updateUserData(w http.ResponseWriter, r *http.Request, uid
 func (h *HandleUsers) initializeUserData(w http.ResponseWriter, r *http.Request) {
 	newDoc := h.Client.Collection("users").NewDoc()
 
-	newUser := defaultUserData()
+	newUser, newProgs := defaultData()
 
+	// create all new programs and associate them to the user.
+	for _, prog := range newProgs {
+		// create program in database.
+		newProg := h.Client.Collection(UserEndpt).NewDoc()
+		newProg.Set(r.Context(), prog)
+
+		// establish association in user doc.
+		newUser.Programs = append(newUser.Programs, newProg.ID)
+	}
+
+	// create user doc.
 	newDoc.Set(r.Context(), newUser)
 
 	result, err := json.Marshal(newUser)
