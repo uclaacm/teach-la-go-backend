@@ -2,7 +2,7 @@ package lib
 
 import (
 	"time"
-
+	
 	"cloud.google.com/go/firestore"
 )
 
@@ -33,25 +33,4 @@ func (p *Program) ToFirestoreUpdate() (up []firestore.Update) {
 	}
 
 	return
-}
-
-// UserData is a struct representation of a user document.
-// It provides functions for converting the struct
-// to firebase-digestible types.
-type UserData struct {
-	DisplayName       string   `firestore:"displayName" json:"displayName"`
-	PhotoName         string   `firestore:"photoName" json:"photoName"`
-	MostRecentProgram string   `firestore:"mostRecentProgram" json:"mostRecentProgram"`
-	Programs          []string `firestore:"programs" json:"programs"`
-	Classes           []string `firestore:"classes" json:"classes"`
-}
-
-// ToFirestoreUpdate returns the database update
-// representation of its UserData struct.
-func (u *UserData) ToFirestoreUpdate() []firestore.Update {
-	f := []firestore.Update{
-		{Path: "mostRecentProgram", Value: u.MostRecentProgram},
-		{Path: "programs", Value: u.Programs},
-	}
-	return f
 }
