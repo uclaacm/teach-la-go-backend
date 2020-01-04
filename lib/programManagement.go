@@ -139,7 +139,7 @@ func (h *HandlePrograms) createProgram(body map[string]string) (string, int) {
 		missingFields = append(missingFields, "name")
 	} else if _, err := LanguageCode(language); language == "" || err != nil {
 		missingFields = append(missingFields, "language")
-	} else if thumbnail >= ThumbnailCount { // TODO FIX
+	} else if thumbnail >= ThumbnailCount {
 		missingFields = append(missingFields, "thumbnail")
 	}
 

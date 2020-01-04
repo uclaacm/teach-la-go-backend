@@ -2,7 +2,7 @@ package lib
 
 import (
 	"time"
-	
+
 	"cloud.google.com/go/firestore"
 )
 

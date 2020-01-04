@@ -26,6 +26,9 @@ go get -d ./...
 go build
 ./teach-la-go-backend
 
+# alternatively, run without building the binary
+go run server.go
+
 # run all tests with arguments
 go test ./... -v -args [arguments]
 ```
