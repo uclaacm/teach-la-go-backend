@@ -83,7 +83,7 @@ func (h HandleUsers) ServeHTTP(w http.ResponseWriter, r *http.Request) {
  */
 func (h *HandleUsers) getUserData(uid string) (string, int) {
 	// acquire userdoc corresponding to uid
-	userDoc, err := h.Client.Collection(UserEndpt).Doc(uid).Get(context.Background())
+	userDoc, err := h.Client.Collection(UsersPath).Doc(uid).Get(context.Background())
 
 	// catch document errors.
 	if status.Code(err) == codes.NotFound {
@@ -93,7 +93,7 @@ func (h *HandleUsers) getUserData(uid string) (string, int) {
 	}
 
 	// acquire only desired fields for response.
-	var u UserData
+	var u User
 	if err = userDoc.DataTo(&u); err != nil {
 		return "error occurred in reading document.", http.StatusInternalServerError
 	}
@@ -120,10 +120,10 @@ func (h *HandleUsers) getUserData(uid string) (string, int) {
  */
 func (h *HandleUsers) updateUserData(uid string, bytesBody []byte) (string, int) {
 	// get userDoc
-	userDoc := h.Client.Collection(UserEndpt).Doc(uid)
+	userDoc := h.Client.Collection(UsersPath).Doc(uid)
 
 	// unmarshal into an UserData struct.
-	requestObj := UserData{}
+	requestObj := User{}
 	json.Unmarshal(bytesBody, &requestObj)
 
 	// ensure all fields were filled.
@@ -152,14 +152,14 @@ func (h *HandleUsers) updateUserData(uid string, bytesBody []byte) (string, int)
  * Creates a new user in the database and returns their data.
  */
 func (h *HandleUsers) initializeUserData() (string, int) {
-	newDoc := h.Client.Collection(UserEndpt).NewDoc()
+	newDoc := h.Client.Collection(UsersPath).NewDoc()
 
 	newUser, newProgs := defaultData()
 
 	// create all new programs and associate them to the user.
 	for _, prog := range newProgs {
 		// create program in database.
-		newProg := h.Client.Collection(UserEndpt).NewDoc()
+		newProg := h.Client.Collection(UsersPath).NewDoc()
 		newProg.Set(context.Background(), prog)
 
 		// establish association in user doc.

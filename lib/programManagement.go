@@ -83,7 +83,7 @@ func (h HandlePrograms) ServeHTTP(w http.ResponseWriter, r *http.Request) {
  */
 func (h *HandlePrograms) getProgram(pid string) (string, int) {
 	// acquire program doc corresponding to its ID.
-	progDoc, err := h.Client.Collection(ProgEndpt).Doc(pid).Get(context.Background())
+	progDoc, err := h.Client.Collection(ProgramsPath).Doc(pid).Get(context.Background())
 
 	// catch errors.
 	if !progDoc.Exists() {
@@ -148,7 +148,7 @@ func (h *HandlePrograms) createProgram(body map[string]string) (string, int) {
 	}
 
 	// ensure that corresponding userdoc exists.
-	userDoc := h.Client.Collection(UserEndpt).Doc(uid)
+	userDoc := h.Client.Collection(UsersPath).Doc(uid)
 	userDocSnap, err := userDoc.Get(context.Background())
 	if !userDocSnap.Exists() {
 		return fmt.Sprintf("bad request: user with UID %s does not exist.", uid), http.StatusBadRequest
@@ -171,7 +171,7 @@ func (h *HandlePrograms) createProgram(body map[string]string) (string, int) {
 	}
 
 	// create the new program document.
-	programDoc := h.Client.Collection(ProgEndpt).NewDoc()
+	programDoc := h.Client.Collection(ProgramsPath).NewDoc()
 
 	// write to programDoc and update associated user.
 	if _, err := programDoc.Set(context.Background(), &programData); err != nil {
@@ -209,7 +209,7 @@ func (h *HandlePrograms) createProgram(body map[string]string) (string, int) {
  */
 func (h *HandlePrograms) updatePrograms(pid string, body map[string]Program) (string, int) {
 	// acquire userdoc
-	userDoc := h.Client.Collection(UserEndpt).Doc(pid)
+	userDoc := h.Client.Collection(UsersPath).Doc(pid)
 	userData, err := userDoc.Get(context.Background())
 	if err != nil || !userData.Exists() {
 		return fmt.Sprintf("error: failed to acquire user doc. %s", err), http.StatusInternalServerError
@@ -218,7 +218,7 @@ func (h *HandlePrograms) updatePrograms(pid string, body map[string]Program) (st
 	// merge documents as appropriate.
 	for id, programData := range body {
 		// acquire program doc.
-		programDoc := h.Client.Collection(ProgEndpt).Doc(id)
+		programDoc := h.Client.Collection(ProgramsPath).Doc(id)
 
 		// check for existence.
 		if data, err := programDoc.Get(context.Background()); err != nil || !data.Exists() {
@@ -241,7 +241,7 @@ func (h *HandlePrograms) updatePrograms(pid string, body map[string]Program) (st
  */
 func (h *HandlePrograms) deletePrograms(uid string, pid string) (string, int) {
 	// acquire userdoc
-	userDoc := h.Client.Collection(UserEndpt).Doc(pid)
+	userDoc := h.Client.Collection(UsersPath).Doc(pid)
 	userData, err := userDoc.Get(context.Background())
 	if err != nil {
 		return fmt.Sprintf("error: failed to acquire user doc. %s", err), http.StatusInternalServerError
@@ -253,7 +253,7 @@ func (h *HandlePrograms) deletePrograms(uid string, pid string) (string, int) {
 	}
 
 	// acquire progdoc.
-	progDoc := h.Client.Collection(ProgEndpt).Doc(pid)
+	progDoc := h.Client.Collection(ProgramsPath).Doc(pid)
 	progData, err := progDoc.Get(context.Background())
 	if err != nil {
 		return "error: failed to acquire program doc.", http.StatusInternalServerError

@@ -20,13 +20,17 @@ const (
 	// thumbnails available to choose from.
 	ThumbnailCount = 58
 
-	// ProgEndpt describes the path to the program
-	// management endpoint.
-	ProgEndpt = "programs"
+	// DefaultEnvVar describes the default environment
+	// variable used by the server.
+	DefaultEnvVar = "CFGPATH"
 
-	// UserEndpt describes the path to the user management
+	// ProgramsPath describes the path to the program
+	// management endpoint.
+	ProgramsPath = "programs"
+
+	// UsersPath describes the path to the user management
 	// endpoint
-	UserEndpt = "users"
+	UsersPath = "users"
 )
 
 // LanguageName acquires the name for the language desecribed
@@ -94,14 +98,14 @@ func defaultProgram(languageCode int) (defaultProg Program) {
 // and its associated Programs. Associations
 // between said UserData and Programs are not
 // automatically applied in the database.
-func defaultData() (*UserData, []Program) {
+func defaultData() (User, []Program) {
 	var defaultProgs []Program
 	for k := 0; k < LanguageCount; k++ {
 		defaultProgs = append(defaultProgs, defaultProgram(k))
 	}
 
-	u := UserData{
+	u := User{
 		DisplayName: "J Bruin",
 	}
-	return &u, defaultProgs
+	return u, defaultProgs
 }
