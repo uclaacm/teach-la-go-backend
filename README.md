@@ -25,4 +25,7 @@ go get -d ./...
 # build and run the server
 go build
 ./teach-la-go-backend
+
+# run all tests with arguments
+go test ./... -v -args [arguments]
 ```
