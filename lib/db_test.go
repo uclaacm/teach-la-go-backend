@@ -23,7 +23,11 @@ func TestDB(t *testing.T) {
 	db := dbTester{}
 	db.DB, _ = lib.OpenFromEnv(context.Background())
 
-	t.Run("getUser", db.testGetUser)
+	// run DB.Get tests first to ensure that proceeding
+	// tests function properly.
+	if passed := t.Run("getUser", db.testGetUser) && t.Run("getProgram", db.testGetProgram); !passed {
+		t.Fatal("failed to pass DB.Get tests, terminating early")
+	}
 }
 
 // test that a database client can be opened properly.
@@ -48,18 +52,38 @@ func (d *dbTester) testGetUser(t *testing.T) {
 	// test with nil uid.
 	uid := ""
 	if _, err := d.GetUser(context.Background(), uid); err == nil {
-		t.Errorf("incorrectly successfully returned from nil UID")
+		t.Errorf("incorrectly returned successfully from nil UID")
 	}
 
 	// acquire uid from arguments.
-	uid = os.Args[len(os.Args)-1]
-	t.Logf("trying to open user document with UID %s", uid)
+	uid = os.Args[len(os.Args)-2]
+	t.Logf("trying to open user document with UID '%s'", uid)
 	if uid == "" {
-		t.Fatalf("existing uid not provided, please run tests with `go test -args [existing user uid]`")
+		t.Fatalf("existing uid not provided, please run tests with `go test -args [existing user id] [existing program id]`")
 	}
 
 	// test with provided uid.
 	if _, err := d.GetUser(context.Background(), uid); err != nil {
-		t.Errorf("failed to retrieve user object for assumed real UID %s", uid)
+		t.Errorf("failed to retrieve user object for assumed real UID '%s'. %s", uid, err)
+	}
+}
+
+func (d *dbTester) testGetProgram(t *testing.T) {
+	// test with nil uid.
+	uid := ""
+	if _, err := d.GetProgram(context.Background(), uid); err == nil {
+		t.Errorf("incorrectly returned successfully from nil UID")
+	}
+
+	// acquire uid from arguments.
+	uid = os.Args[len(os.Args)-1]
+	t.Logf("trying to open program document with UID '%s'", uid)
+	if uid == "" {
+		t.Fatalf("existing uid not provided, please run tests with `go test -args [existing user id] [existing program id]`")
+	}
+
+	// test with provided uid.
+	if _, err := d.GetProgram(context.Background(), uid); err != nil {
+		t.Errorf("failed to rerieve program for assumed real UID '%s'. %s", uid, err)
 	}
 }
