@@ -10,7 +10,6 @@ import (
 
 	"./lib"
 	m "./middleware"
-	"./tools"
 )
 
 // PORT defines where we serve the backend.
@@ -20,14 +19,20 @@ func main() {
 	// set up context for main routine.
 	mainContext := context.Background()
 
-	// acquire firestore client.
+	// acquire DB client.
 	// fails early if we cannot acquire one.
-	client := tools.GetDB(&mainContext)
-	defer client.Close()
+	var (
+		d *lib.DB
+		err error
+	)
+	if d, err = lib.OpenFromEnv(context.Background()); err != nil {
+		log.Fatalf("failed to open DB client. %s", err)
+	}
+	defer d.Close()
 
 	// establish handlers.
-	userMgr := lib.HandleUsers{Client: client}
-	progMgr := lib.HandlePrograms{Client: client}
+	userMgr := lib.HandleUsers{Client: d.Client}
+	progMgr := lib.HandlePrograms{Client: d.Client}
 
 	log.Printf("initialized firestore client and route handlers.")
 
