@@ -6,11 +6,12 @@ import "cloud.google.com/go/firestore"
 // It provides functions for converting the struct
 // to firebase-digestible types.
 type User struct {
-	DisplayName       string   `firestore:"displayName" json:"displayName"`
-	PhotoName         string   `firestore:"photoName" json:"photoName"`
-	MostRecentProgram string   `firestore:"mostRecentProgram" json:"mostRecentProgram"`
-	Programs          []string `firestore:"programs" json:"programs"`
 	Classes           []string `firestore:"classes" json:"classes"`
+	DisplayName       string   `firestore:"displayName" json:"displayName"`
+	MostRecentProgram string   `firestore:"mostRecentProgram" json:"mostRecentProgram"`
+	PhotoName         string   `firestore:"photoName" json:"photoName"`
+	Programs          []string `firestore:"programs" json:"programs"`
+	UID               string   `json:"uid"`
 }
 
 // ToFirestoreUpdate returns the database update

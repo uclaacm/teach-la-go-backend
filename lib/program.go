@@ -8,11 +8,12 @@ import (
 
 // Program is a representation of a program document.
 type Program struct {
-	Code        string    `json:"code" firestore:"code"`
-	DateCreated time.Time `json:"dateCreated" firestore:"dateCreated"`
-	Language    string    `json:"language" firestore:"language"`
-	Name        string    `json:"name" firestore:"name"`
-	Thumbnail   int64     `json:"thumbnail" firestore:"thumbnail"`
+	Code        string    `firestore:"code" json:"code"`
+	DateCreated time.Time `firestore:"dateCreated" json:"dateCreated"`
+	Language    string    `firestore:"language" json:"language"`
+	Name        string    `firestore:"name" json:"name"`
+	Thumbnail   int64     `firestore:"thumbnail" json:"thumbnail"`
+	UID         string    `json:"uid"`
 }
 
 // ToFirestoreUpdate returns the []firestore.Update representation

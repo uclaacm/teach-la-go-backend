@@ -42,11 +42,12 @@ func OpenFromEnv(ctx context.Context) (*DB, error) {
 }
 
 // CreateUser creates the default user and program documents,
-// then returns the uid for said user.
-func (d *DB) CreateUser(ctx context.Context) (string, error) {
+// then returns the object for said User.
+func (d *DB) CreateUser(ctx context.Context) (*User, error) {
 	doc := d.Collection(UsersPath).NewDoc()
 
 	newUser, newProgs := defaultData()
+	newUser.UID = doc.ID
 
 	// create all new programs and associate them to the user.
 	for _, prog := range newProgs {
@@ -60,7 +61,7 @@ func (d *DB) CreateUser(ctx context.Context) (string, error) {
 
 	// create user doc.
 	_, err := doc.Set(ctx, newUser)
-	return doc.ID, err
+	return &newUser, err
 }
 
 // GetUser returns a user document in struct form,
@@ -71,7 +72,7 @@ func (d *DB) GetUser(ctx context.Context, uid string) (*User, error) {
 		return nil, err
 	}
 
-	u := &User{}
+	u := &User{UID: uid}
 	return u, doc.DataTo(u)
 }
 
@@ -104,7 +105,7 @@ func (d *DB) GetProgram(ctx context.Context, uid string) (*Program, error) {
 		return nil, err
 	}
 
-	p := &Program{}
+	p := &Program{UID: uid}
 	return p, doc.DataTo(p)
 }
 
