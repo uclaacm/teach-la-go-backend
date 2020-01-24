@@ -29,23 +29,19 @@ func main() {
 		log.Fatalf("failed to open DB client. %s", err)
 	}
 	defer d.Close()
+	log.Printf("initialized database client")
 
 	// establish handlers.
-	userMgr := lib.HandleUsers{Client: d.Client}
 	progMgr := lib.HandlePrograms{Client: d.Client}
 
-	log.Printf("initialized firestore client and route handlers.")
 
 	// set up multiplexer.
 	router := http.NewServeMux()
-	log.Printf("multiplexer initialized.")
 
 	// user management
-	userCORS := m.CORSConfig{
-		AllowedHeaders: []string{"Content-Type"},
-		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut},
-	}
-	router.Handle("/userData/", m.WithCORSConfig(userMgr, userCORS))
+	router.HandleFunc("/getUser/", d.HandleGetUser)
+	router.HandleFunc("/updateUser/", d.HandleUpdateUser)
+	router.HandleFunc("/createUser/", d.HandleInitializeUser)
 
 	// program management
 	progCORS := m.CORSConfig{
