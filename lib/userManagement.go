@@ -10,14 +10,19 @@ import (
 
 /**
  * getUserData
- * Parameters:
- * {
- *     uid: ...
- * }
- *
- * Returns: Status 200 with marshalled User object.
- *
  * Acquire the userdoc with the given uid.
+ *
+ * Query Parameters:
+ *  - id string: ID of user to get
+ *  - programs bool: whether to include user's programs in response.
+ *
+ * Returns: Status 200 with marshalled User and optional programs.
+ *
+ * Example Response:
+ * {
+ *   "userData": [User object]
+ *   "programs": [array of Program objects]
+ * }
  */
 func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -25,20 +30,17 @@ func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 		userJSON []byte
 		err error
 	)
+	
+	query := r.URL.Query()
 
 	// if the current request does not have an User struct
 	// in its context (e.g. referred from createUser), then
 	// acquire the User struct assuming the uid was provided
 	// in the request body.
 	if ctxUser := r.Context().Value("user"); ctxUser == nil {
-		// attempt to acquire UID from request body.
-		if err := t.RequestBodyTo(r, u); err != nil {
-			http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
-			return
-		}
-
-		// attempt to get the complete user struct.
-		u, err = d.GetUser(r.Context(), u.UID)
+		// attempt to get the complete user struct using URL
+		// params.
+		u, err = d.GetUser(r.Context(), query.Get("id"))
 		if err != nil {
 			http.Error(w, "error occurred in reading document.", http.StatusInternalServerError)
 			return
@@ -49,8 +51,30 @@ func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 		u = ctxUser.(*User)
 	}
 
+	// response structure
+	resp := struct {
+		UserData *User `json:"userData"`
+		Programs []Program `json:"programs"`
+	}{UserData: u}
+
+	// retrieve user's program information if requested.
+	if query.Get("programs") == "true" {
+		// get all the programs for the user.
+		for _, pid := range u.Programs {
+			// attempt to get program, failing if we cannot.
+			p, err := d.GetProgram(r.Context(), pid)
+			if err != nil {
+				http.Error(w, "error occurred in retrieving programs.", http.StatusInternalServerError)
+				return
+			}
+
+			// append to response.
+			resp.Programs = append(resp.Programs, *p)
+		}
+	}
+
 	// convert to JSON.
-	if userJSON, err = json.Marshal(u); err != nil {
+	if userJSON, err = json.MarshalIndent(resp, "", "    "); err != nil {
 		http.Error(w, "error occurred in writing response.", http.StatusInternalServerError)
 		return
 	}
