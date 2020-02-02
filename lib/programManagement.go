@@ -15,6 +15,59 @@ import (
 )
 
 /**
+ * getProgram
+ * Parameters:
+ * {
+ *     uid: ...
+ * }
+ *
+ * Returns: Status 200 with marshalled Program object.
+ *
+ * Acquire the program doc with the given uid.
+ */
+
+ func (d *DB) HandleGetProgram(w httpResponseWriter, r http.Request) {
+	var (
+		p *Program
+		progJSON []byte
+		err error
+	)
+
+	// if the current request does not have an Program struct
+	// in its context (e.g. referred from createProgram), then
+	// acquire the Program struct assuming the uid was provided
+	// in the request body.
+	if ctxProgram := r.Context().Value("program"); ctxProgram == nil {
+		// attempt to acquire UID from request body.
+		if err := t.RequestBodyTo(r, p); err != nil {
+			http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
+			return
+		}
+
+		// attempt to get the complete program struct.
+		p, err = d.GetProgram(r.Context(), p.UID)
+		if err != nil {
+			http.Error(w, "error occurred in reading document.", http.StatusInternalServerError)
+			return
+		}
+	} else if _, isProgram := ctxProgram.(*Program); isProgram {
+		// otherwise, the current request has a Program struct in its context.
+		// proceed with that program.
+		p = ctxProgram.(*Program)
+	}
+
+	// convert to JSON.
+	if progJSON, err = json.Marshal(p); err != nil {
+		http.Error(w, "error occurred in writing response.", http.StatusInternalServerError)
+		return
+	}
+
+	// return the user data as JSON.
+	w.Write(progJSON)
+ }
+
+
+/**
  * initializeProgramData
  * Parameters: none
  *
