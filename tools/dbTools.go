@@ -1,8 +1,8 @@
 package tools
 
 import (
+	"../logger"
 	"context"
-	"log"
 	"os"
 
 	"cloud.google.com/go/firestore"
@@ -19,22 +19,22 @@ func GetDB(ctx *context.Context) (client *firestore.Client) {
 
 	// check, using os.Stat(), that the file exists. If it does not exist, fail.
 	if _, err := os.Stat(configPath); err != nil {
-		log.Fatalf("could not find firebase config file! Did you set your CFGPATH variable? %s", err)
+		logger.Fatalf("could not find firebase config file! Did you set your CFGPATH variable? %s", err)
 	}
-	log.Printf("using application credentials located at %s", configPath)
+	logger.Debugf("using application credentials located at %s", configPath)
 
 	// set up the app through which our client will be
 	// acquired.
 	opt := option.WithCredentialsFile(configPath)
 	app, err := firebase.NewApp(*ctx, nil, opt)
 	if err != nil {
-		log.Fatalf("failed to create client: %s", err)
+		logger.Fatalf("failed to create client: %s", err)
 	}
 
 	// acquire the firestore client, fail if we cannot.
 	client, err = app.Firestore(*ctx)
 	if err != nil {
-		log.Fatalf("failed to create client: %s", err)
+		logger.Fatalf("failed to create client: %s", err)
 	}
 
 	// naked return of client if successful.

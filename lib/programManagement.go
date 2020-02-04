@@ -1,11 +1,11 @@
 package lib
 
 import (
+	"../logger"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -66,7 +66,7 @@ func (h HandlePrograms) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// log only if an error occurred.
 	if code != http.StatusOK {
-		log.Println(response)
+		logger.Errorf(response)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -95,14 +95,14 @@ func (h *HandlePrograms) getProgram(pid string) (string, int) {
 	// move doc data to struct representation.
 	var p Program
 	if err = progDoc.DataTo(&p); err != nil {
-		log.Printf("error occurred in writing document to %T struct: %s", p, err)
+		logger.Errorf("failed writing document to %T struct: %s", p, err)
 		return "error occurred in document retrieval.", http.StatusInternalServerError
 	}
 
 	// move to JSON.
 	var progJSON []byte
 	if progJSON, err = json.Marshal(p); err != nil {
-		log.Printf("failed marshalling struct to JSON: %s", err)
+		logger.Errorf("failed marshalling struct to JSON: %s", err)
 		return "error occurred in document retrieval.", http.StatusInternalServerError
 	}
 
@@ -181,7 +181,7 @@ func (h *HandlePrograms) createProgram(body map[string]string) (string, int) {
 		return fmt.Sprintf("error: failed to update user document. %s", err), http.StatusInternalServerError
 	}
 
-	log.Printf("created new program doc {%s} associated to user {%s}.", programDoc.ID, uid)
+	logger.Debugf("created new program doc {%s} associated to user {%s}.", programDoc.ID, uid)
 
 	// write response, return OK if nominal.
 	response := map[string]interface{}{

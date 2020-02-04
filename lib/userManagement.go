@@ -1,11 +1,11 @@
 package lib
 
 import (
+	"../logger"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"cloud.google.com/go/firestore"
@@ -34,11 +34,11 @@ func (h HandleUsers) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 	body := make(map[string]string)
 	if bytesBody, err = ioutil.ReadAll(r.Body); err != nil {
-		log.Printf("error: failed to read request body.")
+		logger.Errorf("failed to read request body.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else if err := json.Unmarshal(bytesBody, &body); len(bytesBody) > 0 && err != nil {
-		log.Printf("error: failed to marshal request body. %s", err)
+		logger.Errorf("failed to marshal request body. %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -67,7 +67,7 @@ func (h HandleUsers) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// handle errors.
 	if code != http.StatusOK {
-		log.Println(response)
+		logger.Errorf(response)
 	}
 
 	w.WriteHeader(code)
