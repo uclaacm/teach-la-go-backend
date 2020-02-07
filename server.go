@@ -22,7 +22,7 @@ func main() {
 	// acquire DB client.
 	// fails early if we cannot acquire one.
 	var (
-		d *lib.DB
+		d   *lib.DB
 		err error
 	)
 	if d, err = lib.OpenFromEnv(context.Background()); err != nil {
@@ -31,24 +31,19 @@ func main() {
 	defer d.Close()
 	log.Printf("initialized database client")
 
-	// establish handlers.
-	progMgr := lib.HandlePrograms{Client: d.Client}
-
-
 	// set up multiplexer.
 	router := http.NewServeMux()
 
 	// user management
-	router.HandleFunc("/getUser/", d.HandleGetUser)
-	router.HandleFunc("/updateUser/", d.HandleUpdateUser)
-	router.HandleFunc("/createUser/", d.HandleInitializeUser)
+	router.HandleFunc("/user/get", d.HandleGetUser)
+	router.HandleFunc("/user/update", d.HandleUpdateUser)
+	router.HandleFunc("/user/create", d.HandleInitializeUser)
 
 	// program management
-	progCORS := m.CORSConfig{
-		AllowedHeaders: []string{"Content-Type"},
-		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
-	}
-	router.Handle("/programs/", m.WithCORSConfig(progMgr, progCORS))
+	router.HandleFunc("/program/get", d.HandleGetProgram)
+	router.HandleFunc("/program/update", d.HandleUpdateProgram)
+	router.HandleFunc("/program/create", d.HandleInitializeProgram)
+	router.HandleFunc("/program/delete", d.HandleDeleteProgram)
 
 	// fallback route
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
