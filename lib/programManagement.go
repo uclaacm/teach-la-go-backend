@@ -3,15 +3,15 @@ package lib
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"log"
+	//"fmt"
+	//"io/ioutil"
+	//"log"
 	"net/http"
-	"strconv"
+	//"strconv"
 
 	t "../tools"
 
-	"cloud.google.com/go/firestore"
+	//"cloud.google.com/go/firestore"
 )
 
 /**
@@ -26,7 +26,7 @@ import (
  * Acquire the program doc with the given uid.
  */
 
- func (d *DB) HandleGetProgram(w httpResponseWriter, r http.Request) {
+ func (d *DB) HandleGetProgram(w http.ResponseWriter, r *http.Request) {
 	var (
 		p *Program
 		progJSON []byte
@@ -137,8 +137,9 @@ import (
  */
  func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
 
-	if _,err = d.getProgram(r.Context(), r.Context().Value("pid"))
-
+	//if _,err = d.getProgram(r.Context(), r.Context().Value("pid"))
+	var pr = Program{}
+	p := &pr
 	// if the current request does not have an Program struct
 	// in its context, then acquire the Program struct assuming 
 	// the uid was provided in the request body.
@@ -151,7 +152,7 @@ import (
 		}
 
 		// attempt to get the complete program struct.
-		p, err = d.GetProgram(r.Context(), p.UID)
+		_, err := d.GetProgram(r.Context(), p.UID)
 		if err != nil {
 			http.Error(w, "error occurred in reading document.", http.StatusInternalServerError)
 			return
@@ -164,5 +165,5 @@ import (
 		p = ctxProgram.(*Program)
 	}
 
-	d.deleteProgram(r.Context(), p.uid)
+	d.DeleteProgram(r.Context(), p.UID)
  }
