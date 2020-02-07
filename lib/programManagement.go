@@ -3,15 +3,9 @@ package lib
 import (
 	"context"
 	"encoding/json"
-	//"fmt"
-	//"io/ioutil"
-	//"log"
 	"net/http"
-	//"strconv"
 
 	t "../tools"
-
-	//"cloud.google.com/go/firestore"
 )
 
 /**
@@ -25,12 +19,11 @@ import (
  *
  * Acquire the program doc with the given uid.
  */
-
- func (d *DB) HandleGetProgram(w http.ResponseWriter, r *http.Request) {
+func (d *DB) HandleGetProgram(w http.ResponseWriter, r *http.Request) {
 	var (
-		p *Program
+		p        *Program
 		progJSON []byte
-		err error
+		err      error
 	)
 
 	// if the current request does not have an Program struct
@@ -64,8 +57,7 @@ import (
 
 	// return the user data as JSON.
 	w.Write(progJSON)
- }
-
+}
 
 /**
  * initializeProgramData
@@ -75,15 +67,15 @@ import (
  *
  * Creates a new user in the database and returns their data.
  */
- func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
-	 // unmarshal request body into an Program struct.
+func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
+	// unmarshal request body into an Program struct.
 	requestObj := Program{}
 	if err := t.RequestBodyTo(r, &requestObj); err != nil {
 		http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
 		return
 	}
 	// put program struct into db
-	p, err := d.CreateProgram(r.Context(), &requestObj) 
+	p, err := d.CreateProgram(r.Context(), &requestObj)
 	if err != nil {
 		http.Error(w, "failed to initialize program data.", http.StatusInternalServerError)
 		return
@@ -93,7 +85,6 @@ import (
 	ctx := context.WithValue(r.Context(), "program", p)
 	d.HandleGetProgram(w, r.WithContext(ctx))
 }
-
 
 /**
  * updateProgramData
@@ -107,7 +98,7 @@ import (
  * Merges the JSON passed to it in the request body
  * with program uid.
  */
- func (d *DB) HandleUpdateProgram(w http.ResponseWriter, r *http.Request) {
+func (d *DB) HandleUpdateProgram(w http.ResponseWriter, r *http.Request) {
 	// unmarshal request body into an Program struct.
 	requestObj := Program{}
 	if err := t.RequestBodyTo(r, &requestObj); err != nil {
@@ -133,37 +124,21 @@ import (
  * }
  *
  *
- * Deletes the program identified by {pid}. Did not make {uid} required. 
+ * Deletes the program identified by {pid}. Did not make {uid} required.
  */
- func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
+func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
+	pr := &Program{}
 
-	//if _,err = d.getProgram(r.Context(), r.Context().Value("pid"))
-	var pr = Program{}
-	p := &pr
-	// if the current request does not have an Program struct
-	// in its context, then acquire the Program struct assuming 
-	// the uid was provided in the request body.
-	if ctxProgram := r.Context().Value("program"); ctxProgram == nil {
-		// program does not exist
-		// attempt to acquire UID from request body.
-		if err := t.RequestBodyTo(r, p); err != nil {
-			http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
-			return
-		}
-
-		// attempt to get the complete program struct.
-		_, err := d.GetProgram(r.Context(), p.UID)
-		if err != nil {
-			http.Error(w, "error occurred in reading document.", http.StatusInternalServerError)
-			return
-		}
-
-	} else if _, isProgram := ctxProgram.(*Program); isProgram {
-		// program does exist
-		// otherwise, the current request has a Program struct in its context.
-		// proceed with that program.
-		p = ctxProgram.(*Program)
+	// acquire PID from request body.
+	if err := t.RequestBodyTo(r, pr); err != nil {
+		http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
+		return
 	}
 
-	d.DeleteProgram(r.Context(), p.UID)
- }
+	// try to delete the program, throwing error if
+	// does not exist or deletion fails.
+	if err := d.DeleteProgram(r.Context(), pr.UID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
