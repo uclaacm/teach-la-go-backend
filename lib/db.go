@@ -93,6 +93,8 @@ func (d *DB) UpdateUser(ctx context.Context, uid string, u *User) error {
 func (d *DB) CreateProgram(ctx context.Context, p *Program) (string, error) {
 	doc := d.Collection(ProgramsPath).NewDoc()
 
+	// update UID to match, then update doc.
+	p.UID = doc.ID
 	_, err := doc.Set(ctx, *p)
 	return doc.ID, err
 }
