@@ -10,85 +10,110 @@ import (
 
 /**
  * getProgram
- * Parameters:
- * {
- *     uid: ...
- * }
+ * Query parameters: programId
  *
- * Returns: Status 200 with marshalled Program object.
- *
- * Acquire the program doc with the given uid.
+ * Returns: Status 200 with a marshalled Program struct.
  */
 func (d *DB) HandleGetProgram(w http.ResponseWriter, r *http.Request) {
-	var (
-		p        *Program
-		progJSON []byte
-		err      error
-	)
+	var pid string
 
-	// if the current request does not have an Program struct
-	// in its context (e.g. referred from createProgram), then
-	// acquire the Program struct assuming the uid was provided
-	// in the request body.
-	if ctxProgram := r.Context().Value("program"); ctxProgram == nil {
-		// attempt to acquire UID from request body.
-		if err := t.RequestBodyTo(r, p); err != nil {
-			http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
-			return
-		}
-
-		// attempt to get the complete program struct.
-		p, err = d.GetProgram(r.Context(), p.UID)
-		if err != nil {
-			http.Error(w, "error occurred in reading document.", http.StatusInternalServerError)
-			return
-		}
-	} else if _, isProgram := ctxProgram.(*Program); isProgram {
-		// otherwise, the current request has a Program struct in its context.
-		// proceed with that program.
-		p = ctxProgram.(*Program)
+	// attempt to acquire program from request context.
+	// if missing, then check query parameters.
+	if ctxID, ok := r.Context().Value("getProgram").(string); ok {
+		pid = ctxID
+	} else {
+		pid = r.URL.Query().Get("programId")
 	}
 
-	// convert to JSON.
-	if progJSON, err = json.Marshal(p); err != nil {
-		http.Error(w, "error occurred in writing response.", http.StatusInternalServerError)
+	// attempt to acquire doc.
+	p, err := d.GetProgram(r.Context(), pid)
+
+	// check that the pid is present and that the program exists.
+	if err != nil || p == nil {
+		http.Error(w, "program does not exist.", http.StatusNotFound)
 		return
 	}
 
-	// return the user data as JSON.
-	w.Write(progJSON)
+	// otherwise, return the marshalled program.
+	if resp, err := json.Marshal(&p); err != nil {
+		http.Error(w, "failed to marshal response.", http.StatusInternalServerError)
+	} else {
+		w.Write(resp)
+	}
 }
 
 /**
  * initializeProgramData
- * Parameters: none
+ * Body:
+ * {
+ *   uid: UID for the user the program belongs to
+ *   thumbnail: index of desired thumbnail
+ *   language: language string
+ *   name: name of program
+ *   code: [optional code for program]
+ * }
  *
  * Returns: Status 200 with a marshalled User struct.
  *
- * Creates a new user in the database and returns their data.
+ * Creates a new program in the database and returns its data.
  */
 func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
-	// unmarshal request body into an Program struct.
-	requestObj := Program{}
-	if err := t.RequestBodyTo(r, &requestObj); err != nil {
-		http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
-		return
-	}
-	// put program struct into db
-	p, err := d.CreateProgram(r.Context(), &requestObj)
-	if err != nil {
-		http.Error(w, "failed to initialize program data.", http.StatusInternalServerError)
+	var (
+		langCode int
+		err      error
+	)
+
+	// unmarshal request body into a struct matching
+	// what we expect.
+	requestBody := Program{}
+	if err := t.RequestBodyTo(r, &requestBody); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// check that language exists.
+	if langCode, err = LanguageCode(requestBody.Language); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// check that user exists.
+	u, err := d.GetUser(r.Context(), requestBody.UID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// thumbnail should be within range.
+	if requestBody.Thumbnail > ThumbnailCount || requestBody.Thumbnail < 0 {
+		http.Error(w, "thumbnail index out of bounds.", http.StatusBadRequest)
+		return
+	}
+
+	// add default code if none provided.
+	if requestBody.Code == "" {
+		requestBody.Code = defaultProgram(langCode).Code
+	}
+
+	// create the program doc.
+	p, err := d.CreateProgram(r.Context(), &requestBody)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// associate program to user.
+	u.AddProgram(p)
+	d.UpdateUser(r.Context(), u.UID, u)
+
 	// pass control to getProgramData.
-	ctx := context.WithValue(r.Context(), "program", p)
+	ctx := context.WithValue(r.Context(), "getProgram", p)
 	d.HandleGetProgram(w, r.WithContext(ctx))
 }
 
 /**
  * updateProgramData
- * Parameters:
+ * Body:
  * {
  *     [Program object]
  * }
@@ -118,27 +143,37 @@ func (d *DB) HandleUpdateProgram(w http.ResponseWriter, r *http.Request) {
 
 /**
  * deleteProgram
- * Parameters:
- * {
- *     pid: ...
- * }
+ * Query parameters: uid, pid
  *
- *
- * Deletes the program identified by {pid}. Did not make {uid} required.
+ * Deletes the program identified by {pid} from user {uid}.
  */
 func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
-	pr := &Program{}
+	// acquire parameters.
+	uid := r.URL.Query().Get("userId")
+	pid := r.URL.Query().Get("programId")
 
-	// acquire PID from request body.
-	if err := t.RequestBodyTo(r, pr); err != nil {
-		http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
+	var (
+		u   *User
+		err error
+	)
+
+	// attempt to acquire user doc.
+	if u, err = d.GetUser(r.Context(), uid); err != nil {
+		http.Error(w, "user doc does not exist.", http.StatusNotFound)
 		return
 	}
 
-	// try to delete the program, throwing error if
-	// does not exist or deletion fails.
-	if err := d.DeleteProgram(r.Context(), pr.UID); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	// attempt to delete program doc.
+	if err = d.DeleteProgram(r.Context(), pid); err != nil {
+		http.Error(w, "failed to delete program doc.", http.StatusInternalServerError)
 		return
 	}
+
+	// remove program from user's array, then return.
+	if err = u.RemoveProgram(pid); err != nil {
+		http.Error(w, "failed to dissociate program from user doc.", http.StatusInternalServerError)
+		return
+	}
+	d.UpdateUser(r.Context(), uid, u)
+	w.WriteHeader(http.StatusOK)
 }
