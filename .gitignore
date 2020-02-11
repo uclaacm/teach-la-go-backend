@@ -11,5 +11,8 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+#secrets
+*.env
+
 # Output binary
 teach-la-go-backend
