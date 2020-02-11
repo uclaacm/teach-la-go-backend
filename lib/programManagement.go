@@ -103,8 +103,11 @@ func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// associate program to user.
-	u.AddProgram(p)
-	d.UpdateUser(r.Context(), u.UID, u)
+	if err = d.AddProgramToUser(r. Context(), u.UID, p); err != nil{
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	//d.UpdateUser(r.Context(), u.UID, u)
 
 	// pass control to getProgramData.
 	ctx := context.WithValue(r.Context(), "getProgram", p)
@@ -153,15 +156,11 @@ func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
 	pid := r.URL.Query().Get("programId")
 
 	var (
-		u   *User
+		// u   *User
 		err error
 	)
 
-	// attempt to acquire user doc.
-	if u, err = d.GetUser(r.Context(), uid); err != nil {
-		http.Error(w, "user doc does not exist.", http.StatusNotFound)
-		return
-	}
+	//TODO: Make this handler atomic
 
 	// attempt to delete program doc.
 	if err = d.DeleteProgram(r.Context(), pid); err != nil {
@@ -169,11 +168,11 @@ func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// remove program from user's array, then return.
-	if err = u.RemoveProgram(pid); err != nil {
-		http.Error(w, "failed to dissociate program from user doc.", http.StatusInternalServerError)
+	// Remove this program from the user's list
+	if err = d.DeleteProgramFromUser(r.Context(), uid, pid); err != nil {
+		http.Error(w, "failed updating user's program list.", http.StatusInternalServerError)
 		return
 	}
-	d.UpdateUser(r.Context(), uid, u)
+
 	w.WriteHeader(http.StatusOK)
 }

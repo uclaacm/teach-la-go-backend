@@ -67,6 +67,7 @@ func (u *User) AddProgram(pid string) {
 	u.Programs = append(u.Programs, pid)
 }
 
+// DEPRICATED: No longer used
 // RemoveProgram removes the program identified from the User's
 // array.
 func (u *User) RemoveProgram(pid string) error {

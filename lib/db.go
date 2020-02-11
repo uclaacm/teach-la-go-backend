@@ -86,6 +86,35 @@ func (d *DB) UpdateUser(ctx context.Context, uid string, u *User) error {
 	return err
 }
 
+// DeleteProgramFromUser takes a uid and a pid, 
+// and deletes the pid from the User with the given uid
+func (d *DB) DeleteProgramFromUser(ctx context.Context, uid string, pid string) error {
+	
+	//get the user doc
+	doc := d.Collection(UsersPath).Doc(uid)
+
+	_, err := doc.Update(ctx, []firestore.Update{
+		{Path: "programs", Value: firestore.ArrayRemove(pid)},
+	})
+
+	return err
+}
+
+// AddProgramToUser takes a uid and a pid, 
+// and adds the pid to the user's list of programs
+func (d *DB) AddProgramToUser(ctx context.Context, uid string, pid string) error {
+
+	//get the user doc
+	doc := d.Collection(UsersPath).Doc(uid) 
+
+	_, err := doc.Update(ctx, []firestore.Update{
+		{Path: "programs", Value: firestore.ArrayUnion(pid)},
+	})
+
+	return err
+
+}
+
 // CreateProgram creates a new program document to match
 // the provided struct.
 // The program's UID is returned with an error, should one
