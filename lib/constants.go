@@ -86,6 +86,7 @@ func defaultProgram(languageCode int) (defaultProg Program) {
 		return
 	}
 
+	//defaultProg.UID = uid
 	defaultProg.Code = defaultCode
 	defaultProg.Language, _ = LanguageName(languageCode)
 	defaultProg.DateCreated = time.Now().UTC()
@@ -105,7 +106,8 @@ func defaultData() (User, []Program) {
 	}
 
 	u := User{
-		DisplayName: "J Bruin",
+		DisplayName: 	"J Bruin",
+		//UID:			uid,
 	}
 	return u, defaultProgs
 }

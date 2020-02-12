@@ -14,6 +14,7 @@ type Program struct {
 	Name        string    `firestore:"name" json:"name"`
 	Thumbnail   int64     `firestore:"thumbnail" json:"thumbnail"`
 	UID         string    `json:"uid"`
+//	PID			string	  `json:"pid"`
 }
 
 // ToFirestoreUpdate returns the []firestore.Update representation

@@ -44,8 +44,10 @@ func OpenFromEnv(ctx context.Context) (*DB, error) {
 // CreateUser creates the default user and program documents,
 // then returns the object for said User.
 func (d *DB) CreateUser(ctx context.Context) (*User, error) {
+	// create new doc for user
 	doc := d.Collection(UsersPath).NewDoc()
 
+	// create structures to be used as default data
 	newUser, newProgs := defaultData()
 	newUser.UID = doc.ID
 
@@ -119,11 +121,13 @@ func (d *DB) AddProgramToUser(ctx context.Context, uid string, pid string) error
 // the provided struct.
 // The program's UID is returned with an error, should one
 // occur.
-func (d *DB) CreateProgram(ctx context.Context, p *Program) (string, error) {
+func (d *DB) CreateProgram(ctx context.Context, p *Program/*, uid string*/) (string, error) {
 	doc := d.Collection(ProgramsPath).NewDoc()
 
 	// update UID to match, then update doc.
 	p.UID = doc.ID
+	//p.PID = doc.ID
+	//p.UID = uid
 	_, err := doc.Set(ctx, *p)
 	return doc.ID, err
 }
