@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,6 +10,7 @@ import (
 	"./lib"
 	m "./middleware"
 	"./tools"
+	log "github.com/lumisphere902/gologger"
 )
 
 // PORT defines where we serve the backend.
@@ -29,11 +29,11 @@ func main() {
 	userMgr := lib.HandleUsers{Client: client}
 	progMgr := lib.HandlePrograms{Client: client}
 
-	log.Printf("initialized firestore client and route handlers.")
+	log.Debugf("initialized firestore client and route handlers.")
 
 	// set up multiplexer.
 	router := http.NewServeMux()
-	log.Printf("multiplexer initialized.")
+	log.Debugf("multiplexer initialized.")
 
 	// user management
 	userCORS := m.CORSConfig{
@@ -54,7 +54,7 @@ func main() {
 		http.Error(w, "", http.StatusNotFound)
 	})
 
-	log.Printf("endpoints initialized.")
+	log.Debugf("endpoints initialized.")
 
 	// server configuration
 	s := &http.Server{
@@ -70,13 +70,13 @@ func main() {
 	kill := make(chan os.Signal, 1)
 	signal.Notify(kill, os.Interrupt)
 	go func() {
-		log.Printf("serving on %s", PORT)
-		log.Fatal(s.ListenAndServe())
+		log.Debugf("serving on %s", PORT)
+		log.Fatalln(s.ListenAndServe())
 	}()
 
 	// wait for system interrupt to call shutdown on the server.
 	<-kill
-	log.Printf("received kill signal, attempting to gracefully shut down.")
+	log.Debugf("received kill signal, attempting to gracefully shut down.")
 
 	// server has 10 seconds from interrupt to gracefully shutdown.
 	timeout, terminate := context.WithDeadline(mainContext, time.Now().Add(10*time.Second))

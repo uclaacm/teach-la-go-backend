@@ -2,11 +2,11 @@ package tools
 
 import (
 	"context"
-	"log"
 	"os"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
+	log "github.com/lumisphere902/gologger"
 	"google.golang.org/api/option"
 )
 
@@ -21,7 +21,7 @@ func GetDB(ctx *context.Context) (client *firestore.Client) {
 	if _, err := os.Stat(configPath); err != nil {
 		log.Fatalf("could not find firebase config file! Did you set your CFGPATH variable? %s", err)
 	}
-	log.Printf("using application credentials located at %s", configPath)
+	log.Debugf("using application credentials located at %s", configPath)
 
 	// set up the app through which our client will be
 	// acquired.

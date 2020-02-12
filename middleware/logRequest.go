@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
+
+	log "github.com/lumisphere902/gologger"
 )
 
 // LogRequest automatically logs all relevant information about a request object

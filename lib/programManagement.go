@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 
 	"cloud.google.com/go/firestore"
+	log "github.com/lumisphere902/gologger"
 )
 
 // HandlePrograms manages all requests pertaining to
@@ -66,7 +66,7 @@ func (h HandlePrograms) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// log only if an error occurred.
 	if code != http.StatusOK {
-		log.Println(response)
+		log.Errorf(response)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -95,14 +95,14 @@ func (h *HandlePrograms) getProgram(pid string) (string, int) {
 	// move doc data to struct representation.
 	var p Program
 	if err = progDoc.DataTo(&p); err != nil {
-		log.Printf("error occurred in writing document to %T struct: %s", p, err)
+		log.Errorf("Failed to write document to %T struct: %s", p, err)
 		return "error occurred in document retrieval.", http.StatusInternalServerError
 	}
 
 	// move to JSON.
 	var progJSON []byte
 	if progJSON, err = json.Marshal(p); err != nil {
-		log.Printf("failed marshalling struct to JSON: %s", err)
+		log.Errorf("failed marshalling struct to JSON: %s", err)
 		return "error occurred in document retrieval.", http.StatusInternalServerError
 	}
 
@@ -129,7 +129,7 @@ func (h *HandlePrograms) createProgram(body map[string]string) (string, int) {
 	language := body["language"]
 	thumbnail, err := strconv.ParseInt(body["thumbnail"], 10, 64)
 	if err != nil {
-		return fmt.Sprintf("error: improper thumbnail value."), http.StatusBadRequest
+		return fmt.Sprintf("improper thumbnail value"), http.StatusBadRequest
 	}
 
 	var missingFields []string
@@ -144,16 +144,16 @@ func (h *HandlePrograms) createProgram(body map[string]string) (string, int) {
 	}
 
 	if len(missingFields) != 0 {
-		return fmt.Sprintf("error: request missing valid %s fields.", missingFields), http.StatusBadRequest
+		return fmt.Sprintf("request missing valid %s fields.", missingFields), http.StatusBadRequest
 	}
 
 	// ensure that corresponding userdoc exists.
 	userDoc := h.Client.Collection(UsersPath).Doc(uid)
 	userDocSnap, err := userDoc.Get(context.Background())
 	if !userDocSnap.Exists() {
-		return fmt.Sprintf("bad request: user with UID %s does not exist.", uid), http.StatusBadRequest
+		return fmt.Sprintf("user with UID %s does not exist.", uid), http.StatusBadRequest
 	} else if err != nil {
-		return fmt.Sprintf("error: failed to acquire userdoc. %s", err), http.StatusBadRequest
+		return fmt.Sprintf("failed to acquire userdoc. %s", err), http.StatusBadRequest
 	}
 
 	// initialize a program to match params supplied,
@@ -175,13 +175,13 @@ func (h *HandlePrograms) createProgram(body map[string]string) (string, int) {
 
 	// write to programDoc and update associated user.
 	if _, err := programDoc.Set(context.Background(), &programData); err != nil {
-		return fmt.Sprintf("error: failed to write to new program document. %s", err), http.StatusInternalServerError
+		return fmt.Sprintf("failed to write to new program document. %s", err), http.StatusInternalServerError
 	}
 	if _, err := userDoc.Update(context.Background(), []firestore.Update{{Path: "programs", Value: firestore.ArrayUnion(programDoc.ID)}}); err != nil {
-		return fmt.Sprintf("error: failed to update user document. %s", err), http.StatusInternalServerError
+		return fmt.Sprintf("failed to update user document. %s", err), http.StatusInternalServerError
 	}
 
-	log.Printf("created new program doc {%s} associated to user {%s}.", programDoc.ID, uid)
+	log.Debugf("created new program doc {%s} associated to user {%s}.", programDoc.ID, uid)
 
 	// write response, return OK if nominal.
 	response := map[string]interface{}{
@@ -192,7 +192,7 @@ func (h *HandlePrograms) createProgram(body map[string]string) (string, int) {
 		return string(updateData), http.StatusOK
 	}
 
-	return "error: failed to marshal createProgram response.", http.StatusInternalServerError
+	return "failed to marshal createProgram response.", http.StatusInternalServerError
 }
 
 /**
@@ -212,7 +212,7 @@ func (h *HandlePrograms) updatePrograms(pid string, body map[string]Program) (st
 	userDoc := h.Client.Collection(UsersPath).Doc(pid)
 	userData, err := userDoc.Get(context.Background())
 	if err != nil || !userData.Exists() {
-		return fmt.Sprintf("error: failed to acquire user doc. %s", err), http.StatusInternalServerError
+		return fmt.Sprintf("failed to acquire user doc. %s", err), http.StatusInternalServerError
 	}
 
 	// merge documents as appropriate.
@@ -222,7 +222,7 @@ func (h *HandlePrograms) updatePrograms(pid string, body map[string]Program) (st
 
 		// check for existence.
 		if data, err := programDoc.Get(context.Background()); err != nil || !data.Exists() {
-			return fmt.Sprintf("error: failed to acquire program doc."), http.StatusInternalServerError
+			return fmt.Sprintf("failed to acquire program doc."), http.StatusInternalServerError
 		}
 
 		// update data.
@@ -244,7 +244,7 @@ func (h *HandlePrograms) deletePrograms(uid string, pid string) (string, int) {
 	userDoc := h.Client.Collection(UsersPath).Doc(pid)
 	userData, err := userDoc.Get(context.Background())
 	if err != nil {
-		return fmt.Sprintf("error: failed to acquire user doc. %s", err), http.StatusInternalServerError
+		return fmt.Sprintf("failed to acquire user doc. %s", err), http.StatusInternalServerError
 	}
 
 	// the pid and uid are required.
@@ -256,7 +256,7 @@ func (h *HandlePrograms) deletePrograms(uid string, pid string) (string, int) {
 	progDoc := h.Client.Collection(ProgramsPath).Doc(pid)
 	progData, err := progDoc.Get(context.Background())
 	if err != nil {
-		return "error: failed to acquire program doc.", http.StatusInternalServerError
+		return "failed to acquire program doc.", http.StatusInternalServerError
 	}
 
 	// check that both userdoc and progdoc exist.
@@ -266,12 +266,12 @@ func (h *HandlePrograms) deletePrograms(uid string, pid string) (string, int) {
 
 	// delete the program from userdoc program list.
 	if _, err := userDoc.Update(context.Background(), []firestore.Update{{Path: "programs", Value: firestore.ArrayRemove(pid)}}); err != nil {
-		return "error: failed to update userDoc.", http.StatusInternalServerError
+		return "failed to update userDoc.", http.StatusInternalServerError
 	}
 
 	// delete the program from the programs collection.
 	if _, err := progDoc.Delete(context.Background()); err != nil {
-		return "error: failed to delete progDoc.", http.StatusInternalServerError
+		return "failed to delete progDoc.", http.StatusInternalServerError
 	}
 
 	return "", http.StatusOK

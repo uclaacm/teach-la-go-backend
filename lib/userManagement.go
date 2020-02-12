@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"cloud.google.com/go/firestore"
+	log "github.com/lumisphere902/gologger"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -34,11 +34,11 @@ func (h HandleUsers) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 	body := make(map[string]string)
 	if bytesBody, err = ioutil.ReadAll(r.Body); err != nil {
-		log.Printf("error: failed to read request body.")
+		log.Errorf("failed to read request body.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else if err := json.Unmarshal(bytesBody, &body); len(bytesBody) > 0 && err != nil {
-		log.Printf("error: failed to marshal request body. %s", err)
+		log.Errorf("failed to marshal request body. %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -67,7 +67,7 @@ func (h HandleUsers) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// handle errors.
 	if code != http.StatusOK {
-		log.Println(response)
+		log.Errorf(response)
 	}
 
 	w.WriteHeader(code)
@@ -89,13 +89,13 @@ func (h *HandleUsers) getUserData(uid string) (string, int) {
 	if status.Code(err) == codes.NotFound {
 		return "document does not exist.", http.StatusNotFound
 	} else if err != nil {
-		return fmt.Sprintf("error occurred in document retrieval: %s", err), http.StatusInternalServerError
+		return fmt.Sprintf("failed to retrieve document: %s", err), http.StatusInternalServerError
 	}
 
 	// acquire only desired fields for response.
 	var u User
 	if err = userDoc.DataTo(&u); err != nil {
-		return "error occurred in reading document.", http.StatusInternalServerError
+		return "failed to read document", http.StatusInternalServerError
 	}
 
 	// convert to JSON.
@@ -104,7 +104,7 @@ func (h *HandleUsers) getUserData(uid string) (string, int) {
 	// optional: pretty print our JSON response.
 	userJSON, err = json.MarshalIndent(u, "", "    ")
 	if err != nil {
-		return "error occurred in reading document.", http.StatusInternalServerError
+		return "failed to read document", http.StatusInternalServerError
 	}
 
 	// return the user data as JSON.
@@ -130,16 +130,16 @@ func (h *HandleUsers) updateUserData(uid string, bytesBody []byte) (string, int)
 	updateData := requestObj.ToFirestoreUpdate()
 
 	if len(updateData) == 0 {
-		return "missing fields from request.", http.StatusBadRequest
+		return "missing fields from request", http.StatusBadRequest
 	}
 
 	_, err := userDoc.Update(context.Background(), updateData)
 
 	// check for errors.
 	if status.Code(err) == codes.NotFound {
-		return "document does not exist.", http.StatusNotFound
+		return "document does not exist", http.StatusNotFound
 	} else if err != nil {
-		return fmt.Sprintf("error occurred in document retrieval: %s", err), http.StatusInternalServerError
+		return fmt.Sprintf("failed to retrieve document: %s", err), http.StatusInternalServerError
 	}
 
 	return "", http.StatusOK

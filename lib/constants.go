@@ -2,8 +2,9 @@ package lib
 
 import (
 	"errors"
-	"log"
 	"time"
+
+	log "github.com/lumisphere902/gologger"
 )
 
 const (
@@ -82,7 +83,7 @@ func defaultProgram(languageCode int) (defaultProg Program) {
 	case html:
 		defaultCode = "<html>\n  <head>\n  </head>\n  <body>\n    <div style='width: 100px; height: 100px; background-color: black'>\n    </div>\n  </body>\n</html>"
 	case notALanguage:
-		log.Printf("language does not exist.")
+		log.Errorf("language does not exist.")
 		return
 	}
 
