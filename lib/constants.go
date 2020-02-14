@@ -2,8 +2,9 @@ package lib
 
 import (
 	"errors"
-	"log"
 	"time"
+
+	"../tools/log"
 )
 
 const (
@@ -82,7 +83,7 @@ func defaultProgram(languageCode int) (defaultProg Program) {
 	case html:
 		defaultCode = "<html>\n  <head>\n  </head>\n  <body>\n    <div style='width: 100px; height: 100px; background-color: black'>\n    </div>\n  </body>\n</html>"
 	case notALanguage:
-		log.Printf("language does not exist.")
+		log.Debugf("language does not exist.")
 		return
 	}
 
@@ -106,8 +107,8 @@ func defaultData() (User, []Program) {
 	}
 
 	u := User{
-		DisplayName: 	"J Bruin",
-		//UID:			uid,
+		DisplayName: "J Bruin",
+		//UID:		 	uid,
 	}
 	return u, defaultProgs
 }
