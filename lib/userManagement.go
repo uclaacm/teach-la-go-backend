@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	t "../tools"
+	requests "../tools/requests"
 )
 
 /**
@@ -26,11 +26,11 @@ import (
  */
 func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 	var (
-		u *User
+		u        *User
 		userJSON []byte
-		err error
+		err      error
 	)
-	
+
 	query := r.URL.Query()
 
 	// if the current request does not have an User struct
@@ -53,7 +53,7 @@ func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 
 	// response structure
 	resp := struct {
-		UserData *User `json:"userData"`
+		UserData *User     `json:"userData"`
 		Programs []Program `json:"programs"`
 	}{UserData: u}
 
@@ -98,7 +98,7 @@ func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 func (d *DB) HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	// unmarshal request body into an User struct.
 	requestObj := User{}
-	if err := t.RequestBodyTo(r, &requestObj); err != nil {
+	if err := requests.BodyTo(r, &requestObj); err != nil {
 		http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
 		return
 	}
