@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"log"
+	"../tools/log"
 	"net/http"
 )
 

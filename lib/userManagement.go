@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	requests "../tools/requests"
+	"../tools/requests"
 )
 
 /**
