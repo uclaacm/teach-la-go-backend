@@ -31,11 +31,30 @@ go build
 # run the server
 ./teach-la-go-backend
 
-# run all tests
-go test ./...
+```
+If you try running the server at this point (with `./teach-la-go-backend`), you'll probably get a message like this: `could not find firebase config file! Did you set your CFGPATH variable? stat : no such file or directory`. To **run** the project, one needs to be able to interact with the TeachLA Firebase through service account credentials (usually a single JSON file). These can be obtained during a TeachLA dev team meeting, or by messaging the #go-backend channel on the TLA Slack. 
+
+Once acquired, save the JSON file in the root directory. **It is recommended that you chnage the file extension to `.env` so `gitignore` will prevent it from being accidentally uploaded to the public repo**. Once you have done that, specify the location of your credentials by setting the environment variable `$CFGPATH`:
+```
+export CFGPATH=./secret.env
 ```
 
-If you try running the server at this point (with `./teach-la-go-backend`), you'll probably get a message like this: `could not find firebase config file! Did you set your CFGPATH variable? stat : no such file or directory`. To **run** the project, one needs to be able to interact with the TeachLA Firebase through service account credentials. These can be obtained during a TeachLA dev team meeting, or by messaging the #go-backend channel on the TLA Slack. Once acquired, locate your credentials file with the environment variable `$CFGPATH`. You can now run the server you built!
+You can now run the server you built!
+
+## Testing
+
+Run the following command to run tests:
+
+```sh
+# run all tests
+go test ./...
+
+# run a specific test
+go test ./server_test.go
+
+# run tests with log output
+go test -v ./server_test.go
+```
 
 With this, you can build, test, and run the actual backend. If you'd like to get working, you can stop reading here. Otherwise, you can scan through the documentation below.
 
