@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	t "../tools"
+	"../tools/requests"
 )
 
 /**
@@ -66,7 +66,7 @@ func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
 	// unmarshal request body into a struct matching
 	// what we expect.
 	requestBody := Program{}
-	if err := t.RequestBodyTo(r, &requestBody); err != nil {
+	if err := requests.BodyTo(r, &requestBody); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -103,7 +103,7 @@ func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// associate program to user.
-	if err = d.AddProgramToUser(r. Context(), u.UID, p); err != nil{
+	if err = d.AddProgramToUser(r.Context(), u.UID, p); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -129,7 +129,7 @@ func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
 func (d *DB) HandleUpdateProgram(w http.ResponseWriter, r *http.Request) {
 	// unmarshal request body into an Program struct.
 	requestObj := Program{}
-	if err := t.RequestBodyTo(r, &requestObj); err != nil {
+	if err := requests.BodyTo(r, &requestObj); err != nil {
 		http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
 		return
 	}
