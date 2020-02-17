@@ -38,6 +38,7 @@ func (d *DB) HandleGetProgram(w http.ResponseWriter, r *http.Request) {
 	if resp, err := json.Marshal(&p); err != nil {
 		http.Error(w, "failed to marshal response.", http.StatusInternalServerError)
 	} else {
+		w.WriteHeader(http.StatusOK)
 		w.Write(resp)
 	}
 }

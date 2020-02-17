@@ -74,12 +74,13 @@ func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// convert to JSON.
-	if userJSON, err = json.MarshalIndent(resp, "", "    "); err != nil {
+	if userJSON, err = json.Marshal(resp); err != nil {
 		http.Error(w, "error occurred in writing response.", http.StatusInternalServerError)
 		return
 	}
 
 	// return the user data as JSON.
+	w.WriteHeader(http.StatusOK)
 	w.Write(userJSON)
 }
 
