@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"./lib"
+	"./db"
 )
 
 // PORT defines where we serve the backend.
@@ -17,7 +17,7 @@ const PORT = ":8081"
 
 //structure to store
 type Response struct {
-	UserData lib.User
+	UserData db.User
 	Programs []string
 }
 
@@ -25,7 +25,7 @@ type Response struct {
 func TestRigDB(t *testing.T) {
 
 	var (
-		d   *lib.DB // stores instance of connection with database
+		d   *db.DB // stores instance of connection with database
 		err error
 		res Response // structure to store response fron database
 	)
@@ -35,7 +35,7 @@ func TestRigDB(t *testing.T) {
 	// Test opening connection with database
 	t.Run("Open connection with database", func(t *testing.T) {
 
-		if d, err = lib.OpenFromEnv(context.Background()); err != nil {
+		if d, err = db.OpenFromEnv(context.Background()); err != nil {
 			t.Fatal("failed to open DB client")
 		}
 	})
