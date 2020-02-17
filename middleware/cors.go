@@ -33,17 +33,11 @@ func (c *CORSConfig) OriginSupported(requestOrigin string) bool {
 		return false
 	}
 
-	// if we have an empty allowed origins list or wildcard, return true.
-	if len(c.AllowedOrigins) == 0 ||
-		(len(c.AllowedOrigins) == 1 && c.AllowedOrigins[0] == "*") {
-		return true
-	}
-
 	// the value of the Origin header must be a case-sensitive
 	// match for a supported origin.
 	for _, o := range c.AllowedOrigins {
 		// check that the origin is permitted.
-		if requestOrigin == o {
+		if o == "*" || requestOrigin == o {
 			return true
 		}
 	}
@@ -73,8 +67,8 @@ func (c *CORSConfig) MethodSupported(requestMethod string) bool {
 func (c *CORSConfig) HeadersSupported(requestHeaderFieldNames []string) bool {
 	// it is permissible to omit this header.
 	// also, if we have an empty header list, default to permitting all headers.
-	if len(requestHeaderFieldNames) == 1 && requestHeaderFieldNames[0] == "" ||
-		len(c.AllowedHeaders) == 0 {
+	if len(c.AllowedHeaders) == 0 ||
+		(len(requestHeaderFieldNames) == 1 && requestHeaderFieldNames[0] == "") {
 		return true
 	}
 
@@ -103,37 +97,40 @@ func (c *CORSConfig) HeadersSupported(requestHeaderFieldNames []string) bool {
 // verbosity, please wrap it with some sort of request logging middleware.
 func WithCORSConfig(next http.Handler, c CORSConfig) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// acquire header values.
+		origin := r.Header.Get("Origin")
+		method := r.Header.Get("Access-Control-Request-Method")
+		headerFieldNames := strings.Split(r.Header.Get("Access-Control-Request-Headers"), ", ")
+
+		// request origin, method must be a **case-sensitive** match
+		// in those that are supported.
+		// request headers must be a case **in**sensitive match.
+		// if any conditions fail, we throw the request out.
+		if !c.OriginSupported(origin) {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// if the resource supports credentials, add a single Access-Control-Allow-Origin
+		// header, with the value of the Origin header as value.
+		// also add a single Access-Control-Allow-Credentials header with "true" as value.
+		// otherwise, add a single Access-Control-Allow-Origin header, with the value of the
+		// Origin header.
+		if c.SupportsCredentials {
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+
 		// handle preflight request.
 		if r.Method == http.MethodOptions {
-			// acquire relevant fields.
-			origin := r.Header.Get("Origin")
-			method := r.Header.Get("Access-Control-Request-Method")
-			headerFieldNames := strings.Split(r.Header.Get("Access-Control-Request-Headers"), ", ")
-
-			// request origin, method must be a **case-sensitive** match
-			// in those that are supported.
-			// request headers must be a case **in**sensitive match.
-			// if any conditions fail, we throw the request out.
-			if !c.OriginSupported(origin) ||
-				!c.MethodSupported(method) ||
-				!c.HeadersSupported(headerFieldNames) {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-
 			// Future consideration:
 			// in addition to checking the Origin header, we should check the Host header to ensure
 			// that the host name provided matches the host name on which the reosuce resides.
 
-			// if the resource supports credentials, add a single Access-Control-Allow-Origin
-			// header, with the value of the Origin header as value.
-			// also add a single Access-Control-Allow-Credentials header with "true" as value.
-			// otherwise, add a single Access-Control-Allow-Origin header, with the value of the
-			// Origin header.
-			if c.SupportsCredentials {
-				w.Header().Set("Access-Control-Allow-Credentials", "true")
+			if !c.MethodSupported(method) || !c.HeadersSupported(headerFieldNames) {
+				w.WriteHeader(http.StatusBadRequest)
+				return
 			}
-			w.Header().Set("Access-Control-Allow-Origin", origin)
 
 			// if provided a MaxAge, add a single Access-Control-Max-Age header.
 			if c.MaxAge != 0 {
@@ -164,6 +161,9 @@ func WithCORS(next http.Handler) http.Handler {
 	// MaxAge is omitted, and credentials are not
 	// supported.
 	defaultCfg := CORSConfig{
+		AllowedOrigins: []string{
+			"*",
+		},
 		AllowedMethods: []string{
 			http.MethodConnect,
 			http.MethodDelete,
