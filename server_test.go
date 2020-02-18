@@ -113,6 +113,7 @@ func TestRigDB(t *testing.T) {
 	// Test creating a program from a user
 	t.Run("Create program", func(t *testing.T){
 
+		t.Logf("Building query")
 		// create JSON for a new program 
 		pr := struct {
 			Code 		string 
@@ -148,6 +149,7 @@ func TestRigDB(t *testing.T) {
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(d.HandleInitializeProgram)
 
+		t.Logf("Making call...")
 		handler.ServeHTTP(rr, req)
 
 		if status := rr.Code; status != http.StatusOK {
@@ -156,7 +158,45 @@ func TestRigDB(t *testing.T) {
 
 	})
 
+	// Test creating a class from a user
+	t.Run("Create Class", func(t *testing.T){
 
+		// create JSON for a new program 
+		pr := struct {
+			Uid 		string
+			Name 		string
+			Thumbnail	int
+		}{
+			res.UserData.UID,
+			"TestClass",
+			1,
+		}
+
+		pro, err := json.Marshal(&pr) 
+
+		if err != nil {
+			t.Fatal("Failed to create JSON")
+		}
+
+		//fmt.Printf("%s", pro)
+
+		req, err := http.NewRequest("POST", "/class/create", bytes.NewBuffer(pro))
+		req.Header.Set("Content-Type", "application/json")
+
+		if err != nil {
+			t.Fatal("Failed to test create program")
+		}
+		
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(d.HandleCreateClass)
+
+		handler.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatal("Create program failed")
+		}
+
+	})
 
 }
 

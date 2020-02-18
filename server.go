@@ -45,6 +45,10 @@ func main() {
 	router.HandleFunc("/program/create", d.HandleInitializeProgram)
 	router.HandleFunc("/program/delete", d.HandleDeleteProgram)
 
+	//class management
+	router.HandleFunc("/class/create", d.HandleCreateClass)
+	
+
 	// fallback route
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusNotFound)

@@ -7,12 +7,8 @@ import (
 	"../tools/requests"
 )
 
-/**
- * getProgram
- * Query parameters: programId
- *
- * Returns: Status 200 with a marshalled Program struct.
- */
+// HandleCreateClass is the handler for creating a new class.
+// It takes the UID of the creator, the name of the class, and a thunmbnail id. 
 func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
 	
 	var (
@@ -21,17 +17,17 @@ func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
 
 	//create an anonymous structure to handle requests
 	req := struct {
-		Uid 		string  	`json:"uid"`
+		UID 		string  	`json:"uid"`
 		Name 		string		`json:"name"`
 		Thumbnail 	int64 		`json:"thumbnail"`
 	}{}
-
 	//read JSON from request body
 	if err = requests.BodyTo(r, &req); err != nil {
 		http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
 		return
 	}
-	if req.Uid == "" {
+
+	if req.UID == "" {
 		http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
 		return
 	}
@@ -49,35 +45,31 @@ func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
 	class := Class{
 		Thumbnail: req.Thumbnail, 
 		Name: req.Name, 
-		Creator: req.Uid, 
-		Instructors: []string{req.Uid},
+		Creator: req.UID, 
+		Instructors: []string{req.UID},
 		Members: []string{},
 		Programs: []string{},
 		CID: "",
-	}
-	
+	}	
 	
 	// TODO create id using words, not hash
 	//create the class
 	cid, err := d.CreateClass(r.Context(), &class)
 
 	//add this class to the user's "Classes" list
-	err = d.AddClassToUser(r.Context(), req.Uid, cid)
+	err = d.AddClassToUser(r.Context(), req.UID, cid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// return the result of this handler
-
-	// read the class document just created and put it into a struct
+	// read the class document just created 
 	c, err := d.GetClass(r.Context(), cid)
-
 	if err != nil || c == nil {
 		http.Error(w, "class does not exist.", http.StatusNotFound)
 		return
 	}
-
+	//return the class struct in the response
 	if resp, err := json.Marshal(c); err != nil {
 		http.Error(w, "failed to marshal response.", http.StatusInternalServerError)
 	} else {
