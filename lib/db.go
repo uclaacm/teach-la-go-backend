@@ -196,6 +196,49 @@ func (d *DB) AddClassToUser(ctx context.Context, uid string, cid string) error {
 
 }
 
+func (d *DB) AddUserToClass(ctx context.Context, uid string, cid string) error {
+
+	//get the class doc
+	doc := d.Collection(ClassesPath).Doc(cid) 
+
+	//add the class id
+	_, err := doc.Update(ctx, []firestore.Update{
+		{Path: "members", Value: firestore.ArrayUnion(uid)},
+	})
+
+	return err
+
+}
+
+func (d *DB) RemoveUserFromClass(ctx context.Context, uid string, cid string) error {
+
+	//get the class doc
+	doc := d.Collection(ClassesPath).Doc(cid) 
+
+	//add the class id
+	_, err := doc.Update(ctx, []firestore.Update{
+		{Path: "members", Value: firestore.ArrayRemove(uid)},
+	})
+
+	return err
+
+}
+
+func (d *DB) RemoveClassFromUser(ctx context.Context, uid string, cid string) error {
+
+	//get the user doc
+	doc := d.Collection(UsersPath).Doc(uid) 
+
+	//remove the class id
+	_, err := doc.Update(ctx, []firestore.Update{
+		{Path: "classes", Value: firestore.ArrayRemove(cid)},
+	})
+
+	return err
+
+}
+
+
 func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
 
 	//get document for specified class
