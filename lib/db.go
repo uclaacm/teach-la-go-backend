@@ -122,25 +122,25 @@ func (d *DB) AddProgramToUser(ctx context.Context, uid string, pid string) error
 // The program's UID is returned with an error, should one
 // occur.
 func (d *DB) CreateProgram(ctx context.Context, p *Program/*, uid string*/) (string, error) {
+	
+	//crate new program document
 	doc := d.Collection(ProgramsPath).NewDoc()
 
 	// update UID to match, then update doc.
 	p.UID = doc.ID
-	//p.PID = doc.ID
-	//p.UID = uid
 	_, err := doc.Set(ctx, *p)
-	return doc.ID, err
+	return p.UID, err
 }
 
 // GetProgram returns a program document in struct form,
 // with an error if one occurs.
-func (d *DB) GetProgram(ctx context.Context, uid string) (*Program, error) {
-	doc, err := d.Collection(ProgramsPath).Doc(uid).Get(ctx)
+func (d *DB) GetProgram(ctx context.Context, pid string) (*Program, error) {
+	doc, err := d.Collection(ProgramsPath).Doc(pid).Get(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	p := &Program{UID: uid}
+	p := &Program{UID: pid}
 	return p, doc.DataTo(p)
 }
 
@@ -162,3 +162,56 @@ func (d *DB) DeleteProgram(ctx context.Context, uid string) error {
 	_, err := doc.Delete(ctx)
 	return err
 }
+
+
+// CreateClass creates a new class document to match the provided struct.
+// The class's UID is returned with an error, should one occur.
+func (d *DB) CreateClass(ctx context.Context, c *Class) (string, error) {
+	// create a new doc for this class
+	doc := d.Collection(ClassesPath).NewDoc()
+
+	// set the CID parameter
+	c.CID = doc.ID
+
+	// update database
+	_, err := doc.Set(ctx, *c)
+
+	//return the results
+	return c.CID, err
+}
+
+// AddClassToUser takes a uid and a pid, 
+// and adds the pid to the user's list of programs
+func (d *DB) AddClassToUser(ctx context.Context, uid string, cid string) error {
+
+	//get the user doc
+	doc := d.Collection(UsersPath).Doc(uid) 
+
+	//add the class id
+	_, err := doc.Update(ctx, []firestore.Update{
+		{Path: "classes", Value: firestore.ArrayUnion(cid)},
+	})
+
+	return err
+
+}
+
+func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
+
+	//get document for specified class
+	doc, err := d.Collection(ClassesPath).Doc(cid).Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// create struct to populate
+	c := &Class{}
+	// populate struct
+	if err := doc.DataTo(c); err != nil {
+		return nil, err
+	}
+	
+	return c, err
+}
+
+

@@ -29,6 +29,10 @@ const (
 	// management endpoint.
 	ProgramsPath = "programs"
 
+	// ClassesPath describes the path to the classes
+	// management endpoint.
+	ClassesPath = "classes"
+
 	// UsersPath describes the path to the user management
 	// endpoint
 	UsersPath = "users"
