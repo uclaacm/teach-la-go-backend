@@ -123,7 +123,7 @@ func (d *DB) HandleGetClass(w http.ResponseWriter, r *http.Request) {
 	//check if the uid exists in the members list
 	var is_member bool = false;
 
-	for _, m in range c.Members {
+	for _, m := range c.Members {
 		if m == req.UID {
 			is_member = true
 			break
