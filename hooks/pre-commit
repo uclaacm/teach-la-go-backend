@@ -14,19 +14,19 @@
 
 govet=$(go vet ./lib)
 if [[ ! -z "$govet" ]]; then
-	echo "vet checks not passed: $govet \n"
+	echo "go vet checks not passed: Exit code $govet \n"
 	exit 1
 fi
 
 lint=$(golint -set_exit_status)
 if [[ ! -z "$golint" ]]; then
-	echo "lint checks not passed: $golint"
+	echo "golint checks not passed: Exit code $golint\n"
 	exit 1
 fi
 
 build=$(go build)
 if [[ $? -ne 0 ]]; then
-	echo "commit failed to build: return code $build"
+	echo "commit failed to build: return code $build\n"
 	exit $build
 fi
 
