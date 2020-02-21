@@ -12,6 +12,45 @@
 #
 # This script does not handle file names that contain spaces.
 
+check_continue() {
+	echo "Continue? Y/N: "
+	read resp
+	ret=1
+	while [[ ret ]];
+	do 
+		read resp
+		if [[ $resp  == "N" ]]; then
+			exit 1
+		elif [[ $resp  == "Y" ]]; then
+			ret=0
+		else
+			echo "Please enter Y or N: "
+			ret=1
+		fi
+	done
+	return 0
+}
+
+govet=$(go vet ./lib)
+if [[ ! -z "$govet" ]]; then
+	echo "vet checks not passed: $govet \n"
+	check_continue
+fi
+
+lint=$(golint -set_exit_status)
+if [[ ! -z "$golint" ]]; then
+	echo "vet checks not passed: $golint"
+	check_continue
+fi
+
+build=$(go build)
+if [[ $? -ne 0 ]]; then
+	echo "commit failed to build: return code $build"
+	exit $build
+fi
+
+gofiles=$(git diff --cached --name-only --diff-filter=ACM | grep '.go$')
+
 gofiles=$(git diff --cached --name-only --diff-filter=ACM | grep '.go$')
 [ -z "$gofiles" ] && exit 0
 
@@ -21,6 +60,7 @@ unformatted=$(gofmt -l $gofiles)
 # run gofmt on improperly formatted files.
 for fn in $unformatted; do
 	gofmt -w -e $PWD/$fn
+	git add $PWD/$fn
 done
 
 exit 0
