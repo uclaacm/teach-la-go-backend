@@ -20,21 +20,21 @@ cd $rootdir
 
 govet=$(go vet)
 retcode=$?
-if [ $? -ne 0 ] || [ ! -z "$govet" ]; then
+if [ $retcode -ne 0 ] || [ ! -z "$govet" ] ; then
 	echo "go vet checks not passed: Exit code $retcode\n"
 	exit 1
 fi
 
 golint=$(golint -set_exit_status $gofiles)
 retcode=$?
-if [ $? -ne 0 ] || [ ! -z "$golint" ]; then
+if [ $retcode -ne 0 ] || [ ! -z "$golint" ] ; then
 	echo "golint checks not passed: Exit code $retcode\n"
 	exit 1
 fi
 
 build=$(go build)
 retcode=$?
-if [ $? -ne 0 ]; then
+if [ $retcode -ne 0 ]; then
 	echo "commit failed to build: return code $retcode\n"
 	exit 1
 fi
