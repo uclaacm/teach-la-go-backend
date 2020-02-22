@@ -50,7 +50,7 @@ func main() {
 		http.Error(w, "", http.StatusNotFound)
 	})
 
-	log.Printf("endpoints initialized. %d")
+	log.Printf("endpoints initialized.%s")
 
 	// server configuration
 	s := &http.Server{
