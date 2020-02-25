@@ -52,9 +52,12 @@ func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
 		CID: "",
 	}	
 	
-	// TODO create id using words, not hash
+	
 	//create the class
 	cid, err := d.CreateClass(r.Context(), &class)
+
+	//create an alias for this class
+	d.MakeAlias(r.Context(), cid)
 
 	//add this class to the user's "Classes" list
 	err = d.AddClassToUser(r.Context(), req.UID, cid)

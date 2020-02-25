@@ -3,6 +3,9 @@ package lib
 import (
 	"context"
 	"os"
+	"strings"
+
+	"../tools/tinycrypt"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
@@ -257,4 +260,63 @@ func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
 	return c, err
 }
 
+
+func (d *DB) MakeAlias(ctx context.Context, pid string) (string, error) {
+
+	// convert pid into a 36 bit hash
+	aid := MakeHash(pid) 
+
+	//get the mapping collection
+	col := d.Collection(AliasPath)
+	//get the snapshot of the document
+	snap, err := col.Doc(pid).Get(ctx)
+
+	//if the doc id is taken, try different numbers
+	for snap.Exists() == true {
+		aid+=1
+		if aid == 0xFFFFFFFFF{
+			aid = 0
+		}
+		snap, err = col.Doc(pid).Get(ctx)
+	}
+
+	// create a new doc for this alias
+	//convert the aid into a word
+	s := strings.Join(tinycrypt.GenerateWord36(aid), ", ")
+	//create mapping
+	_, err = col.Doc(s).Set(ctx, map[string]interface{}{
+		"target" : pid,
+	})
+
+	return s, err
+
+}
+
+// Take the 120 bit pid and makes a 36 bit aid
+func MakeHash(pid string) (uint64) {
+	
+	//get first 6 chars
+	pid = pid[0:6]
+	index := uint64(0)
+	aid := uint64(0)
+
+	//convert their UNICODE into 6 bit ints
+	for _, c := range pid{
+		//if this is a number (0 ~ 9)
+		if c >= 0x0030 && c <= 0x0039 {
+			index = uint64(c - 0x0030) 
+		} else if c >= 0x0041 && c <= 0x005A{ //else if this is uppercase char
+			index = uint64(c - 0x0041) 
+		} else if c >= 0x0061 && c <= 0x007A{ //else if this is lowercase char
+			index = uint64(c - 0x0061)
+		} else {
+			index = 0
+		}
+
+		aid = (aid | index) << 6
+	}
+
+	return aid
+
+}
 

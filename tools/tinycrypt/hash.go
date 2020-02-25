@@ -8,14 +8,21 @@ package tinycrypt
 
 // Declare constants
 
+// structure for Encrypter
 type Encrypter struct{
 	Key []uint64
 }
 
+
+// InitializeEncrypter is a function to initialize the Encrypter with 
+// a list of keys. 
+// Input: list of uint64 keys
 func (e *Encrypter) InitializeEncrypter(key []uint64) {
 	e.Key = key
 }
 
+// F is a function that takes a key and data, and generates a hash
+// F does not have to be inverseable
 func F(b, k uint64) (uint64){
 	return b + (k ^ (b << 2)) + (k ^ (b << 4)) + (k ^ (b << 8)) + (k ^ (b << 16)) + (k ^ (b << 32))
 }
@@ -41,6 +48,9 @@ func (e *Encrypter) Encrypt36(plain uint64) (uint64){
 
 }
 
+// ======================
+// Handlers for encrypting 8 bit data
+// ======================
 
 func (e *Encrypter) Encrypt8(plain uint8) (uint8){
 
@@ -50,4 +60,27 @@ func (e *Encrypter) Encrypt8(plain uint8) (uint8){
 
 	return uint8(res)
 
+}
+
+// ======================
+// Handlers for creating a plain engligh word hash
+// ======================
+
+// GenerateWord36 takes a 36 bit unsigned integer and creates 
+// human friendly hashes
+func GenerateWord36(plain uint64) ([]string){
+
+	id := uint16(0)
+	mask := uint64(0xFFF)
+
+	words := []string{}
+	
+	for i := 0; i < 3; i++{
+
+		id = uint16(plain & mask) 
+		words = append(words, Words[id])
+		plain = plain >> 12
+	}
+
+	return words
 }

@@ -33,6 +33,10 @@ const (
 	// management endpoint.
 	ClassesPath = "classes"
 
+	// ClassesPath describes the path to the classes
+	// management endpoint.
+	AliasPath = "alias"
+
 	// UsersPath describes the path to the user management
 	// endpoint
 	UsersPath = "users"

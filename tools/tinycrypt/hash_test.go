@@ -35,9 +35,14 @@ func TestEncrypt(t *testing.T) {
 		
 			res = en.Encrypt36(res)
 			t.Log("Encrypted: ", res)
-		
+
+			words := tinycrypt.GenerateWord36(res)
+			t.Log("Generated: ", words)
+
 			res = de.Encrypt36(res)
 			t.Log("Decrypted: ", res)
+
+			
 		})
 		
 	}
