@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"time"
 
-	"./lib"
+	"./db"
 	m "./middleware"
 )
 
@@ -22,10 +22,10 @@ func main() {
 	// acquire DB client.
 	// fails early if we cannot acquire one.
 	var (
-		d   *lib.DB
+		d   *db.DB
 		err error
 	)
-	if d, err = lib.OpenFromEnv(context.Background()); err != nil {
+	if d, err = db.OpenFromEnv(context.Background()); err != nil {
 		log.Fatalf("failed to open DB client. %s", err)
 	}
 	defer d.Close()

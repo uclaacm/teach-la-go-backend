@@ -1,4 +1,4 @@
-package lib
+package db
 
 import (
 	"context"
@@ -91,10 +91,10 @@ func (d *DB) UpdateUser(ctx context.Context, uid string, u *User) error {
 	return err
 }
 
-// DeleteProgramFromUser takes a uid and a pid, 
+// DeleteProgramFromUser takes a uid and a pid,
 // and deletes the pid from the User with the given uid
 func (d *DB) DeleteProgramFromUser(ctx context.Context, uid string, pid string) error {
-	
+
 	//get the user doc
 	doc := d.Collection(UsersPath).Doc(uid)
 
@@ -105,12 +105,12 @@ func (d *DB) DeleteProgramFromUser(ctx context.Context, uid string, pid string) 
 	return err
 }
 
-// AddProgramToUser takes a uid and a pid, 
+// AddProgramToUser takes a uid and a pid,
 // and adds the pid to the user's list of programs
 func (d *DB) AddProgramToUser(ctx context.Context, uid string, pid string) error {
 
 	//get the user doc
-	doc := d.Collection(UsersPath).Doc(uid) 
+	doc := d.Collection(UsersPath).Doc(uid)
 
 	_, err := doc.Update(ctx, []firestore.Update{
 		{Path: "programs", Value: firestore.ArrayUnion(pid)},
@@ -124,9 +124,7 @@ func (d *DB) AddProgramToUser(ctx context.Context, uid string, pid string) error
 // the provided struct.
 // The program's UID is returned with an error, should one
 // occur.
-func (d *DB) CreateProgram(ctx context.Context, p *Program/*, uid string*/) (string, error) {
-	
-	//crate new program document
+func (d *DB) CreateProgram(ctx context.Context, p *Program) (string, error) {
 	doc := d.Collection(ProgramsPath).NewDoc()
 
 	// update UID to match, then update doc.
