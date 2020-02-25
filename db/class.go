@@ -1,4 +1,4 @@
-package lib
+package db
 
 // Class is a struct representation of a class document.
 // It provides functions for converting the struct
