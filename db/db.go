@@ -197,6 +197,7 @@ func (d *DB) AddClassToUser(ctx context.Context, uid string, cid string) error {
 
 }
 
+// AddUserToClass add an uid to a given class
 func (d *DB) AddUserToClass(ctx context.Context, uid string, cid string) error {
 
 	//get the class doc
@@ -211,6 +212,7 @@ func (d *DB) AddUserToClass(ctx context.Context, uid string, cid string) error {
 
 }
 
+// RemoveUserFromClass removes an uid from a given class
 func (d *DB) RemoveUserFromClass(ctx context.Context, uid string, cid string) error {
 
 	//get the class doc
@@ -225,6 +227,7 @@ func (d *DB) RemoveUserFromClass(ctx context.Context, uid string, cid string) er
 
 }
 
+// RemoveClassFromUser removes a class from a given user
 func (d *DB) RemoveClassFromUser(ctx context.Context, uid string, cid string) error {
 
 	//get the user doc
@@ -239,7 +242,8 @@ func (d *DB) RemoveClassFromUser(ctx context.Context, uid string, cid string) er
 
 }
 
-
+// GetClass takes a cid, and returns a Class struct with its parameters populated
+// The retuned value is a pointer to the struct instantiated in this function
 func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
 
 	//get document for specified class
@@ -258,39 +262,48 @@ func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
 	return c, err
 }
 
+// MakeAlias takes an id (usually pid or cid), generates a 3 word id, and 
+// stores it in Firebase. The generated 3 word id is returned as a list
+func (d *DB) MakeAlias(ctx context.Context, uid string) ([]string, error) {
 
-func (d *DB) MakeAlias(ctx context.Context, pid string) (string, error) {
+	// convert uid into a 36 bit hash
+	aid := MakeHash(uid) 
 
-	// convert pid into a 36 bit hash
-	aid := MakeHash(pid) 
+	// convert that to a 3 word id
+	wid_list := tinycrypt.GenerateWord36(aid)
+	// the result is an array,so concat into a single string
+	wid := strings.Join(wid_list, ",") 
 
-	//get the mapping collection
+	// get the mapping collection
 	col := d.Collection(AliasPath)
-	//get the snapshot of the document
-	snap, err := col.Doc(pid).Get(ctx)
+	// get the snapshot of the document with the requested wid
+	snap, err := col.Doc(wid).Get(ctx)
 
-	//if the doc id is taken, try different numbers
+	//if the doc id is taken, generate a different wid
 	for snap.Exists() == true {
-		aid+=1
+
+		aid++
 		if aid == 0xFFFFFFFFF{
 			aid = 0
 		}
-		snap, err = col.Doc(pid).Get(ctx)
-	}
 
-	// create a new doc for this alias
-	//convert the aid into a word
-	s := strings.Join(tinycrypt.GenerateWord36(aid), ", ")
+		wid_list = tinycrypt.GenerateWord36(aid)
+		wid = strings.Join(wid_list, ",") 
+		
+		snap, err = col.Doc(wid).Get(ctx)
+	}
+	
 	//create mapping
-	_, err = col.Doc(s).Set(ctx, map[string]interface{}{
-		"target" : pid,
+	_, err = col.Doc(wid).Set(ctx, map[string]interface{}{
+		"target" : uid,
 	})
 
-	return s, err
+	return wid_list, err
 
 }
 
-// Take the 120 bit pid and makes a 36 bit aid
+// MakeHash is a helper funciton that takes a 120 bit id 
+// and makes a 36 bit id
 func MakeHash(pid string) (uint64) {
 	
 	//get first 6 chars

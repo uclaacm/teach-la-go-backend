@@ -25,16 +25,15 @@ type Response struct {
 func TestRigDB(t *testing.T) {
 
 	var (
-		d   *db.DB // stores instance of connection with database
+		d   *db.DB 		// stores instance of connection with database
 		err error
-		res Response // structure to store response fron database
+		res Response 	// structure to store response fron database
 	)
 
 	t.Logf("Testing initialization of database...")
 
 	// Test opening connection with database
 	t.Run("Open connection with database", func(t *testing.T) {
-
 		if d, err = db.OpenFromEnv(context.Background()); err != nil {
 			t.Fatal("failed to open DB client")
 		}
@@ -42,7 +41,6 @@ func TestRigDB(t *testing.T) {
 
 	t.Logf("Testing creating new user...")
 
-	// Test creating a new user
 	t.Run("Create new user", func(t *testing.T) {
 
 		req, err := http.NewRequest("POST", "/user/create", nil)
@@ -77,7 +75,6 @@ func TestRigDB(t *testing.T) {
 
 	t.Logf("Testing deletion of program from user...")
 
-	// Test deleting a program from a user
 	t.Run("Delete program", func(t *testing.T) {
 
 		req, err := http.NewRequest("DELETE", "/program/delete", nil)
@@ -88,9 +85,6 @@ func TestRigDB(t *testing.T) {
 
 		// build query
 		p := req.URL.Query()
-
-		//fmt.Printf("UID: %s\n", res.UserData.UID)
-		//fmt.Printf("Program: %s\n", res.UserData.Programs[0])
 
 		p.Add("userId", res.UserData.UID)
 		p.Add("programId", res.UserData.Programs[0])
@@ -109,7 +103,6 @@ func TestRigDB(t *testing.T) {
 
 	t.Logf("Testing creating program for user...")
 
-	// Test creating a program from a user
 	t.Run("Create program", func(t *testing.T) {
 
 		t.Logf("Building query")
@@ -136,8 +129,6 @@ func TestRigDB(t *testing.T) {
 			t.Fatal("Failed to create JSON")
 		}
 
-		//fmt.Printf("%s", pro)
-
 		req, err := http.NewRequest("POST", "/program/create", bytes.NewBuffer(pro))
 		req.Header.Set("Content-Type", "application/json")
 
@@ -155,6 +146,49 @@ func TestRigDB(t *testing.T) {
 			t.Fatal("Create program failed")
 		}
 
+	})
+
+	t.Logf("Testing getting user...")
+
+	t.Run("Get user", func(t *testing.T) {
+
+		t.Logf("Building query")
+
+		req, err := http.NewRequest("GET", "/user/get", nil)
+
+		if err != nil {
+			t.Fatal("Failed to create http request")
+		}
+
+		// build query
+		p := req.URL.Query()
+
+		p.Add("userId", res.UserData.UID)
+		p.Add("includePrograms", res.UserData.Programs[0])
+		req.URL.RawQuery = p.Encode()
+
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(d.HandleDeleteProgram)
+
+		// struct to recieve response 
+		resp := struct {
+			UserData *db.User     `json:"userData"`
+			Programs []db.Program `json:"programs"`
+		}{}
+
+		handler.ServeHTTP(rr, req)
+
+		//get raw data returned
+		r_byte, _ := ioutil.ReadAll(rr.Body)
+		//unmarshall json
+		json.Unmarshal(r_byte, resp)
+
+		//TODO check if correct programs are made
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatal("Delete program failed")
+		}
+		
 	})
 
 	// Test creating a class from a user

@@ -31,6 +31,7 @@ func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
 		return
 	}
+	
 	if req.Name == "" {
 		http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
 		return
