@@ -174,6 +174,9 @@ func WithCORS(serveFn func(http.ResponseWriter, *http.Request)) func(http.Respon
 			http.MethodPut,
 			http.MethodTrace,
 		},
+		AllowedHeaders: []string{
+			"*",
+		},
 	}
 
 	return WithCORSConfig(serveFn, defaultCfg)
