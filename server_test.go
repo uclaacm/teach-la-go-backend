@@ -28,6 +28,8 @@ func TestRigDB(t *testing.T) {
 		d   *db.DB 		// stores instance of connection with database
 		err error
 		res Response 	// structure to store response fron database
+		res_student Response 	// structure to store response fron database
+		class_id string
 	)
 
 	t.Logf("Testing initialization of database...")
@@ -163,12 +165,15 @@ func TestRigDB(t *testing.T) {
 		// build query
 		p := req.URL.Query()
 
-		p.Add("userId", res.UserData.UID)
-		p.Add("includePrograms", res.UserData.Programs[0])
+		//p.Add("userId", res.UserData.UID)
+		//p.Add("includePrograms", res.UserData.Programs[0])
+		t.Log(res.UserData.UID)
+		p.Add("id", res.UserData.UID)
+		p.Add("programs", "true")
 		req.URL.RawQuery = p.Encode()
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(d.HandleDeleteProgram)
+		handler := http.HandlerFunc(d.HandleGetUser)
 
 		// struct to recieve response 
 		resp := struct {
@@ -177,16 +182,21 @@ func TestRigDB(t *testing.T) {
 		}{}
 
 		handler.ServeHTTP(rr, req)
-
+		t.Log(rr.Body)
 		//get raw data returned
-		r_byte, _ := ioutil.ReadAll(rr.Body)
 		//unmarshall json
-		json.Unmarshal(r_byte, resp)
+		j, err := ioutil.ReadAll(rr.Result().Body)
+		if err != nil {
+			t.Fatal("Failed to read response")
+		}
+
+		json.Unmarshal([]byte(j), resp)
 
 		//TODO check if correct programs are made
-
+		//t.Logf(resp.Programs[0].Name)
+		
 		if status := rr.Code; status != http.StatusOK {
-			t.Fatal("Delete program failed")
+			t.Fatal("Get user failed")
 		}
 		
 	})
@@ -225,6 +235,82 @@ func TestRigDB(t *testing.T) {
 
 		handler.ServeHTTP(rr, req)
 
+		var class db.Class
+
+		t.Log(rr.Body)
+
+		j, err := ioutil.ReadAll(rr.Result().Body)
+		if err != nil {
+			t.Fatal("Failed to read response")
+		}
+
+		json.Unmarshal([]byte(j), &class)
+		class_id = class.WID
+		
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatal("Create program failed")
+		}
+
+	})
+
+	// Create another student to join the class
+	t.Run("Create new student", func(t *testing.T) {
+		req, err := http.NewRequest("POST", "/user/create", nil)
+		if err != nil {
+			t.Fatal("Failed to create http request")
+		}
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(d.HandleInitializeUser)
+
+		handler.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatal("Failed to create user")
+		}
+
+		defer rr.Result().Body.Close()
+
+		j, err := ioutil.ReadAll(rr.Result().Body)
+		if err != nil {
+			t.Fatal("Failed to read response")
+		}
+
+		json.Unmarshal([]byte(j), &res_student)
+	})
+
+	// Test adding a user to class
+	t.Run("Join Class", func(t *testing.T){
+
+		// create JSON for a new program 
+		pr := struct {
+			Uid 		string
+			Cid			string
+		}{
+			res.UserData.UID,
+			class_id,
+		}
+
+		pro, err := json.Marshal(&pr) 
+
+		if err != nil {
+			t.Fatal("Failed to create JSON")
+		}
+
+		//fmt.Printf("%s", pro)
+
+		req, err := http.NewRequest("POST", "/class/join", bytes.NewBuffer(pro))
+		req.Header.Set("Content-Type", "application/json")
+
+		if err != nil {
+			t.Fatal("Failed to test create program")
+		}
+		
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(d.HandleJoinClass)
+
+		handler.ServeHTTP(rr, req)
+		t.Log(rr.Body)
 		if status := rr.Code; status != http.StatusOK {
 			t.Fatal("Create program failed")
 		}

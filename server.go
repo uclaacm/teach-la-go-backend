@@ -47,6 +47,9 @@ func main() {
 
 	//class management
 	router.HandleFunc("/class/create", d.HandleCreateClass)
+	router.HandleFunc("/class/get", d.HandleGetClass)
+	router.HandleFunc("/class/join", d.HandleJoinClass)
+	router.HandleFunc("/class/leave", d.HandleLeaveClass)
 	
 
 	// fallback route

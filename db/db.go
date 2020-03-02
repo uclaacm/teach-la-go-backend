@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"../tools/tinycrypt"
+	tinycrypt "github.com/uclaacm/teach-la-go-backend-tinycrypt"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
@@ -171,14 +171,21 @@ func (d *DB) CreateClass(ctx context.Context, c *Class) (string, error) {
 	// create a new doc for this class
 	doc := d.Collection(ClassesPath).NewDoc()
 
-	// set the CID parameter
+	//set the CID parameter
 	c.CID = doc.ID
 
-	// update database
+	//update the database
 	_, err := doc.Set(ctx, *c)
 
 	//return the results
-	return c.CID, err
+	return doc.ID, err
+}
+
+func (d *DB) UpdateClassWID(ctx context.Context, cid string, wid string) error {
+	doc := d.Collection(ClassesPath).Doc(cid)
+
+	_, err := doc.Update(ctx, []firestore.Update{{Path: "WID", Value: wid }})
+	return err
 }
 
 // AddClassToUser takes a uid and a pid, 
@@ -262,12 +269,13 @@ func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
 	return c, err
 }
 
-// MakeAlias takes an id (usually pid or cid), generates a 3 word id, and 
-// stores it in Firebase. The generated 3 word id is returned as a list
-func (d *DB) MakeAlias(ctx context.Context, uid string) ([]string, error) {
+// MakeAlias takes an id (usually pid or cid), generates a 3 word id(wid), and 
+// stores it in Firebase. The generated wid is returned as a string, with words comma seperated
+func (d *DB) MakeAlias(ctx context.Context, uid string, path string) (string, error) {
 
 	// convert uid into a 36 bit hash
-	aid := MakeHash(uid) 
+	//aid := tinycrypt.MakeHash(uid) 
+	aid := tinycrypt.GenerateHash() 
 
 	// convert that to a 3 word id
 	wid_list := tinycrypt.GenerateWord36(aid)
@@ -275,7 +283,7 @@ func (d *DB) MakeAlias(ctx context.Context, uid string) ([]string, error) {
 	wid := strings.Join(wid_list, ",") 
 
 	// get the mapping collection
-	col := d.Collection(AliasPath)
+	col := d.Collection(path)
 	// get the snapshot of the document with the requested wid
 	snap, err := col.Doc(wid).Get(ctx)
 
@@ -283,7 +291,7 @@ func (d *DB) MakeAlias(ctx context.Context, uid string) ([]string, error) {
 	for snap.Exists() == true {
 
 		aid++
-		if aid == 0xFFFFFFFFF{
+		if aid >= 0xFFFFFFFFF{
 			aid = 0
 		}
 
@@ -298,36 +306,26 @@ func (d *DB) MakeAlias(ctx context.Context, uid string) ([]string, error) {
 		"target" : uid,
 	})
 
-	return wid_list, err
+	return strings.Join(wid_list, ","), err
 
 }
 
-// MakeHash is a helper funciton that takes a 120 bit id 
-// and makes a 36 bit id
-func MakeHash(pid string) (uint64) {
-	
-	//get first 6 chars
-	pid = pid[0:6]
-	index := uint64(0)
-	aid := uint64(0)
 
-	//convert their UNICODE into 6 bit ints
-	for _, c := range pid{
-		//if this is a number (0 ~ 9)
-		if c >= 0x0030 && c <= 0x0039 {
-			index = uint64(c - 0x0030) 
-		} else if c >= 0x0041 && c <= 0x005A{ //else if this is uppercase char
-			index = uint64(c - 0x0041) 
-		} else if c >= 0x0061 && c <= 0x007A{ //else if this is lowercase char
-			index = uint64(c - 0x0061)
-		} else {
-			index = 0
-		}
 
-		aid = (aid | index) << 6
+// GetUIDFromWID returns the UID given a WID
+func (d *DB) GetUIDFromWID(ctx context.Context, wid string, path string) (string, error) {
+
+	// get the document with the mapping
+	doc, err := d.Collection(path).Doc(wid).Get(ctx)
+	if err != nil {
+		return "", err
 	}
 
-	return aid
+	t := struct {
+		Target	string `firestore:target`
+	}{}
 
+	err = doc.DataTo(&t)
+
+	return t.Target, err
 }
-
