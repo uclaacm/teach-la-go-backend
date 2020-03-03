@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"time"
 
-	"./lib"
+	"./db"
 	m "./middleware"
 )
 
@@ -22,10 +22,10 @@ func main() {
 	// acquire DB client.
 	// fails early if we cannot acquire one.
 	var (
-		d   *lib.DB
+		d   *db.DB
 		err error
 	)
-	if d, err = lib.OpenFromEnv(context.Background()); err != nil {
+	if d, err = db.OpenFromEnv(context.Background()); err != nil {
 		log.Fatalf("failed to open DB client. %s", err)
 	}
 	defer d.Close()
@@ -44,6 +44,13 @@ func main() {
 	router.HandleFunc("/program/update", d.HandleUpdateProgram)
 	router.HandleFunc("/program/create", d.HandleInitializeProgram)
 	router.HandleFunc("/program/delete", d.HandleDeleteProgram)
+
+	//class management
+	router.HandleFunc("/class/create", d.HandleCreateClass)
+	router.HandleFunc("/class/get", d.HandleGetClass)
+	router.HandleFunc("/class/join", d.HandleJoinClass)
+	router.HandleFunc("/class/leave", d.HandleLeaveClass)
+	
 
 	// fallback route
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

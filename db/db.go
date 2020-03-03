@@ -1,8 +1,11 @@
-package lib
+package db
 
 import (
 	"context"
 	"os"
+	"strings"
+
+	tinycrypt "github.com/uclaacm/teach-la-go-backend-tinycrypt"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
@@ -88,10 +91,10 @@ func (d *DB) UpdateUser(ctx context.Context, uid string, u *User) error {
 	return err
 }
 
-// DeleteProgramFromUser takes a uid and a pid, 
+// DeleteProgramFromUser takes a uid and a pid,
 // and deletes the pid from the User with the given uid
 func (d *DB) DeleteProgramFromUser(ctx context.Context, uid string, pid string) error {
-	
+
 	//get the user doc
 	doc := d.Collection(UsersPath).Doc(uid)
 
@@ -102,12 +105,12 @@ func (d *DB) DeleteProgramFromUser(ctx context.Context, uid string, pid string) 
 	return err
 }
 
-// AddProgramToUser takes a uid and a pid, 
+// AddProgramToUser takes a uid and a pid,
 // and adds the pid to the user's list of programs
 func (d *DB) AddProgramToUser(ctx context.Context, uid string, pid string) error {
 
 	//get the user doc
-	doc := d.Collection(UsersPath).Doc(uid) 
+	doc := d.Collection(UsersPath).Doc(uid)
 
 	_, err := doc.Update(ctx, []firestore.Update{
 		{Path: "programs", Value: firestore.ArrayUnion(pid)},
@@ -121,9 +124,7 @@ func (d *DB) AddProgramToUser(ctx context.Context, uid string, pid string) error
 // the provided struct.
 // The program's UID is returned with an error, should one
 // occur.
-func (d *DB) CreateProgram(ctx context.Context, p *Program/*, uid string*/) (string, error) {
-	
-	//crate new program document
+func (d *DB) CreateProgram(ctx context.Context, p *Program) (string, error) {
 	doc := d.Collection(ProgramsPath).NewDoc()
 
 	// update UID to match, then update doc.
@@ -170,14 +171,21 @@ func (d *DB) CreateClass(ctx context.Context, c *Class) (string, error) {
 	// create a new doc for this class
 	doc := d.Collection(ClassesPath).NewDoc()
 
-	// set the CID parameter
+	//set the CID parameter
 	c.CID = doc.ID
 
-	// update database
+	//update the database
 	_, err := doc.Set(ctx, *c)
 
 	//return the results
-	return c.CID, err
+	return doc.ID, err
+}
+
+func (d *DB) UpdateClassWID(ctx context.Context, cid string, wid string) error {
+	doc := d.Collection(ClassesPath).Doc(cid)
+
+	_, err := doc.Update(ctx, []firestore.Update{{Path: "WID", Value: wid }})
+	return err
 }
 
 // AddClassToUser takes a uid and a pid, 
@@ -196,6 +204,53 @@ func (d *DB) AddClassToUser(ctx context.Context, uid string, cid string) error {
 
 }
 
+// AddUserToClass add an uid to a given class
+func (d *DB) AddUserToClass(ctx context.Context, uid string, cid string) error {
+
+	//get the class doc
+	doc := d.Collection(ClassesPath).Doc(cid) 
+
+	//add the class id
+	_, err := doc.Update(ctx, []firestore.Update{
+		{Path: "members", Value: firestore.ArrayUnion(uid)},
+	})
+
+	return err
+
+}
+
+// RemoveUserFromClass removes an uid from a given class
+func (d *DB) RemoveUserFromClass(ctx context.Context, uid string, cid string) error {
+
+	//get the class doc
+	doc := d.Collection(ClassesPath).Doc(cid) 
+
+	//add the class id
+	_, err := doc.Update(ctx, []firestore.Update{
+		{Path: "members", Value: firestore.ArrayRemove(uid)},
+	})
+
+	return err
+
+}
+
+// RemoveClassFromUser removes a class from a given user
+func (d *DB) RemoveClassFromUser(ctx context.Context, uid string, cid string) error {
+
+	//get the user doc
+	doc := d.Collection(UsersPath).Doc(uid) 
+
+	//remove the class id
+	_, err := doc.Update(ctx, []firestore.Update{
+		{Path: "classes", Value: firestore.ArrayRemove(cid)},
+	})
+
+	return err
+
+}
+
+// GetClass takes a cid, and returns a Class struct with its parameters populated
+// The retuned value is a pointer to the struct instantiated in this function
 func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
 
 	//get document for specified class
@@ -214,4 +269,63 @@ func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
 	return c, err
 }
 
+// MakeAlias takes an id (usually pid or cid), generates a 3 word id(wid), and 
+// stores it in Firebase. The generated wid is returned as a string, with words comma seperated
+func (d *DB) MakeAlias(ctx context.Context, uid string, path string) (string, error) {
 
+	// convert uid into a 36 bit hash
+	//aid := tinycrypt.MakeHash(uid) 
+	aid := tinycrypt.GenerateHash() 
+
+	// convert that to a 3 word id
+	wid_list := tinycrypt.GenerateWord36(aid)
+	// the result is an array,so concat into a single string
+	wid := strings.Join(wid_list, ",") 
+
+	// get the mapping collection
+	col := d.Collection(path)
+	// get the snapshot of the document with the requested wid
+	snap, err := col.Doc(wid).Get(ctx)
+
+	//if the doc id is taken, generate a different wid
+	for snap.Exists() == true {
+
+		aid++
+		if aid >= 0xFFFFFFFFF{
+			aid = 0
+		}
+
+		wid_list = tinycrypt.GenerateWord36(aid)
+		wid = strings.Join(wid_list, ",") 
+		
+		snap, err = col.Doc(wid).Get(ctx)
+	}
+	
+	//create mapping
+	_, err = col.Doc(wid).Set(ctx, map[string]interface{}{
+		"target" : uid,
+	})
+
+	return strings.Join(wid_list, ","), err
+
+}
+
+
+
+// GetUIDFromWID returns the UID given a WID
+func (d *DB) GetUIDFromWID(ctx context.Context, wid string, path string) (string, error) {
+
+	// get the document with the mapping
+	doc, err := d.Collection(path).Doc(wid).Get(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	t := struct {
+		Target	string `firestore:target`
+	}{}
+
+	err = doc.DataTo(&t)
+
+	return t.Target, err
+}

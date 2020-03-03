@@ -70,8 +70,8 @@ Missing resource | `http.StatusNotFound` | `404`
 Something unexpected happened server side | `http.StatusInternalServerError` | `500`
 
 ## What files do what
-* Descriptions of document types can be found in `lib/user.go` and `lib/program.go`.
-* Endpoint functionality is divided up into `lib/userManagement.go` and `lib/programManagement.go`.
+* Descriptions of document types can be found in `db/user.go` and `db/program.go`.
+* Endpoint functionality is divided up into `db/userManagement.go` and `db/programManagement.go`.
 * All tests are of the form `fileToTestName_test.go`.
 * Middleware that handles certain request-specific options prior to handing off the request to the default handler can be found in `middleware/`.
 * `hooks/` harbors our git pre-commit hooks that enforce coding style.

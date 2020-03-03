@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"../tools/log"
 	"net/http"
+
+	"../tools/log"
 )
 
 // LogRequest automatically logs all relevant information about a request object
