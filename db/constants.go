@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"../tools/log"
+	"github.com/uclaacm/teach-la-go-backend/tools/log"
 )
 
 const (
