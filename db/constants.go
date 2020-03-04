@@ -43,6 +43,16 @@ const (
 	// ClassesAliasPath describes the path to the collection with 3 word id => hash mapping for classes
 	ClassesAliasPath = "classes_alias"
 
+	// num_shards = 32
+	// alias_size = 16777216
+	// divider = 1024
+	num_shards = 8
+	alias_size = int64(64)
+	divider = int64(4)
+	max_size = alias_size / (divider * num_shards)
+	slot_per_shard = alias_size / num_shards
+	shard_cap = slot_per_shard
+
 	
 )
 

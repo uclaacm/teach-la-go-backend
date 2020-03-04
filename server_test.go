@@ -214,31 +214,6 @@ func TestRigDB(t *testing.T) {
 		
 	})
 
-	
-
-	
-	// Test creating a class from a user
-	// t.Run("Create Shards", func(t *testing.T){
-	// 	err := d.InitShards(context.Background(), "classes_alias")
-	// 	if err != nil {
-	// 		t.Fatal("init failed")
-	// 	}
-	// })
-
-	// Test creating a class from a user
-	t.Run("Get ID", func(t *testing.T){
-		for i := 0; i < 10; i++ {
-			u, err := d.GetID(context.Background(), "classes_alias")
-			if err != nil {
-				t.Fatal("init failed")
-			}
-			
-			t.Logf("u: %d\n",u)
-		}
-	})
-
-
-	
 
 
 	// Test creating a class from a user
