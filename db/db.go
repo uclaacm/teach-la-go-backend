@@ -3,9 +3,6 @@ package db
 import (
 	"context"
 	"os"
-	"strings"
-
-	tinycrypt "github.com/uclaacm/teach-la-go-backend-tinycrypt"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
@@ -267,65 +264,4 @@ func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
 	}
 	
 	return c, err
-}
-
-// MakeAlias takes an id (usually pid or cid), generates a 3 word id(wid), and 
-// stores it in Firebase. The generated wid is returned as a string, with words comma seperated
-func (d *DB) MakeAlias(ctx context.Context, uid string, path string) (string, error) {
-
-	// convert uid into a 36 bit hash
-	//aid := tinycrypt.MakeHash(uid) 
-	aid := tinycrypt.GenerateHash() 
-
-	// convert that to a 3 word id
-	wid_list := tinycrypt.GenerateWord36(aid)
-	// the result is an array,so concat into a single string
-	wid := strings.Join(wid_list, ",") 
-
-	// get the mapping collection
-	col := d.Collection(path)
-	// get the snapshot of the document with the requested wid
-	snap, err := col.Doc(wid).Get(ctx)
-
-	//if the doc id is taken, generate a different wid
-	for snap.Exists() == true {
-
-		aid++
-		if aid >= 0xFFFFFFFFF{
-			aid = 0
-		}
-
-		wid_list = tinycrypt.GenerateWord36(aid)
-		wid = strings.Join(wid_list, ",") 
-		
-		snap, err = col.Doc(wid).Get(ctx)
-	}
-	
-	//create mapping
-	_, err = col.Doc(wid).Set(ctx, map[string]interface{}{
-		"target" : uid,
-	})
-
-	return strings.Join(wid_list, ","), err
-
-}
-
-
-
-// GetUIDFromWID returns the UID given a WID
-func (d *DB) GetUIDFromWID(ctx context.Context, wid string, path string) (string, error) {
-
-	// get the document with the mapping
-	doc, err := d.Collection(path).Doc(wid).Get(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	t := struct {
-		Target	string `firestore:target`
-	}{}
-
-	err = doc.DataTo(&t)
-
-	return t.Target, err
 }

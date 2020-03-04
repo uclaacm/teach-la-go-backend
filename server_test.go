@@ -31,7 +31,7 @@ func TestRigDB(t *testing.T) {
 		res_student Response 	// structure to store response fron database
 		class_id string
 	)
-
+	
 	t.Logf("Testing initialization of database...")
 
 	// Test opening connection with database
@@ -163,69 +163,6 @@ func TestRigDB(t *testing.T) {
 
 	})
 
-	// Create another student to join the class
-	t.Run("Create new student", func(t *testing.T) {
-		req, err := http.NewRequest("POST", "/user/create", nil)
-		if err != nil {
-			t.Fatal("Failed to create http request")
-		}
-		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(d.HandleInitializeUser)
-
-		handler.ServeHTTP(rr, req)
-
-		if status := rr.Code; status != http.StatusOK {
-			t.Fatal("Failed to create user")
-		}
-
-		defer rr.Result().Body.Close()
-
-		j, err := ioutil.ReadAll(rr.Result().Body)
-		if err != nil {
-			t.Fatal("Failed to read response")
-		}
-
-		json.Unmarshal([]byte(j), &res_student)
-	})
-
-	// Test adding a user to class
-	t.Run("Join Class", func(t *testing.T){
-
-		// create JSON for a new program 
-		pr := struct {
-			Uid 		string
-			Cid			string
-		}{
-			res.UserData.UID,
-			class_id,
-		}
-
-		pro, err := json.Marshal(&pr) 
-
-		if err != nil {
-			t.Fatal("Failed to create JSON")
-		}
-
-		//fmt.Printf("%s", pro)
-
-		req, err := http.NewRequest("POST", "/class/join", bytes.NewBuffer(pro))
-		req.Header.Set("Content-Type", "application/json")
-
-		if err != nil {
-			t.Fatal("Failed to test create program")
-		}
-		
-		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(d.HandleJoinClass)
-
-		handler.ServeHTTP(rr, req)
-		t.Log(rr.Body)
-		if status := rr.Code; status != http.StatusOK {
-			t.Fatal("Create program failed")
-		}
-
-	})
-
 	t.Logf("Testing getting user...")
 
 	t.Run("Get user", func(t *testing.T) {
@@ -277,6 +214,33 @@ func TestRigDB(t *testing.T) {
 		
 	})
 
+	
+
+	
+	// Test creating a class from a user
+	// t.Run("Create Shards", func(t *testing.T){
+	// 	err := d.InitShards(context.Background(), "classes_alias")
+	// 	if err != nil {
+	// 		t.Fatal("init failed")
+	// 	}
+	// })
+
+	// Test creating a class from a user
+	t.Run("Get ID", func(t *testing.T){
+		for i := 0; i < 10; i++ {
+			u, err := d.GetID(context.Background(), "classes_alias")
+			if err != nil {
+				t.Fatal("init failed")
+			}
+			
+			t.Logf("u: %d\n",u)
+		}
+	})
+
+
+	
+
+
 	// Test creating a class from a user
 	t.Run("Create Class", func(t *testing.T){
 
@@ -288,7 +252,7 @@ func TestRigDB(t *testing.T) {
 		}{
 			res.UserData.UID,
 			"TestClass",
-			1,
+			2,
 		}
 
 		pro, err := json.Marshal(&pr) 
@@ -393,4 +357,5 @@ func TestRigDB(t *testing.T) {
 
 	})
 
+	
 }
