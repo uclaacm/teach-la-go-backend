@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"cloud.google.com/go/firestore"
@@ -15,30 +16,24 @@ type DB struct {
 	*firestore.Client
 }
 
-// OpenFromCreds returns a pointer to a database client based on
-// JSON credentials pointed to by the provided path.
+// OpenFromEnv returns a pointer to a database client based on
+// JSON credentials given by the environment variable.
 // Returns an error if it fails at any point.
-func OpenFromCreds(ctx context.Context, path string) (*DB, error) {
+func OpenFromEnv(ctx context.Context) (*DB, error) {
 	// check, using os.Stat(), that the file exists. If it does not exist,
 	// then fail.
-	if _, err := os.Stat(path); err != nil {
-		return nil, err
+	if os.Getenv("TLACFG") == "" {
+		return nil, fmt.Errorf("No TLACFG variable provided.")
 	}
 
 	// set up the app through which our client will be
 	// acquired.
-	opt := option.WithCredentialsFile(path)
+	opt := option.WithCredentialsJSON([]byte(os.Getenv("TLACFG")))
 	app, err := firebase.NewApp(ctx, nil, opt)
 
 	// acquire the firestore client, fail if we cannot.
 	client, err := app.Firestore(ctx)
 	return &DB{Client: client}, err
-}
-
-// OpenFromEnv calls OpenFromCreds with the path
-// provided by your environment variable $CFGPATH.
-func OpenFromEnv(ctx context.Context) (*DB, error) {
-	return OpenFromCreds(ctx, os.Getenv(DefaultEnvVar))
 }
 
 // CreateUser creates the default user and program documents,
