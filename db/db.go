@@ -20,15 +20,14 @@ type DB struct {
 // JSON credentials given by the environment variable.
 // Returns an error if it fails at any point.
 func OpenFromEnv(ctx context.Context) (*DB, error) {
-	// check, using os.Stat(), that the file exists. If it does not exist,
-	// then fail.
-	if os.Getenv("TLACFG") == "" {
-		return nil, fmt.Errorf("No TLACFG variable provided.")
+	cfg := os.Getenv("TLACFG")
+	if cfg == "" {
+		return nil, fmt.Errorf("no $TLACFG environment variable provided")
 	}
 
 	// set up the app through which our client will be
 	// acquired.
-	opt := option.WithCredentialsJSON([]byte(os.Getenv("TLACFG")))
+	opt := option.WithCredentialsJSON([]byte(cfg))
 	app, err := firebase.NewApp(ctx, nil, opt)
 
 	// acquire the firestore client, fail if we cannot.

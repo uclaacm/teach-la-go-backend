@@ -8,16 +8,20 @@ import (
 	"os/signal"
 	"time"
 
+	_ "github.com/heroku/x/hmetrics/onload"
 	"github.com/uclaacm/teach-la-go-backend/db"
 	m "github.com/uclaacm/teach-la-go-backend/middleware"
 )
 
-// PORT defines where we serve the backend.
-const PORT = ":8081"
-
 func main() {
 	// set up context for main routine.
 	mainContext := context.Background()
+
+	// check for PORT variable.
+	port := os.Getenv("PORT")
+	if port == "" {
+		log.Fatalf("no $PORT environment variable provided.")
+	}
 
 	// acquire DB client.
 	// fails early if we cannot acquire one.
@@ -54,7 +58,7 @@ func main() {
 
 	// server configuration
 	s := &http.Server{
-		Addr:           PORT,
+		Addr:           ":" + port,
 		Handler:        m.LogRequest(router),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
@@ -66,7 +70,7 @@ func main() {
 	kill := make(chan os.Signal, 1)
 	signal.Notify(kill, os.Interrupt)
 	go func() {
-		log.Printf("serving on %s", PORT)
+		log.Printf("serving on :%s", port)
 		log.Fatal(s.ListenAndServe())
 	}()
 
