@@ -23,7 +23,7 @@ type User struct {
 func (u *User) ToFirestoreUpdate() []firestore.Update {
 	f := []firestore.Update{
 		{Path: "mostRecentProgram", Value: u.MostRecentProgram},
-		{Path: "programs", Value: u.Programs},
+		{Path: "programs", Value: firestore.ArrayUnion(u.Programs)},
 	}
 	return f
 }
