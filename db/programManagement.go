@@ -37,7 +37,7 @@ func (d *DB) HandleGetProgram(w http.ResponseWriter, r *http.Request) {
 
 	// otherwise, return the marshalled program.
 	if resp, err := json.Marshal(&p); err != nil {
-		http.Error(w, "failed to marshal response.", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
 		w.WriteHeader(http.StatusOK)
 		w.Write(resp)
@@ -134,7 +134,7 @@ func (d *DB) HandleUpdateProgram(w http.ResponseWriter, r *http.Request) {
 	// unmarshal request body into an Program struct.
 	requestObj := Program{}
 	if err := requests.BodyTo(r, &requestObj); err != nil {
-		http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -167,13 +167,13 @@ func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
 
 	// remove this program from the user's list
 	if err = d.DeleteProgramFromUser(r.Context(), uid, pid); err != nil {
-		http.Error(w, "failed updating user's program list.", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// attempt to delete program doc.
 	if err = d.DeleteProgram(r.Context(), pid); err != nil {
-		http.Error(w, "failed to delete program doc.", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

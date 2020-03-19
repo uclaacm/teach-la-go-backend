@@ -42,7 +42,7 @@ func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 		// params.
 		u, err = d.GetUser(r.Context(), query.Get("uid"))
 		if err != nil {
-			http.Error(w, "error occurred in reading document.", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	} else if _, isUser := ctxUser.(*User); isUser {
@@ -64,7 +64,7 @@ func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 			// attempt to get program, failing if we cannot.
 			p, err := d.GetProgram(r.Context(), pid)
 			if err != nil {
-				http.Error(w, "error occurred in retrieving programs.", http.StatusInternalServerError)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -75,7 +75,7 @@ func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 
 	// convert to JSON.
 	if userJSON, err = json.Marshal(resp); err != nil {
-		http.Error(w, "error occurred in writing response.", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -88,7 +88,7 @@ func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
  * updateUserData
  * Body:
  * {
- *     [User object]
+ *     [partial User object with UID]
  * }
  *
  * Returns: Status 200 on success.
@@ -100,7 +100,7 @@ func (d *DB) HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	// unmarshal request body into an User struct.
 	requestObj := User{}
 	if err := requests.BodyTo(r, &requestObj); err != nil {
-		http.Error(w, "error occurred in reading body.", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -124,7 +124,7 @@ func (d *DB) HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
 func (d *DB) HandleInitializeUser(w http.ResponseWriter, r *http.Request) {
 	u, err := d.CreateUser(r.Context())
 	if err != nil {
-		http.Error(w, "failed to initialize user data.", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
