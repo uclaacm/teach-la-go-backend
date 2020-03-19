@@ -84,16 +84,25 @@ func (d *DB) UpdateUser(ctx context.Context, uid string, u *User) error {
 
 // DeleteProgramFromUser takes a uid and a pid,
 // and deletes the pid from the User with the given uid
-func (d *DB) DeleteProgramFromUser(ctx context.Context, uid string, pid string) error {
-
-	//get the user doc
+func (d *DB) DeleteProgramFromUser(ctx context.Context, uid string, pid string) (err error) {
 	doc := d.Collection(UsersPath).Doc(uid)
 
-	_, err := doc.Update(ctx, []firestore.Update{
+	var ud *firestore.DocumentSnapshot
+	u := User{}
+	if ud, err = doc.Get(ctx); err == nil {
+		if err = ud.DataTo(&u); err != nil {
+			return
+		}
+	} else {
+		return
+	}
+
+	_, err = doc.Update(ctx, []firestore.Update{
+		{Path: "mostRecentProgram", Value: int(-1)},
 		{Path: "programs", Value: firestore.ArrayRemove(pid)},
 	})
 
-	return err
+	return
 }
 
 // AddProgramToUser takes a uid and a pid,
