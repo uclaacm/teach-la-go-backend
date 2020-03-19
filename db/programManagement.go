@@ -10,7 +10,8 @@ import (
 
 /**
  * getProgram
- * Query parameters: programId
+ * Query parameters:
+ *	- pid string: UID of the program to retrieve the data for.
  *
  * Returns: Status 200 with a marshalled Program struct.
  */
@@ -22,7 +23,7 @@ func (d *DB) HandleGetProgram(w http.ResponseWriter, r *http.Request) {
 	if ctxID, ok := r.Context().Value("getProgram").(string); ok {
 		pid = ctxID
 	} else {
-		pid = r.URL.Query().Get("programId")
+		pid = r.URL.Query().Get("pid")
 	}
 
 	// attempt to acquire doc.
@@ -108,7 +109,6 @@ func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//d.UpdateUser(r.Context(), u.UID, u)
 
 	// pass control to getProgramData.
 	ctx := context.WithValue(r.Context(), "getProgram", p)
@@ -117,6 +117,9 @@ func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
 
 /**
  * updateProgramData
+ * Query parameters:
+ *	- uid string: UID of the user to update
+ *
  * Body:
  * {
  *     [Program object]
@@ -135,7 +138,7 @@ func (d *DB) HandleUpdateProgram(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uid := requestObj.UID
+	uid := r.URL.Query().Get("uid")
 	if uid == "" {
 		http.Error(w, "a uid is required.", http.StatusBadRequest)
 		return
@@ -147,31 +150,30 @@ func (d *DB) HandleUpdateProgram(w http.ResponseWriter, r *http.Request) {
 
 /**
  * deleteProgram
- * Query parameters: uid, pid
+ * Query parameters:
+ *	- uid string: UID of the user to delete the program from.
+ *	- pid string: UID of the program to delete.
  *
  * Deletes the program identified by {pid} from user {uid}.
  */
 func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
 	// acquire parameters.
-	uid := r.URL.Query().Get("userId")
-	pid := r.URL.Query().Get("programId")
+	uid := r.URL.Query().Get("uid")
+	pid := r.URL.Query().Get("pid")
 
-	var (
-		// u   *User
-		err error
-	)
+	var err error
 
 	//TODO: Make this handler atomic
+
+	// remove this program from the user's list
+	if err = d.DeleteProgramFromUser(r.Context(), uid, pid); err != nil {
+		http.Error(w, "failed updating user's program list.", http.StatusInternalServerError)
+		return
+	}
 
 	// attempt to delete program doc.
 	if err = d.DeleteProgram(r.Context(), pid); err != nil {
 		http.Error(w, "failed to delete program doc.", http.StatusInternalServerError)
-		return
-	}
-
-	// Remove this program from the user's list
-	if err = d.DeleteProgramFromUser(r.Context(), uid, pid); err != nil {
-		http.Error(w, "failed updating user's program list.", http.StatusInternalServerError)
 		return
 	}
 

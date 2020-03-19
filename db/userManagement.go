@@ -13,7 +13,7 @@ import (
  * Acquire the userdoc with the given uid.
  *
  * Query Parameters:
- *  - id string: ID of user to get
+ *  - uid string: UID of user to get
  *  - programs bool: whether to include user's programs in response.
  *
  * Returns: Status 200 with marshalled User and optional programs.
@@ -40,7 +40,7 @@ func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 	if ctxUser := r.Context().Value("user"); ctxUser == nil {
 		// attempt to get the complete user struct using URL
 		// params.
-		u, err = d.GetUser(r.Context(), query.Get("id"))
+		u, err = d.GetUser(r.Context(), query.Get("uid"))
 		if err != nil {
 			http.Error(w, "error occurred in reading document.", http.StatusInternalServerError)
 			return
@@ -86,7 +86,7 @@ func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 
 /**
  * updateUserData
- * Parameters:
+ * Body:
  * {
  *     [User object]
  * }
@@ -116,7 +116,6 @@ func (d *DB) HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
 
 /**
  * initializeUserData
- * Parameters: none
  *
  * Returns: Status 200 with a marshalled User struct.
  *
