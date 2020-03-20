@@ -118,7 +118,8 @@ func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
 /**
  * updateProgramData
  * Query parameters:
- *	- uid string: UID of the user to update
+ *	- uid string: UID of the user whose program will be updated
+ *	- pid string: PID of the program belonging to user uid to update.
  *
  * Body:
  * {
@@ -131,20 +132,24 @@ func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
  * with program uid.
  */
 func (d *DB) HandleUpdateProgram(w http.ResponseWriter, r *http.Request) {
-	// unmarshal request body into an Program struct.
-	requestObj := Program{}
+	var requestObj Program
 	if err := requests.BodyTo(r, &requestObj); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	uid := r.URL.Query().Get("uid")
-	if uid == "" {
-		http.Error(w, "a uid is required.", http.StatusBadRequest)
+	pid := r.URL.Query().Get("pid")
+	if uid == "" || pid == "" {
+		http.Error(w, "uid and pid query parameters are required.", http.StatusBadRequest)
 		return
 	}
 
-	d.UpdateProgram(r.Context(), uid, &requestObj)
+	if err := d.UpdateProgram(r.Context(), uid, pid, &requestObj); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 

@@ -145,14 +145,30 @@ func (d *DB) GetProgram(ctx context.Context, uid string) (*Program, error) {
 	return p, doc.DataTo(p)
 }
 
-// UpdateProgram updates the program with the given uid to match
-// the program provided as an argument.
+// UpdateProgram updates the program with given pid belonging to the
+// user with given uid to match the *Program provided as an argument.
 // An error is returned if any issues are encountered.
-func (d *DB) UpdateProgram(ctx context.Context, uid string, p *Program) error {
-	doc := d.Collection(ProgramsPath).Doc(uid)
+func (d *DB) UpdateProgram(ctx context.Context, uid string, pid string, progUpdate *Program) error {
+	userSnapshot, err := d.Collection(UsersPath).Doc(uid).Get(ctx)
+	if err != nil {
+		return err
+	}
 
-	_, err := doc.Update(ctx, p.ToFirestoreUpdate())
-	return err
+	// validate that the program belongs to the user.
+	u := User{}
+	if err := userSnapshot.DataTo(&u); err != nil {
+		return err
+	}
+
+	for _, userPID := range u.Programs {
+		if pid == userPID {
+			// found the program, proceed
+			_, err := d.Collection(ProgramsPath).Doc(pid).Update(ctx, progUpdate.ToFirestoreUpdate())
+			return err
+		}
+	}
+
+	return fmt.Errorf("pid does not belong to user")
 }
 
 // DeleteProgram deletes the program with the given uid. An error
