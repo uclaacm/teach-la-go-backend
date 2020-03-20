@@ -1,19 +1,17 @@
 package db
 
 import (
-	"time"
-
 	"cloud.google.com/go/firestore"
 )
 
 // Program is a representation of a program document.
 type Program struct {
-	Code        string    `firestore:"code" json:"code"`
-	DateCreated time.Time `firestore:"dateCreated" json:"dateCreated"`
-	Language    string    `firestore:"language" json:"language"`
-	Name        string    `firestore:"name" json:"name"`
-	Thumbnail   int64     `firestore:"thumbnail" json:"thumbnail"`
-	UID         string    `json:"uid"`
+	Code        string `firestore:"code" json:"code"`
+	DateCreated string `firestore:"dateCreated" json:"dateCreated"`
+	Language    string `firestore:"language" json:"language"`
+	Name        string `firestore:"name" json:"name"`
+	Thumbnail   int    `firestore:"thumbnail" json:"thumbnail"`
+	UID         string `json:"uid"`
 	//	PID			string	  `json:"pid"`
 }
 

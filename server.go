@@ -39,15 +39,43 @@ func main() {
 	router := http.NewServeMux()
 
 	// user management
-	router.HandleFunc("/user/get", m.WithCORS(d.HandleGetUser))
-	router.HandleFunc("/user/update", m.WithCORS(d.HandleUpdateUser))
-	router.HandleFunc("/user/create", m.WithCORS(d.HandleInitializeUser))
+	router.HandleFunc("/user/get", m.WithCORSConfig(d.HandleGetUser, m.CORSConfig{
+		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
+		AllowedMethods: []string{http.MethodGet},
+		MaxAge:         3200,
+	}))
+	router.HandleFunc("/user/update", m.WithCORSConfig(d.HandleUpdateUser, m.CORSConfig{
+		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
+		AllowedMethods: []string{http.MethodPut},
+		MaxAge:         3200,
+	}))
+	router.HandleFunc("/user/create", m.WithCORSConfig(d.HandleInitializeUser, m.CORSConfig{
+		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
+		AllowedMethods: []string{http.MethodPost},
+		MaxAge:         3200,
+	}))
 
 	// program management
-	router.HandleFunc("/program/get", m.WithCORS(d.HandleGetProgram))
-	router.HandleFunc("/program/update", m.WithCORS(d.HandleUpdateProgram))
-	router.HandleFunc("/program/create", m.WithCORS(d.HandleInitializeProgram))
-	router.HandleFunc("/program/delete", m.WithCORS(d.HandleDeleteProgram))
+	router.HandleFunc("/program/get", m.WithCORSConfig(d.HandleGetProgram, m.CORSConfig{
+		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
+		AllowedMethods: []string{http.MethodGet},
+		MaxAge:         3200,
+	}))
+	router.HandleFunc("/program/update", m.WithCORSConfig(d.HandleUpdateProgram, m.CORSConfig{
+		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
+		AllowedMethods: []string{http.MethodPut},
+		MaxAge:         3200,
+	}))
+	router.HandleFunc("/program/create", m.WithCORSConfig(d.HandleInitializeProgram, m.CORSConfig{
+		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
+		AllowedMethods: []string{http.MethodPost},
+		MaxAge:         3200,
+	}))
+	router.HandleFunc("/program/delete", m.WithCORSConfig(d.HandleDeleteProgram, m.CORSConfig{
+		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
+		AllowedMethods: []string{http.MethodDelete},
+		MaxAge:         3200,
+	}))
 
 	// fallback route
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
