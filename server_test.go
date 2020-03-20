@@ -92,8 +92,8 @@ func TestRigDB(t *testing.T) {
 		//fmt.Printf("UID: %s\n", res.UserData.UID)
 		//fmt.Printf("Program: %s\n", res.UserData.Programs[0])
 
-		p.Add("userId", res.UserData.UID)
-		p.Add("programId", res.UserData.Programs[0])
+		p.Add("uid", res.UserData.UID)
+		p.Add("pid", res.UserData.Programs[0])
 		req.URL.RawQuery = p.Encode()
 
 		rr := httptest.NewRecorder()
@@ -113,20 +113,13 @@ func TestRigDB(t *testing.T) {
 	t.Run("Create program", func(t *testing.T) {
 
 		// create JSON for a new program
-		pr := struct {
-			Code        string
-			DateCreated string
-			Language    string
-			Name        string
-			Thumbnail   int
-			Uid         string
-		}{
-			"print(my cool code)\n",
-			"2020-02-07T08:41:00Z",
-			"python",
-			"Neat Program",
-			12,
-			res.UserData.UID,
+		pr := db.Program{
+			Code:        "print(my cool code)\n",
+			DateCreated: "2020-02-07T08:41:00Z",
+			Language:    "python",
+			Name:        "Neat Program",
+			Thumbnail:   12,
+			UID:         res.UserData.UID,
 		}
 
 		pro, err := json.Marshal(&pr)

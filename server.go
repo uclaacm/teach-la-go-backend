@@ -42,16 +42,19 @@ func main() {
 	router.HandleFunc("/user/get", m.WithCORSConfig(d.HandleGetUser, m.CORSConfig{
 		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
 		AllowedMethods: []string{http.MethodGet},
+		AllowedHeaders: []string{"Content-Type"},
 		MaxAge:         3200,
 	}))
 	router.HandleFunc("/user/update", m.WithCORSConfig(d.HandleUpdateUser, m.CORSConfig{
 		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
 		AllowedMethods: []string{http.MethodPut},
+		AllowedHeaders: []string{"Content-Type"},
 		MaxAge:         3200,
 	}))
 	router.HandleFunc("/user/create", m.WithCORSConfig(d.HandleInitializeUser, m.CORSConfig{
 		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
 		AllowedMethods: []string{http.MethodPost},
+		AllowedHeaders: []string{"Content-Type"},
 		MaxAge:         3200,
 	}))
 
@@ -59,21 +62,25 @@ func main() {
 	router.HandleFunc("/program/get", m.WithCORSConfig(d.HandleGetProgram, m.CORSConfig{
 		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
 		AllowedMethods: []string{http.MethodGet},
+		AllowedHeaders: []string{"Content-Type"},
 		MaxAge:         3200,
 	}))
 	router.HandleFunc("/program/update", m.WithCORSConfig(d.HandleUpdateProgram, m.CORSConfig{
 		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
 		AllowedMethods: []string{http.MethodPut},
+		AllowedHeaders: []string{"Content-Type"},
 		MaxAge:         3200,
 	}))
 	router.HandleFunc("/program/create", m.WithCORSConfig(d.HandleInitializeProgram, m.CORSConfig{
 		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
 		AllowedMethods: []string{http.MethodPost},
+		AllowedHeaders: []string{"Content-Type"},
 		MaxAge:         3200,
 	}))
 	router.HandleFunc("/program/delete", m.WithCORSConfig(d.HandleDeleteProgram, m.CORSConfig{
 		AllowedOrigins: []string{"http://localhost:8080", "editor.uclaacm.com"},
 		AllowedMethods: []string{http.MethodDelete},
+		AllowedHeaders: []string{"Content-Type"},
 		MaxAge:         3200,
 	}))
 
