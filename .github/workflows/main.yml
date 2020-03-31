@@ -1,0 +1,26 @@
+name: CI
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v1.0.0
+      with:
+        go-version: '1.14.1'
+
+    - name: Passes go lint, vet, fmt
+      run: |
+        golint -set_exit_status
+        go vet .
+        gofmt -l .
+    - name: Builds
+      run: go build
+    - name: Passes tests
+      run: go test ./...
