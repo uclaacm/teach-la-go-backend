@@ -14,7 +14,7 @@ jobs:
     - uses: actions/setup-go@v1.0.0
       with:
         go-version: '1.14.1'
-        
+    - run: go get -d ./...
     - name: Builds
       run: go build
     - name: Passes tests
