@@ -14,11 +14,7 @@ jobs:
     - uses: actions/setup-go@v1.0.0
       with:
         go-version: '1.14.1'
-
-    - name: Passes go vet, fmt
-      run: |
-        go vet
-        gofmt -l .
+        
     - name: Builds
       run: go build
     - name: Passes tests
