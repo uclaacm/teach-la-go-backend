@@ -269,8 +269,8 @@ func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
 	return c, err
 }
 
-// MakeAlias takes an id (usually pid or cid), generates a 3 word id(wid), and 
-// stores it in Firebase. The generated wid is returned as a string, with words comma seperated
+// MakeAlias takes an id (usually pid or cid), allocates a 3 word id(wid), and 
+// stores it in Firebase. The generated wid is a string, with words comma seperated
 func (d *DB) MakeAlias(ctx context.Context, uid string, path string) (string, error) {
 
 	// convert uid into a 36 bit hash

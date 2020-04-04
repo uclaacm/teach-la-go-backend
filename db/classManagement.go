@@ -37,7 +37,7 @@ func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Thumbnail < 0 || req.Thumbnail >= 50 {
+	if req.Thumbnail < 0 || req.Thumbnail >= ThumbnailCount  {
 		http.Error(w, "Bad thumbnail provided, Exiting", http.StatusInternalServerError)
 		return
 	}
@@ -130,7 +130,7 @@ func (d *DB) HandleGetClass(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//check if the uid exists in the members list or instructor list
-	var is_in bool = false;
+	is_in := false;
 
 	for _, m := range c.Members {
 		if m == req.UID {
