@@ -8,23 +8,27 @@ import (
 	"os/signal"
 	"time"
 
+	_ "github.com/heroku/x/hmetrics/onload"
 	"github.com/uclaacm/teach-la-go-backend/db"
 	m "github.com/uclaacm/teach-la-go-backend/middleware"
 )
 
-// PORT defines where we serve the backend.
-const PORT = ":8081"
+// DEFAULTPORT to serve on.
+const DEFAULTPORT = "8081"
 
 func main() {
-	// set up context for main routine.
-	mainContext := context.Background()
+	// check for PORT variable.
+	port := os.Getenv("PORT")
+	if port == "" {
+		log.Printf("no $PORT environment variable provided, defaulting to '%s'", DEFAULTPORT)
+		port = "8081"
+	}
 
-	// acquire DB client.
-	// fails early if we cannot acquire one.
 	var (
 		d   *db.DB
 		err error
 	)
+
 	if d, err = db.OpenFromEnv(context.Background()); err != nil {
 		log.Fatalf("failed to open DB client. %s", err)
 	}
@@ -60,7 +64,7 @@ func main() {
 
 	// server configuration
 	s := &http.Server{
-		Addr:           PORT,
+		Addr:           ":" + port,
 		Handler:        m.LogRequest(router),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
@@ -72,7 +76,7 @@ func main() {
 	kill := make(chan os.Signal, 1)
 	signal.Notify(kill, os.Interrupt)
 	go func() {
-		log.Printf("serving on %s", PORT)
+		log.Printf("serving on :%s", port)
 		log.Fatal(s.ListenAndServe())
 	}()
 
@@ -81,7 +85,7 @@ func main() {
 	log.Printf("received kill signal, attempting to gracefully shut down.")
 
 	// server has 10 seconds from interrupt to gracefully shutdown.
-	timeout, terminate := context.WithDeadline(mainContext, time.Now().Add(10*time.Second))
+	timeout, terminate := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 	defer terminate()
 	s.Shutdown(timeout)
 }
