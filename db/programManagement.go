@@ -114,7 +114,7 @@ func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
 	ctx := context.WithValue(r.Context(), "getProgram", p)
 	d.HandleGetProgram(w, r.WithContext(ctx))
 }
- 
+
 /**
  * updateProgramData
  * Body:

@@ -25,11 +25,11 @@ type Response struct {
 func TestRigDB(t *testing.T) {
 
 	var (
-		d   *db.DB 		// stores instance of connection with database
-		err error
-		res Response 	// structure to store response fron database
-		res_student Response 	// structure to store response fron database
-		class_id string
+		d           *db.DB // stores instance of connection with database
+		err         error
+		res         Response // structure to store response fron database
+		res_student Response // structure to store response fron database
+		class_id    string
 	)
 
 	t.Logf("Testing initialization of database...")
@@ -108,7 +108,7 @@ func TestRigDB(t *testing.T) {
 	t.Run("Create program", func(t *testing.T) {
 
 		t.Logf("Building query")
-		// create JSON for a new program 
+		// create JSON for a new program
 		pr := struct {
 			Code        string
 			DateCreated string
@@ -175,7 +175,7 @@ func TestRigDB(t *testing.T) {
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(d.HandleGetUser)
 
-		// struct to recieve response 
+		// struct to recieve response
 		resp := struct {
 			UserData *db.User     `json:"userData"`
 			Programs []db.Program `json:"programs"`
@@ -194,28 +194,28 @@ func TestRigDB(t *testing.T) {
 
 		//TODO check if correct programs are made
 		//t.Logf(resp.Programs[0].Name)
-		
+
 		if status := rr.Code; status != http.StatusOK {
 			t.Fatal("Get user failed")
 		}
-		
+
 	})
 
 	// Test creating a class from a user
-	t.Run("Create Class", func(t *testing.T){
+	t.Run("Create Class", func(t *testing.T) {
 
-		// create JSON for a new program 
+		// create JSON for a new program
 		pr := struct {
-			Uid 		string
-			Name 		string
-			Thumbnail	int
+			Uid       string
+			Name      string
+			Thumbnail int
 		}{
 			res.UserData.UID,
 			"TestClass",
 			1,
 		}
 
-		pro, err := json.Marshal(&pr) 
+		pro, err := json.Marshal(&pr)
 
 		if err != nil {
 			t.Fatal("Failed to create JSON")
@@ -246,7 +246,6 @@ func TestRigDB(t *testing.T) {
 
 		json.Unmarshal([]byte(j), &class)
 		class_id = class.WID
-		
 
 		if status := rr.Code; status != http.StatusOK {
 			t.Fatal("Create program failed")
@@ -280,18 +279,18 @@ func TestRigDB(t *testing.T) {
 	})
 
 	// Test adding a user to class
-	t.Run("Join Class", func(t *testing.T){
+	t.Run("Join Class", func(t *testing.T) {
 
-		// create JSON for a new program 
+		// create JSON for a new program
 		pr := struct {
-			Uid 		string
-			Cid			string
+			Uid string
+			Cid string
 		}{
 			res.UserData.UID,
 			class_id,
 		}
 
-		pro, err := json.Marshal(&pr) 
+		pro, err := json.Marshal(&pr)
 
 		if err != nil {
 			t.Fatal("Failed to create JSON")
@@ -305,7 +304,7 @@ func TestRigDB(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to test create program")
 		}
-		
+
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(d.HandleJoinClass)
 

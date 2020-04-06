@@ -8,18 +8,18 @@ import (
 )
 
 // HandleCreateClass is the handler for creating a new class.
-// It takes the UID of the creator, the name of the class, and a thunmbnail id. 
+// It takes the UID of the creator, the name of the class, and a thunmbnail id.
 func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
-	
+
 	var (
 		err error
 	)
 
 	//create an anonymous structure to handle requests
 	req := struct {
-		UID 		string  	`json:"uid"`
-		Name 		string		`json:"name"`
-		Thumbnail 	int64 		`json:"thumbnail"`
+		UID       string `json:"uid"`
+		Name      string `json:"name"`
+		Thumbnail int64  `json:"thumbnail"`
 	}{}
 	//read JSON from request body
 	if err = requests.BodyTo(r, &req); err != nil {
@@ -31,30 +31,26 @@ func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error occurred in reading UID.", http.StatusInternalServerError)
 		return
 	}
-	
+
 	if req.Name == "" {
 		http.Error(w, "Error occurred in reading Name.", http.StatusInternalServerError)
 		return
 	}
 
-	if req.Thumbnail < 0 || req.Thumbnail >= ThumbnailCount  {
+	if req.Thumbnail < 0 || req.Thumbnail >= ThumbnailCount {
 		http.Error(w, "Bad thumbnail provided, Exiting", http.StatusInternalServerError)
 		return
 	}
 
-	
-
 	// structure for class info
 	class := Class{
-		Thumbnail: req.Thumbnail, 
-		Name: req.Name, 
-		Creator: req.UID, 
+		Thumbnail:   req.Thumbnail,
+		Name:        req.Name,
+		Creator:     req.UID,
 		Instructors: []string{req.UID},
-		Members: []string{},
-		Programs: []string{},
-	}	
-
-	
+		Members:     []string{},
+		Programs:    []string{},
+	}
 
 	// create the class
 	cid, err := d.CreateClass(r.Context(), &class)
@@ -66,7 +62,7 @@ func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
 	//create an wid for this class
 	wid, err := d.MakeAlias(r.Context(), cid, ClassesAliasPath)
 
-	//Update class info 
+	//Update class info
 	// create the class
 	err = d.UpdateClassWID(r.Context(), cid, wid)
 
@@ -77,7 +73,7 @@ func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// read the class document just created 
+	// read the class document just created
 	c, err := d.GetClass(r.Context(), cid)
 	if err != nil || c == nil {
 		http.Error(w, "Class does not exist", http.StatusNotFound)
@@ -91,17 +87,17 @@ func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandleGetClass takes the UID (either of a member or an instructor) 
-// and a CID (wid) as a JSON, and returns an object representing the class. 
+// HandleGetClass takes the UID (either of a member or an instructor)
+// and a CID (wid) as a JSON, and returns an object representing the class.
 // If the given UID is not a member or an instructor, error is returned
 func (d *DB) HandleGetClass(w http.ResponseWriter, r *http.Request) {
-	
+
 	var err error
 
 	//create an anonymous structure to handle requests
 	req := struct {
-		UID 		string  	`json:"uid"`
-		WID 		string		`json:"cid"`
+		UID string `json:"uid"`
+		WID string `json:"cid"`
 	}{}
 
 	//read JSON from request body
@@ -130,7 +126,7 @@ func (d *DB) HandleGetClass(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//check if the uid exists in the members list or instructor list
-	is_in := false;
+	is_in := false
 
 	for _, m := range c.Members {
 		if m == req.UID {
@@ -139,13 +135,13 @@ func (d *DB) HandleGetClass(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	for _, i := range c.Instructors{
+	for _, i := range c.Instructors {
 		if i == req.UID {
 			is_in = true
 			break
 		}
 	}
-	
+
 	// if UID was not in class, return error
 	if !is_in {
 		http.Error(w, "Couldn't find user in class", http.StatusInternalServerError)
@@ -160,8 +156,8 @@ func (d *DB) HandleGetClass(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandleJoinClass takes a UID and cid(wid) as a JSON, and attempts to 
-// add the UID to the class given by cid. The updated struct of the class is returned as a 
+// HandleJoinClass takes a UID and cid(wid) as a JSON, and attempts to
+// add the UID to the class given by cid. The updated struct of the class is returned as a
 // JSON
 
 func (d *DB) HandleJoinClass(w http.ResponseWriter, r *http.Request) {
@@ -170,8 +166,8 @@ func (d *DB) HandleJoinClass(w http.ResponseWriter, r *http.Request) {
 
 	//create an anonymous structure to handle requests
 	req := struct {
-		UID 		string  	`json:"uid"`
-		WID 		string		`json:"cid"`
+		UID string `json:"uid"`
+		WID string `json:"cid"`
 	}{}
 
 	//read JSON from request body
@@ -181,7 +177,7 @@ func (d *DB) HandleJoinClass(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.UID == "" {
 		http.Error(w, "Error occurred in reading UID", http.StatusInternalServerError)
-		return   
+		return
 	}
 	if req.WID == "" {
 		http.Error(w, "error occurred in reading WID", http.StatusInternalServerError)
@@ -236,7 +232,6 @@ func (d *DB) HandleJoinClass(w http.ResponseWriter, r *http.Request) {
 
 }
 
-
 func (d *DB) HandleLeaveClass(w http.ResponseWriter, r *http.Request) {
 
 	var (
@@ -245,8 +240,8 @@ func (d *DB) HandleLeaveClass(w http.ResponseWriter, r *http.Request) {
 
 	//create an anonymous structure to handle requests
 	req := struct {
-		UID 		string  	`json:"uid"`
-		CID 		string		`json:"cid"`
+		UID string `json:"uid"`
+		CID string `json:"cid"`
 	}{}
 
 	//read JSON from request body

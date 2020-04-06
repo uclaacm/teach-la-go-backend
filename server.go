@@ -50,7 +50,6 @@ func main() {
 	router.HandleFunc("/class/get", d.HandleGetClass)
 	router.HandleFunc("/class/join", d.HandleJoinClass)
 	router.HandleFunc("/class/leave", d.HandleLeaveClass)
-	
 
 	// fallback route
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
