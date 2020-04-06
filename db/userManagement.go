@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"../tools/requests"
+	"github.com/uclaacm/teach-la-go-backend/tools/requests"
 )
 
 /**

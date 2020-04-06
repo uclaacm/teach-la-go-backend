@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"./db"
+	"github.com/uclaacm/teach-la-go-backend/db"
 )
 
 // PORT defines where we serve the backend.

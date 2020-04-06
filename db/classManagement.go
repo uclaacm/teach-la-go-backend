@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"../tools/requests"
+	"github.com/uclaacm/teach-la-go-backend/tools/requests"
 )
 
 // HandleCreateClass is the handler for creating a new class.

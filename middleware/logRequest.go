@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"../tools/log"
+	"github.com/uclaacm/teach-la-go-backend/tools/log"
 )
 
 // LogRequest automatically logs all relevant information about a request object

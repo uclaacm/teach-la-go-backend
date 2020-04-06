@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"time"
 
-	"./db"
-	m "./middleware"
+	"github.com/uclaacm/teach-la-go-backend/db"
+	m "github.com/uclaacm/teach-la-go-backend/middleware"
 )
 
 // PORT defines where we serve the backend.
