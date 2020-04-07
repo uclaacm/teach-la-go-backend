@@ -32,6 +32,18 @@ const (
 	// UsersPath describes the path to the user management
 	// endpoint
 	UsersPath = "users"
+	
+	// ClassesPath describes the path to the classes
+	// management endpoint.
+	ClassesPath = "classes"
+
+	// ProgramsAliasPath describes the path to the collection with 3 word id => hash mapping for programs
+	ProgramsAliasPath = "programs_alias"
+
+	// ClassesAliasPath describes the path to the collection with 3 word id => hash mapping for classes
+	ClassesAliasPath = "classes_alias"
+
+	
 )
 
 // LanguageName acquires the name for the language desecribed

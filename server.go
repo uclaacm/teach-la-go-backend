@@ -45,6 +45,13 @@ func main() {
 	router.HandleFunc("/program/create", m.WithCORS(d.HandleInitializeProgram))
 	router.HandleFunc("/program/delete", m.WithCORS(d.HandleDeleteProgram))
 
+	//class management
+	router.HandleFunc("/class/create", d.HandleCreateClass)
+	router.HandleFunc("/class/get", d.HandleGetClass)
+	router.HandleFunc("/class/join", d.HandleJoinClass)
+	router.HandleFunc("/class/leave", d.HandleLeaveClass)
+	
+
 	// fallback route
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusNotFound)
