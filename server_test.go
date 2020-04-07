@@ -88,8 +88,8 @@ func TestRigDB(t *testing.T) {
 		// build query
 		p := req.URL.Query()
 
-		p.Add("userId", res.UserData.UID)
-		p.Add("programId", res.UserData.Programs[0])
+		p.Add("uid", res.UserData.UID)
+		p.Add("pid", res.UserData.Programs[0])
 		req.URL.RawQuery = p.Encode()
 
 		rr := httptest.NewRecorder()
@@ -168,7 +168,7 @@ func TestRigDB(t *testing.T) {
 		//p.Add("userId", res.UserData.UID)
 		//p.Add("includePrograms", res.UserData.Programs[0])
 		t.Log(res.UserData.UID)
-		p.Add("id", res.UserData.UID)
+		p.Add("uid", res.UserData.UID)
 		p.Add("programs", "true")
 		req.URL.RawQuery = p.Encode()
 
@@ -190,7 +190,7 @@ func TestRigDB(t *testing.T) {
 			t.Fatal("Failed to read response")
 		}
 
-		json.Unmarshal([]byte(j), resp)
+		json.Unmarshal([]byte(j), &resp)
 
 		//TODO check if correct programs are made
 		//t.Logf(resp.Programs[0].Name)
