@@ -17,13 +17,6 @@ import (
 const DEFAULTPORT = "8081"
 
 func main() {
-	// check for PORT variable.
-	port := os.Getenv("PORT")
-	if port == "" {
-		log.Printf("no $PORT environment variable provided, defaulting to '%s'", DEFAULTPORT)
-		port = "8081"
-	}
-
 	var (
 		d   *db.DB
 		err error
@@ -61,6 +54,13 @@ func main() {
 	})
 
 	log.Printf("endpoints initialized.")
+
+	// check for PORT variable.
+	port := os.Getenv("PORT")
+	if port == "" {
+		log.Printf("no $PORT environment variable provided, defaulting to '%s'", DEFAULTPORT)
+		port = "8081"
+	}
 
 	// server configuration
 	s := &http.Server{

@@ -40,7 +40,7 @@ func (d *DB) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 	if ctxUser := r.Context().Value("user"); ctxUser == nil {
 		// attempt to get the complete user struct using URL
 		// params.
-		u, err = d.GetUser(r.Context(), query.Get("id"))
+		u, err = d.GetUser(r.Context(), query.Get("uid"))
 		if err != nil {
 			http.Error(w, "error occurred in reading document.", http.StatusInternalServerError)
 			return

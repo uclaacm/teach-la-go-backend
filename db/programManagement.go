@@ -22,7 +22,7 @@ func (d *DB) HandleGetProgram(w http.ResponseWriter, r *http.Request) {
 	if ctxID, ok := r.Context().Value("getProgram").(string); ok {
 		pid = ctxID
 	} else {
-		pid = r.URL.Query().Get("programId")
+		pid = r.URL.Query().Get("pid")
 	}
 
 	// attempt to acquire doc.
@@ -153,8 +153,8 @@ func (d *DB) HandleUpdateProgram(w http.ResponseWriter, r *http.Request) {
  */
 func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
 	// acquire parameters.
-	uid := r.URL.Query().Get("userId")
-	pid := r.URL.Query().Get("programId")
+	uid := r.URL.Query().Get("uid")
+	pid := r.URL.Query().Get("pid")
 
 	var (
 		// u   *User
