@@ -32,15 +32,15 @@ func main() {
 	router := http.NewServeMux()
 
 	// user management
-	router.HandleFunc("/user/get", d.HandleGetUser)
-	router.HandleFunc("/user/update", d.HandleUpdateUser)
-	router.HandleFunc("/user/create", d.HandleInitializeUser)
+	router.HandleFunc("/user/get", m.WithCORS(d.HandleGetUser))
+	router.HandleFunc("/user/update", m.WithCORS(d.HandleUpdateUser))
+	router.HandleFunc("/user/create", m.WithCORS(d.HandleInitializeUser))
 
 	// program management
-	router.HandleFunc("/program/get", d.HandleGetProgram)
-	router.HandleFunc("/program/update", d.HandleUpdateProgram)
-	router.HandleFunc("/program/create", d.HandleInitializeProgram)
-	router.HandleFunc("/program/delete", d.HandleDeleteProgram)
+	router.HandleFunc("/program/get", m.WithCORS(d.HandleGetProgram))
+	router.HandleFunc("/program/update", m.WithCORS(d.HandleUpdateProgram))
+	router.HandleFunc("/program/create", m.WithCORS(d.HandleInitializeProgram))
+	router.HandleFunc("/program/delete", m.WithCORS(d.HandleDeleteProgram))
 
 	//class management
 	router.HandleFunc("/class/create", d.HandleCreateClass)

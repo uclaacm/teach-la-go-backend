@@ -95,8 +95,8 @@ func (c *CORSConfig) HeadersSupported(requestHeaderFieldNames []string) bool {
 // WithCORSConfig is middleware that handles your CORS preflight requests quickly
 // and effectively with the supplied configuration. It is not verbose. To enable
 // verbosity, please wrap it with some sort of request logging middleware.
-func WithCORSConfig(next http.Handler, c CORSConfig) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func WithCORSConfig(serveFn func(http.ResponseWriter, *http.Request), c CORSConfig) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		// acquire header values.
 		origin := r.Header.Get("Origin")
 		method := r.Header.Get("Access-Control-Request-Method")
@@ -148,14 +148,14 @@ func WithCORSConfig(next http.Handler, c CORSConfig) http.Handler {
 		}
 
 		// otherwise, serve actual request.
-		next.ServeHTTP(w, r)
-	})
+		serveFn(w, r)
+	}
 }
 
 // WithCORS is middleware that handles your CORS preflight requests quickly
 // and effectively using default settings. It is not verbose. To enable
 // verbosity, please wrap it with some sort of request logging middleware.
-func WithCORS(next http.Handler) http.Handler {
+func WithCORS(serveFn func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	// by default we allow all methods, all origins,
 	// and all headers.
 	// MaxAge is omitted, and credentials are not
@@ -174,7 +174,10 @@ func WithCORS(next http.Handler) http.Handler {
 			http.MethodPut,
 			http.MethodTrace,
 		},
+		AllowedHeaders: []string{
+			"*",
+		},
 	}
 
-	return WithCORSConfig(next, defaultCfg)
+	return WithCORSConfig(serveFn, defaultCfg)
 }
