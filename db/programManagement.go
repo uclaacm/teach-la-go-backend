@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"../tools/requests"
+	"github.com/uclaacm/teach-la-go-backend/tools/requests"
 )
 
 /**
@@ -22,7 +22,7 @@ func (d *DB) HandleGetProgram(w http.ResponseWriter, r *http.Request) {
 	if ctxID, ok := r.Context().Value("getProgram").(string); ok {
 		pid = ctxID
 	} else {
-		pid = r.URL.Query().Get("programId")
+		pid = r.URL.Query().Get("pid")
 	}
 
 	// attempt to acquire doc.
@@ -114,7 +114,7 @@ func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
 	ctx := context.WithValue(r.Context(), "getProgram", p)
 	d.HandleGetProgram(w, r.WithContext(ctx))
 }
- 
+
 /**
  * updateProgramData
  * Body:
@@ -153,8 +153,8 @@ func (d *DB) HandleUpdateProgram(w http.ResponseWriter, r *http.Request) {
  */
 func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
 	// acquire parameters.
-	uid := r.URL.Query().Get("userId")
-	pid := r.URL.Query().Get("programId")
+	uid := r.URL.Query().Get("uid")
+	pid := r.URL.Query().Get("pid")
 
 	var (
 		// u   *User

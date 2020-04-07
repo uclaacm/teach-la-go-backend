@@ -19,3 +19,7 @@ jobs:
       run: go build
     - name: Passes tests
       run: go test ./...
+    - name: Passes go vet, fmt
+      run: |
+        go vet
+        gofmt -l .

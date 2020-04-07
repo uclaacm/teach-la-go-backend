@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"./db"
+	"github.com/uclaacm/teach-la-go-backend/db"
 )
 
 // PORT defines where we serve the backend.
@@ -25,11 +25,11 @@ type Response struct {
 func TestRigDB(t *testing.T) {
 
 	var (
-		d   *db.DB 		// stores instance of connection with database
-		err error
-		res Response 	// structure to store response fron database
-		res_student Response 	// structure to store response fron database
-		class_id string
+		d           *db.DB // stores instance of connection with database
+		err         error
+		res         Response // structure to store response fron database
+		res_student Response // structure to store response fron database
+		class_id    string
 	)
 
 	t.Logf("Testing initialization of database...")
@@ -88,8 +88,8 @@ func TestRigDB(t *testing.T) {
 		// build query
 		p := req.URL.Query()
 
-		p.Add("userId", res.UserData.UID)
-		p.Add("programId", res.UserData.Programs[0])
+		p.Add("uid", res.UserData.UID)
+		p.Add("pid", res.UserData.Programs[0])
 		req.URL.RawQuery = p.Encode()
 
 		rr := httptest.NewRecorder()
@@ -108,7 +108,7 @@ func TestRigDB(t *testing.T) {
 	t.Run("Create program", func(t *testing.T) {
 
 		t.Logf("Building query")
-		// create JSON for a new program 
+		// create JSON for a new program
 		pr := struct {
 			Code        string
 			DateCreated string
@@ -168,14 +168,14 @@ func TestRigDB(t *testing.T) {
 		//p.Add("userId", res.UserData.UID)
 		//p.Add("includePrograms", res.UserData.Programs[0])
 		t.Log(res.UserData.UID)
-		p.Add("id", res.UserData.UID)
+		p.Add("uid", res.UserData.UID)
 		p.Add("programs", "true")
 		req.URL.RawQuery = p.Encode()
 
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(d.HandleGetUser)
 
-		// struct to recieve response 
+		// struct to recieve response
 		resp := struct {
 			UserData *db.User     `json:"userData"`
 			Programs []db.Program `json:"programs"`
@@ -190,32 +190,32 @@ func TestRigDB(t *testing.T) {
 			t.Fatal("Failed to read response")
 		}
 
-		json.Unmarshal([]byte(j), resp)
+		json.Unmarshal([]byte(j), &resp)
 
 		//TODO check if correct programs are made
 		//t.Logf(resp.Programs[0].Name)
-		
+
 		if status := rr.Code; status != http.StatusOK {
 			t.Fatal("Get user failed")
 		}
-		
+
 	})
 
 	// Test creating a class from a user
-	t.Run("Create Class", func(t *testing.T){
+	t.Run("Create Class", func(t *testing.T) {
 
-		// create JSON for a new program 
+		// create JSON for a new program
 		pr := struct {
-			Uid 		string
-			Name 		string
-			Thumbnail	int
+			Uid       string
+			Name      string
+			Thumbnail int
 		}{
 			res.UserData.UID,
 			"TestClass",
 			1,
 		}
 
-		pro, err := json.Marshal(&pr) 
+		pro, err := json.Marshal(&pr)
 
 		if err != nil {
 			t.Fatal("Failed to create JSON")
@@ -246,7 +246,6 @@ func TestRigDB(t *testing.T) {
 
 		json.Unmarshal([]byte(j), &class)
 		class_id = class.WID
-		
 
 		if status := rr.Code; status != http.StatusOK {
 			t.Fatal("Create program failed")
@@ -280,18 +279,18 @@ func TestRigDB(t *testing.T) {
 	})
 
 	// Test adding a user to class
-	t.Run("Join Class", func(t *testing.T){
+	t.Run("Join Class", func(t *testing.T) {
 
-		// create JSON for a new program 
+		// create JSON for a new program
 		pr := struct {
-			Uid 		string
-			Cid			string
+			Uid string
+			Cid string
 		}{
 			res.UserData.UID,
 			class_id,
 		}
 
-		pro, err := json.Marshal(&pr) 
+		pro, err := json.Marshal(&pr)
 
 		if err != nil {
 			t.Fatal("Failed to create JSON")
@@ -305,7 +304,7 @@ func TestRigDB(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to test create program")
 		}
-		
+
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(d.HandleJoinClass)
 
