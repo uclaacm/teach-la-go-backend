@@ -100,7 +100,7 @@ func defaultProgram(languageCode int) (defaultProg Program) {
 	//defaultProg.UID = uid
 	defaultProg.Code = defaultCode
 	defaultProg.Language, _ = LanguageName(languageCode)
-	defaultProg.DateCreated = time.Now().UTC()
+	defaultProg.DateCreated = time.Now().UTC().String()
 
 	return
 }
