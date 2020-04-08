@@ -163,15 +163,15 @@ func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
 
 	//TODO: Make this handler atomic
 
-	// attempt to delete program doc.
-	if err = d.DeleteProgram(r.Context(), pid); err != nil {
-		http.Error(w, "failed to delete program doc.", http.StatusInternalServerError)
-		return
-	}
-
 	// Remove this program from the user's list
 	if err = d.DeleteProgramFromUser(r.Context(), uid, pid); err != nil {
 		http.Error(w, "failed updating user's program list.", http.StatusInternalServerError)
+		return
+	}
+
+	// attempt to delete program doc.
+	if err = d.DeleteProgram(r.Context(), pid); err != nil {
+		http.Error(w, "failed to delete program doc.", http.StatusInternalServerError)
 		return
 	}
 
