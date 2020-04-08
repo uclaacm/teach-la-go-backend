@@ -78,6 +78,11 @@ func (c *CORSConfig) HeadersSupported(requestHeaderFieldNames []string) bool {
 		supported := false
 
 		for _, supportedHeader := range c.AllowedHeaders {
+			// catch wildcard.
+			if supportedHeader == "*" {
+				return true
+			}
+
 			if strings.ToUpper(requestHeader) == strings.ToUpper(supportedHeader) {
 				supported = true
 				break
@@ -144,6 +149,12 @@ func WithCORSConfig(serveFn func(http.ResponseWriter, *http.Request), c CORSConf
 			w.Header().Set("Access-Control-Allow-Headers", strings.Join(c.AllowedHeaders, ", "))
 
 			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// catch unsupported methods.
+		if !c.MethodSupported(r.Method) {
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
