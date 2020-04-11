@@ -3,7 +3,7 @@ package db
 import (
 	"encoding/json"
 	"net/http"
-
+	"net/url"
 	"github.com/uclaacm/teach-la-go-backend/tools/requests"
 )
 
@@ -92,29 +92,24 @@ func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
 // If the given UID is not a member or an instructor, error is returned
 func (d *DB) HandleGetClass(w http.ResponseWriter, r *http.Request) {
 
-	var err error
+	req, err := url.ParseQuery(r.URL.RawQuery)
 
-	//create an anonymous structure to handle requests
-	req := struct {
-		UID string `json:"uid"`
-		WID string `json:"cid"`
-	}{}
-
-	//read JSON from request body
-	if err = requests.BodyTo(r, &req); err != nil {
-		http.Error(w, "Error occurred in reading body", http.StatusInternalServerError)
-		return
-	}
-	if req.UID == "" {
-		http.Error(w, "Error occurred in reading uid", http.StatusInternalServerError)
-		return
-	}
-	if req.WID == "" {
-		http.Error(w, "Error occurred in reading cid", http.StatusInternalServerError)
+	if err != nil {
+		http.Error(w, "Error occurred in reading request", http.StatusInternalServerError)
 		return
 	}
 
-	cid, err := d.GetUIDFromWID(r.Context(), req.WID, ClassesAliasPath)
+	// check if UID and WID are in the query parameters
+	if len(req["UID"]) == 0 || req["UID"][0] == ""{
+		http.Error(w, "Failed to get class (class does not exist or failed to unmarshal data)", http.StatusNotFound)
+		return
+	} 
+	if len(req["WID"]) == 0 || req["WID"][0] == ""{
+		http.Error(w, "Failed to get class (class does not exist or failed to unmarshal data)", http.StatusNotFound)
+		return
+	} 
+
+	cid, err := d.GetUIDFromWID(r.Context(), req["WID"][0], ClassesAliasPath)
 
 	// get the class as a struct (pointer)
 	c, err := d.GetClass(r.Context(), cid)
@@ -129,14 +124,14 @@ func (d *DB) HandleGetClass(w http.ResponseWriter, r *http.Request) {
 	is_in := false
 
 	for _, m := range c.Members {
-		if m == req.UID {
+		if m == req["UID"][0] {
 			is_in = true
 			break
 		}
 	}
 
 	for _, i := range c.Instructors {
-		if i == req.UID {
+		if i == req["UID"][0] {
 			is_in = true
 			break
 		}
