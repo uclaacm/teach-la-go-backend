@@ -147,30 +147,36 @@ func (d *DB) HandleUpdateProgram(w http.ResponseWriter, r *http.Request) {
 
 /**
  * deleteProgram
- * Query parameters: uid, pid
+ * Body parameters:
+ * {
+ *    uid: string
+ *    pid: string
+ * }
  *
  * Deletes the program identified by {pid} from user {uid}.
  */
 func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
-	// acquire parameters.
-	uid := r.URL.Query().Get("uid")
-	pid := r.URL.Query().Get("pid")
+	// acquire parameters via anonymous struct.
+	req := struct {
+		UID string `json:"uid"`
+		PID string `json:"pid"`
+	}{}
 
-	var (
-		// u   *User
-		err error
-	)
+	if err := requests.BodyTo(r, &req); err != nil {
+		http.Error(w, "failed to read request body.", http.StatusInternalServerError)
+		return
+	}
 
 	//TODO: Make this handler atomic
 
 	// Remove this program from the user's list
-	if err = d.DeleteProgramFromUser(r.Context(), uid, pid); err != nil {
+	if err := d.DeleteProgramFromUser(r.Context(), req.UID, req.PID); err != nil {
 		http.Error(w, "failed updating user's program list.", http.StatusInternalServerError)
 		return
 	}
 
 	// attempt to delete program doc.
-	if err = d.DeleteProgram(r.Context(), pid); err != nil {
+	if err := d.DeleteProgram(r.Context(), req.PID); err != nil {
 		http.Error(w, "failed to delete program doc.", http.StatusInternalServerError)
 		return
 	}
