@@ -79,18 +79,24 @@ func TestRigDB(t *testing.T) {
 
 	t.Run("Delete program", func(t *testing.T) {
 
-		req, err := http.NewRequest("DELETE", "/program/delete", nil)
+		body := struct {
+			UID string `json:"uid"`
+			PID string `json:"pid"`
+		}{
+			UID: res.UserData.UID,
+			PID: res.UserData.Programs[0],
+		}
+
+		j, err := json.Marshal(&body)
+		if err != nil {
+			t.Fatal("Failed to marshal request body")
+		}
+
+		req, err := http.NewRequest("DELETE", "/program/delete", bytes.NewBuffer(j))
 
 		if err != nil {
 			t.Fatal("Failed to create http request")
 		}
-
-		// build query
-		p := req.URL.Query()
-
-		p.Add("uid", res.UserData.UID)
-		p.Add("pid", res.UserData.Programs[0])
-		req.URL.RawQuery = p.Encode()
 
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(d.HandleDeleteProgram)
