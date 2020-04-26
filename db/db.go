@@ -51,17 +51,19 @@ func (d *DB) CreateUser(ctx context.Context) (*User, error) {
 	newUser, newProgs := defaultData()
 	newUser.UID = ref.ID
 
-	// create all new programs and associate them to the user.
-	for _, prog := range newProgs {
-		// create program in database.
-		newProg := d.Collection(ProgramsPath).NewDoc()
-		newProg.Set(context.Background(), prog)
-
-		// establish association in user doc.
-		newUser.Programs = append(newUser.Programs, newProg.ID)
-	}
-
 	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		// create all new programs and associate them to the user.
+		for _, prog := range newProgs {
+			// create program in database.
+			newProg := d.Collection(ProgramsPath).NewDoc()
+			if err := tx.Create(newProg, prog); err != nil {
+				return err
+			}
+
+			// establish association in user doc.
+			newUser.Programs = append(newUser.Programs, newProg.ID)
+		}
+
 		return tx.Create(ref, newUser)
 	})
 

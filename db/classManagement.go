@@ -2,9 +2,9 @@ package db
 
 import (
 	"encoding/json"
+	"github.com/uclaacm/teach-la-go-backend/tools/requests"
 	"net/http"
 	"net/url"
-	"github.com/uclaacm/teach-la-go-backend/tools/requests"
 )
 
 // HandleCreateClass is the handler for creating a new class.
@@ -61,10 +61,18 @@ func (d *DB) HandleCreateClass(w http.ResponseWriter, r *http.Request) {
 
 	//create an wid for this class
 	wid, err := d.MakeAlias(r.Context(), cid, ClassesAliasPath)
+	if err != nil {
+		http.Error(w, "Error updating class in Firebase", http.StatusInternalServerError)
+		return
+	}
 
 	//Update class info
 	// create the class
 	err = d.UpdateClassWID(r.Context(), cid, wid)
+	if err != nil {
+		http.Error(w, "Error updating class in Firebase", http.StatusInternalServerError)
+		return
+	}
 
 	//add this class to the user's "Classes" list
 	err = d.AddClassToUser(r.Context(), req.UID, cid)
@@ -100,16 +108,20 @@ func (d *DB) HandleGetClass(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check if UID and WID are in the query parameters
-	if len(req["UID"]) == 0 || req["UID"][0] == ""{
+	if len(req["UID"]) == 0 || req["UID"][0] == "" {
 		http.Error(w, "Failed to get class (class does not exist or failed to unmarshal data)", http.StatusNotFound)
 		return
-	} 
-	if len(req["WID"]) == 0 || req["WID"][0] == ""{
+	}
+	if len(req["WID"]) == 0 || req["WID"][0] == "" {
 		http.Error(w, "Failed to get class (class does not exist or failed to unmarshal data)", http.StatusNotFound)
 		return
-	} 
+	}
 
 	cid, err := d.GetUIDFromWID(r.Context(), req["WID"][0], ClassesAliasPath)
+	if err != nil {
+		http.Error(w, "Failed to get class", http.StatusInternalServerError)
+		return
+	}
 
 	// get the class as a struct (pointer)
 	c, err := d.GetClass(r.Context(), cid)
