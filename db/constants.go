@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"../tools/log"
+	"github.com/uclaacm/teach-la-go-backend/tools/log"
 )
 
 const (
@@ -32,7 +32,7 @@ const (
 	// UsersPath describes the path to the user management
 	// endpoint
 	UsersPath = "users"
-	
+
 	// ClassesPath describes the path to the classes
 	// management endpoint.
 	ClassesPath = "classes"
@@ -112,7 +112,7 @@ func defaultProgram(languageCode int) (defaultProg Program) {
 	//defaultProg.UID = uid
 	defaultProg.Code = defaultCode
 	defaultProg.Language, _ = LanguageName(languageCode)
-	defaultProg.DateCreated = time.Now().UTC()
+	defaultProg.DateCreated = time.Now().UTC().String()
 
 	return
 }

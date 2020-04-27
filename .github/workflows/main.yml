@@ -1,0 +1,27 @@
+name: Go CI
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v1.0.0
+      with:
+        go-version: '1.14.1'
+    - run: go get -d ./...
+    - name: Builds
+      run: go build
+    - name: Passes tests
+      run: go test ./...
+      env:
+        TLACFG: ${{ secrets.TLACFG }}
+    - name: Passes go vet, fmt
+      run: |
+        go vet
+        gofmt -l .

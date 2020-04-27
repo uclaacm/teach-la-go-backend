@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"cloud.google.com/go/firestore"
@@ -15,30 +16,26 @@ type DB struct {
 	*firestore.Client
 }
 
-// OpenFromCreds returns a pointer to a database client based on
-// JSON credentials pointed to by the provided path.
+// OpenFromEnv returns a pointer to a database client based on
+// JSON credentials given by the environment variable.
 // Returns an error if it fails at any point.
-func OpenFromCreds(ctx context.Context, path string) (*DB, error) {
-	// check, using os.Stat(), that the file exists. If it does not exist,
-	// then fail.
-	if _, err := os.Stat(path); err != nil {
-		return nil, err
+func OpenFromEnv(ctx context.Context) (*DB, error) {
+	cfg := os.Getenv("TLACFG")
+	if cfg == "" {
+		return nil, fmt.Errorf("no $TLACFG environment variable provided")
 	}
 
 	// set up the app through which our client will be
 	// acquired.
-	opt := option.WithCredentialsFile(path)
+	opt := option.WithCredentialsJSON([]byte(cfg))
 	app, err := firebase.NewApp(ctx, nil, opt)
+	if err != nil {
+		return nil, err
+	}
 
 	// acquire the firestore client, fail if we cannot.
 	client, err := app.Firestore(ctx)
 	return &DB{Client: client}, err
-}
-
-// OpenFromEnv calls OpenFromCreds with the path
-// provided by your environment variable $CFGPATH.
-func OpenFromEnv(ctx context.Context) (*DB, error) {
-	return OpenFromCreds(ctx, os.Getenv(DefaultEnvVar))
 }
 
 // CreateUser creates the default user and program documents,
@@ -161,7 +158,6 @@ func (d *DB) DeleteProgram(ctx context.Context, uid string) error {
 	return err
 }
 
-
 // CreateClass creates a new class document to match the provided struct.
 // The class's UID is returned with an error, should one occur.
 func (d *DB) CreateClass(ctx context.Context, c *Class) (string, error) {
@@ -181,16 +177,16 @@ func (d *DB) CreateClass(ctx context.Context, c *Class) (string, error) {
 func (d *DB) UpdateClassWID(ctx context.Context, cid string, wid string) error {
 	doc := d.Collection(ClassesPath).Doc(cid)
 
-	_, err := doc.Update(ctx, []firestore.Update{{Path: "WID", Value: wid }})
+	_, err := doc.Update(ctx, []firestore.Update{{Path: "WID", Value: wid}})
 	return err
 }
 
-// AddClassToUser takes a uid and a pid, 
+// AddClassToUser takes a uid and a pid,
 // and adds the pid to the user's list of programs
 func (d *DB) AddClassToUser(ctx context.Context, uid string, cid string) error {
 
 	//get the user doc
-	doc := d.Collection(UsersPath).Doc(uid) 
+	doc := d.Collection(UsersPath).Doc(uid)
 
 	//add the class id
 	_, err := doc.Update(ctx, []firestore.Update{
@@ -205,7 +201,7 @@ func (d *DB) AddClassToUser(ctx context.Context, uid string, cid string) error {
 func (d *DB) AddUserToClass(ctx context.Context, uid string, cid string) error {
 
 	//get the class doc
-	doc := d.Collection(ClassesPath).Doc(cid) 
+	doc := d.Collection(ClassesPath).Doc(cid)
 
 	//add the class id
 	_, err := doc.Update(ctx, []firestore.Update{
@@ -220,7 +216,7 @@ func (d *DB) AddUserToClass(ctx context.Context, uid string, cid string) error {
 func (d *DB) RemoveUserFromClass(ctx context.Context, uid string, cid string) error {
 
 	//get the class doc
-	doc := d.Collection(ClassesPath).Doc(cid) 
+	doc := d.Collection(ClassesPath).Doc(cid)
 
 	//add the class id
 	_, err := doc.Update(ctx, []firestore.Update{
@@ -235,7 +231,7 @@ func (d *DB) RemoveUserFromClass(ctx context.Context, uid string, cid string) er
 func (d *DB) RemoveClassFromUser(ctx context.Context, uid string, cid string) error {
 
 	//get the user doc
-	doc := d.Collection(UsersPath).Doc(uid) 
+	doc := d.Collection(UsersPath).Doc(uid)
 
 	//remove the class id
 	_, err := doc.Update(ctx, []firestore.Update{
@@ -262,6 +258,6 @@ func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
 	if err := doc.DataTo(c); err != nil {
 		return nil, err
 	}
-	
+
 	return c, err
 }

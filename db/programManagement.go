@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"../tools/requests"
+	"github.com/uclaacm/teach-la-go-backend/tools/requests"
 )
 
 /**
@@ -22,7 +22,7 @@ func (d *DB) HandleGetProgram(w http.ResponseWriter, r *http.Request) {
 	if ctxID, ok := r.Context().Value("getProgram").(string); ok {
 		pid = ctxID
 	} else {
-		pid = r.URL.Query().Get("programId")
+		pid = r.URL.Query().Get("pid")
 	}
 
 	// attempt to acquire doc.
@@ -114,7 +114,7 @@ func (d *DB) HandleInitializeProgram(w http.ResponseWriter, r *http.Request) {
 	ctx := context.WithValue(r.Context(), "getProgram", p)
 	d.HandleGetProgram(w, r.WithContext(ctx))
 }
- 
+
 /**
  * updateProgramData
  * Body:
@@ -147,31 +147,37 @@ func (d *DB) HandleUpdateProgram(w http.ResponseWriter, r *http.Request) {
 
 /**
  * deleteProgram
- * Query parameters: uid, pid
+ * Body parameters:
+ * {
+ *    uid: string
+ *    pid: string
+ * }
  *
  * Deletes the program identified by {pid} from user {uid}.
  */
 func (d *DB) HandleDeleteProgram(w http.ResponseWriter, r *http.Request) {
-	// acquire parameters.
-	uid := r.URL.Query().Get("userId")
-	pid := r.URL.Query().Get("programId")
+	// acquire parameters via anonymous struct.
+	req := struct {
+		UID string `json:"uid"`
+		PID string `json:"pid"`
+	}{}
 
-	var (
-		// u   *User
-		err error
-	)
-
-	//TODO: Make this handler atomic
-
-	// attempt to delete program doc.
-	if err = d.DeleteProgram(r.Context(), pid); err != nil {
-		http.Error(w, "failed to delete program doc.", http.StatusInternalServerError)
+	if err := requests.BodyTo(r, &req); err != nil {
+		http.Error(w, "failed to read request body.", http.StatusInternalServerError)
 		return
 	}
 
+	//TODO: Make this handler atomic
+
 	// Remove this program from the user's list
-	if err = d.DeleteProgramFromUser(r.Context(), uid, pid); err != nil {
+	if err := d.DeleteProgramFromUser(r.Context(), req.UID, req.PID); err != nil {
 		http.Error(w, "failed updating user's program list.", http.StatusInternalServerError)
+		return
+	}
+
+	// attempt to delete program doc.
+	if err := d.DeleteProgram(r.Context(), req.PID); err != nil {
+		http.Error(w, "failed to delete program doc.", http.StatusInternalServerError)
 		return
 	}
 
