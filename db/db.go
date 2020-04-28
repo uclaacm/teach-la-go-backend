@@ -305,7 +305,7 @@ func (d *DB) MakeAlias(ctx context.Context, uid string, path string) (string, er
 
 	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
 		doc, err := tx.Get(col.Doc(wid))
-		if err != nil {
+		if doc == nil || (err != nil && doc.Exists()) {
 			return err
 		}
 
@@ -321,7 +321,7 @@ func (d *DB) MakeAlias(ctx context.Context, uid string, path string) (string, er
 			wid = strings.Join(wid_list, ",")
 
 			doc, err = tx.Get(col.Doc(wid))
-			if err != nil {
+			if doc == nil || (err != nil && doc.Exists()) {
 				return err
 			}
 		}
