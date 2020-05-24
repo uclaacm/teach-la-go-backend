@@ -25,10 +25,10 @@ type Response struct {
 func TestRigDB(t *testing.T) {
 
 	var (
-		d           *db.DB // stores instance of connection with database
+		d           *db.DB 		// stores instance of connection with database
 		err         error
-		res         Response // structure to store response fron database
-		res_student Response // structure to store response fron database
+		res         Response 	// structure to store response fron database
+		res_student Response 	// structure to store response fron database
 		class_id    string
 	)
 	
@@ -45,12 +45,14 @@ func TestRigDB(t *testing.T) {
 
 	t.Run("Create new user", func(t *testing.T) {
 
+		// build request 
 		req, err := http.NewRequest("POST", "/user/create", nil)
 
 		if err != nil {
 			t.Fatal("Failed to create http request")
 		}
 
+		// send request
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(d.HandleInitializeUser)
 
@@ -62,11 +64,11 @@ func TestRigDB(t *testing.T) {
 
 		// if creating user succeeded, record the response to use it in the next test
 		defer rr.Result().Body.Close()
-
 		t.Logf("Create user successful")
+		
 		t.Logf("Reading response")
-
 		j, err := ioutil.ReadAll(rr.Result().Body)
+		
 		if err != nil {
 			t.Fatal("Failed to read response")
 		}
@@ -79,6 +81,7 @@ func TestRigDB(t *testing.T) {
 
 	t.Run("Delete program", func(t *testing.T) {
 
+		// build a struct to send in the http request 
 		body := struct {
 			UID string `json:"uid"`
 			PID string `json:"pid"`
@@ -114,6 +117,7 @@ func TestRigDB(t *testing.T) {
 	t.Run("Create program", func(t *testing.T) {
 
 		t.Logf("Building query")
+
 		// create JSON for a new program
 		pr := struct {
 			Code        string
@@ -150,22 +154,27 @@ func TestRigDB(t *testing.T) {
 		t.Logf("Making call...")
 		handler.ServeHTTP(rr, req)
 
-		var class db.Class
-
-		t.Log(rr.Body)
-
-		j, err := ioutil.ReadAll(rr.Result().Body)
-		if err != nil {
-			t.Fatal("Failed to read response")
-		}
-
-		json.Unmarshal([]byte(j), &class)
-		class_id = class.WID
-		
-
 		if status := rr.Code; status != http.StatusOK {
 			t.Fatal("Create program failed")
 		}
+
+
+		// var class db.Class
+
+		t.Log(rr.Body)
+
+		// j, err := ioutil.ReadAll(rr.Result().Body)
+		// if err != nil {
+		// 	t.Fatal("Failed to read response")
+		// }
+
+		// json.Unmarshal([]byte(j), &class)
+		// class_id = class.WID
+		
+
+		// if status := rr.Code; status != http.StatusOK {
+		// 	t.Fatal("Create program failed")
+		// }
 
 	})
 
@@ -183,10 +192,6 @@ func TestRigDB(t *testing.T) {
 
 		// build query
 		p := req.URL.Query()
-
-		//p.Add("userId", res.UserData.UID)
-		//p.Add("includePrograms", res.UserData.Programs[0])
-		t.Log(res.UserData.UID)
 		p.Add("uid", res.UserData.UID)
 		p.Add("programs", "true")
 		req.URL.RawQuery = p.Encode()
@@ -194,7 +199,7 @@ func TestRigDB(t *testing.T) {
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(d.HandleGetUser)
 
-		// struct to recieve response
+		// struct to receive response
 		resp := struct {
 			UserData *db.User     `json:"userData"`
 			Programs []db.Program `json:"programs"`
@@ -202,8 +207,9 @@ func TestRigDB(t *testing.T) {
 
 		handler.ServeHTTP(rr, req)
 		t.Log(rr.Body)
-		//get raw data returned
-		//unmarshall json
+
+		// get raw data returned
+		// unmarshal json
 		j, err := ioutil.ReadAll(rr.Result().Body)
 		if err != nil {
 			t.Fatal("Failed to read response")
@@ -211,18 +217,12 @@ func TestRigDB(t *testing.T) {
 
 		json.Unmarshal([]byte(j), &resp)
 
-		//TODO check if correct programs are made
-		//t.Logf(resp.Programs[0].Name)
-
 		if status := rr.Code; status != http.StatusOK {
 			t.Fatal("Get user failed")
 		}
 
 	})
 
-
-
-	// Test creating a class from a user
 	t.Run("Create Class", func(t *testing.T) {
 
 		// create JSON for a new program
@@ -242,13 +242,11 @@ func TestRigDB(t *testing.T) {
 			t.Fatal("Failed to create JSON")
 		}
 
-		//fmt.Printf("%s", pro)
-
 		req, err := http.NewRequest("POST", "/class/create", bytes.NewBuffer(pro))
 		req.Header.Set("Content-Type", "application/json")
 
 		if err != nil {
-			t.Fatal("Failed to test create program")
+			t.Fatal("Failed to test create class")
 		}
 
 		rr := httptest.NewRecorder()
@@ -269,7 +267,7 @@ func TestRigDB(t *testing.T) {
 		class_id = class.WID
 
 		if status := rr.Code; status != http.StatusOK {
-			t.Fatal("Create program failed")
+			t.Fatal("Create class failed")
 		}
 
 	})

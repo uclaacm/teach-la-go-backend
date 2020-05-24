@@ -5,7 +5,7 @@ import (
 	"testing"
 	"strings"
 
-	"./db"
+	"github.com/uclaacm/teach-la-go-backend/db"
 	tinycrypt "github.com/uclaacm/teach-la-go-backend-tinycrypt" 
 )
 
@@ -25,9 +25,8 @@ func TestAliasDB(t *testing.T) {
 			t.Fatal("failed to open DB client")
 		}
 	})
-
 		
-	//Test creating a class from a user
+	// Initialize the shards 
 	t.Run("Create Shards", func(t *testing.T){
 		err := d.InitShards(context.Background(), "classes_alias")
 		if err != nil {
@@ -35,7 +34,7 @@ func TestAliasDB(t *testing.T) {
 		}
 	})
 
-	// Test creating a class from a user
+	// Request unique ID numbers from the counter 
 	t.Run("Get ID", func(t *testing.T){
 		for i := 0; i < 32; i++ {
 			u, err := d.GetID(context.Background(), "classes_alias")
@@ -43,10 +42,10 @@ func TestAliasDB(t *testing.T) {
 				t.Fatal(err)
 			}
 			
-			t.Logf("u: %d\n",u)
+			t.Logf("Unique ID + hasing:\t\t%d\n",u)
 			w := tinycrypt.GenerateWord24(uint64(u))
 			wid := strings.Join(w, ",") 
-			t.Logf("u: %s\n======",wid)
+			t.Logf("Unique ID + hashing + words:\t%s\n======",wid)
 
 		}
 	})
