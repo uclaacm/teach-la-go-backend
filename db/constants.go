@@ -42,6 +42,16 @@ const (
 
 	// ClassesAliasPath describes the path to the collection with 3 word id => hash mapping for classes
 	ClassesAliasPath = "classes_alias"
+
+	shard_name = "--shards--"
+	num_shards = 8									// number of shards
+	alias_size = int64(16777216)					// number of total unique IDs we can allocate
+	divider = int64(1024)							// a factor used to divide each shards into "blocks"
+	max_size = alias_size / (divider * num_shards) 	// number of blocks per shard
+	slot_per_shard = alias_size / num_shards		// how many IDs we have per shard 
+	shard_cap = slot_per_shard
+
+	
 )
 
 // LanguageName acquires the name for the language desecribed

@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
-
-	tinycrypt "github.com/uclaacm/teach-la-go-backend-tinycrypt"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
@@ -285,75 +282,4 @@ func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
 	})
 
 	return c, err
-}
-
-// MakeAlias takes an id (usually pid or cid), allocates a 3 word id(wid), and
-// stores it in Firebase. The generated wid is a string, with words comma seperated
-func (d *DB) MakeAlias(ctx context.Context, uid string, path string) (string, error) {
-
-	// convert uid into a 36 bit hash
-	//aid := tinycrypt.MakeHash(uid)
-	aid := tinycrypt.GenerateHash()
-
-	// convert that to a 3 word id
-	wid_list := tinycrypt.GenerateWord36(aid)
-	// the result is an array,so concat into a single string
-	wid := strings.Join(wid_list, ",")
-
-	// get the mapping collection
-	col := d.Collection(path)
-
-	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		doc, err := tx.Get(col.Doc(wid))
-		if doc == nil || (err != nil && doc.Exists()) {
-			return err
-		}
-
-		//if the doc id is taken, generate a different wid
-		for doc.Exists() == true {
-
-			aid++
-			if aid >= 0xFFFFFFFFF {
-				aid = 0
-			}
-
-			wid_list = tinycrypt.GenerateWord36(aid)
-			wid = strings.Join(wid_list, ",")
-
-			doc, err = tx.Get(col.Doc(wid))
-			if doc == nil || (err != nil && doc.Exists()) {
-				return err
-			}
-		}
-
-		//create mapping
-		return tx.Set(col.Doc(wid), map[string]interface{}{
-			"target": uid,
-		})
-	})
-
-	return strings.Join(wid_list, ","), err
-
-}
-
-// GetUIDFromWID returns the UID given a WID
-func (d *DB) GetUIDFromWID(ctx context.Context, wid string, path string) (string, error) {
-
-	// get the document with the mapping
-	ref := d.Collection(path).Doc(wid)
-
-	t := struct {
-		Target string `firestore:target`
-	}{}
-
-	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		doc, err := tx.Get(ref)
-		if err != nil {
-			return err
-		}
-
-		return doc.DataTo(&t)
-	})
-
-	return t.Target, err
 }
