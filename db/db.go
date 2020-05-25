@@ -42,47 +42,58 @@ func OpenFromEnv(ctx context.Context) (*DB, error) {
 // then returns the object for said User.
 func (d *DB) CreateUser(ctx context.Context) (*User, error) {
 	// create new doc for user
-	doc := d.Collection(UsersPath).NewDoc()
+	ref := d.Collection(UsersPath).NewDoc()
 
 	// create structures to be used as default data
 	newUser, newProgs := defaultData()
-	newUser.UID = doc.ID
+	newUser.UID = ref.ID
 
-	// create all new programs and associate them to the user.
-	for _, prog := range newProgs {
-		// create program in database.
-		newProg := d.Collection(ProgramsPath).NewDoc()
-		newProg.Set(context.Background(), prog)
+	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		// create all new programs and associate them to the user.
+		for _, prog := range newProgs {
+			// create program in database.
+			newProg := d.Collection(ProgramsPath).NewDoc()
+			if err := tx.Create(newProg, prog); err != nil {
+				return err
+			}
 
-		// establish association in user doc.
-		newUser.Programs = append(newUser.Programs, newProg.ID)
-	}
+			// establish association in user doc.
+			newUser.Programs = append(newUser.Programs, newProg.ID)
+		}
 
-	// create user doc.
-	_, err := doc.Set(ctx, newUser)
+		return tx.Create(ref, newUser)
+	})
+
 	return &newUser, err
 }
 
 // GetUser returns a user document in struct form,
 // with an error if one occurs.
 func (d *DB) GetUser(ctx context.Context, uid string) (*User, error) {
-	doc, err := d.Collection(UsersPath).Doc(uid).Get(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+	ref := d.Collection(UsersPath).Doc(uid)
 	u := &User{UID: uid}
-	return u, doc.DataTo(u)
+
+	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		doc, err := tx.Get(ref)
+		if err != nil {
+			return err
+		}
+
+		return doc.DataTo(u)
+	})
+
+	return u, err
 }
 
 // UpdateUser updates the user document with given uid to match
 // the provided struct.
 // An error is returned should one occur.
 func (d *DB) UpdateUser(ctx context.Context, uid string, u *User) error {
-	doc := d.Collection(UsersPath).Doc(uid)
+	ref := d.Collection(UsersPath).Doc(uid)
 
-	_, err := doc.Update(ctx, u.ToFirestoreUpdate())
-	return err
+	return d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Update(ref, u.ToFirestoreUpdate())
+	})
 }
 
 // DeleteProgramFromUser takes a uid and a pid,
@@ -90,13 +101,13 @@ func (d *DB) UpdateUser(ctx context.Context, uid string, u *User) error {
 func (d *DB) DeleteProgramFromUser(ctx context.Context, uid string, pid string) error {
 
 	//get the user doc
-	doc := d.Collection(UsersPath).Doc(uid)
+	ref := d.Collection(UsersPath).Doc(uid)
 
-	_, err := doc.Update(ctx, []firestore.Update{
-		{Path: "programs", Value: firestore.ArrayRemove(pid)},
+	return d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Update(ref, []firestore.Update{
+			{Path: "programs", Value: firestore.ArrayRemove(pid)},
+		})
 	})
-
-	return err
 }
 
 // AddProgramToUser takes a uid and a pid,
@@ -104,14 +115,13 @@ func (d *DB) DeleteProgramFromUser(ctx context.Context, uid string, pid string) 
 func (d *DB) AddProgramToUser(ctx context.Context, uid string, pid string) error {
 
 	//get the user doc
-	doc := d.Collection(UsersPath).Doc(uid)
+	ref := d.Collection(UsersPath).Doc(uid)
 
-	_, err := doc.Update(ctx, []firestore.Update{
-		{Path: "programs", Value: firestore.ArrayUnion(pid)},
+	return d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Update(ref, []firestore.Update{
+			{Path: "programs", Value: firestore.ArrayUnion(pid)},
+		})
 	})
-
-	return err
-
 }
 
 // CreateProgram creates a new program document to match
@@ -119,145 +129,157 @@ func (d *DB) AddProgramToUser(ctx context.Context, uid string, pid string) error
 // The program's UID is returned with an error, should one
 // occur.
 func (d *DB) CreateProgram(ctx context.Context, p *Program) (string, error) {
-	doc := d.Collection(ProgramsPath).NewDoc()
+	ref := d.Collection(ProgramsPath).NewDoc()
 
 	// update UID to match, then update doc.
-	p.UID = doc.ID
-	_, err := doc.Set(ctx, *p)
+	p.UID = ref.ID
+
+	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Set(ref, *p)
+	})
+
 	return p.UID, err
 }
 
 // GetProgram returns a program document in struct form,
 // with an error if one occurs.
 func (d *DB) GetProgram(ctx context.Context, pid string) (*Program, error) {
-	doc, err := d.Collection(ProgramsPath).Doc(pid).Get(ctx)
-	if err != nil {
-		return nil, err
-	}
+	ref := d.Collection(ProgramsPath).Doc(pid)
 
 	p := &Program{UID: pid}
-	return p, doc.DataTo(p)
+
+	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		doc, err := tx.Get(ref)
+		if err != nil {
+			return err
+		}
+
+		return doc.DataTo(p)
+	})
+
+	return p, err
 }
 
 // UpdateProgram updates the program with the given uid to match
 // the program provided as an argument.
 // An error is returned if any issues are encountered.
 func (d *DB) UpdateProgram(ctx context.Context, uid string, p *Program) error {
-	doc := d.Collection(ProgramsPath).Doc(uid)
+	ref := d.Collection(ProgramsPath).Doc(uid)
 
-	_, err := doc.Update(ctx, p.ToFirestoreUpdate())
-	return err
+	return d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Update(ref, p.ToFirestoreUpdate())
+	})
 }
 
 // DeleteProgram deletes the program with the given uid. An error
 // is returned should one occur.
 func (d *DB) DeleteProgram(ctx context.Context, uid string) error {
-	doc := d.Collection(ProgramsPath).Doc(uid)
+	ref := d.Collection(ProgramsPath).Doc(uid)
 
-	_, err := doc.Delete(ctx)
-	return err
+	return d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Delete(ref)
+	})
 }
 
 // CreateClass creates a new class document to match the provided struct.
 // The class's UID is returned with an error, should one occur.
 func (d *DB) CreateClass(ctx context.Context, c *Class) (string, error) {
 	// create a new doc for this class
-	doc := d.Collection(ClassesPath).NewDoc()
+	ref := d.Collection(ClassesPath).NewDoc()
 
 	//set the CID parameter
-	c.CID = doc.ID
+	c.CID = ref.ID
 
-	//update the database
-	_, err := doc.Set(ctx, *c)
+	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Set(ref, *c)
+	})
 
 	//return the results
-	return doc.ID, err
+	return ref.ID, err
 }
 
 func (d *DB) UpdateClassWID(ctx context.Context, cid string, wid string) error {
-	doc := d.Collection(ClassesPath).Doc(cid)
+	ref := d.Collection(ClassesPath).Doc(cid)
 
-	_, err := doc.Update(ctx, []firestore.Update{{Path: "WID", Value: wid}})
-	return err
+	return d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Update(ref, []firestore.Update{
+			{Path: "WID", Value: wid},
+		})
+	})
 }
 
 // AddClassToUser takes a uid and a pid,
 // and adds the pid to the user's list of programs
 func (d *DB) AddClassToUser(ctx context.Context, uid string, cid string) error {
-
 	//get the user doc
-	doc := d.Collection(UsersPath).Doc(uid)
+	ref := d.Collection(UsersPath).Doc(uid)
 
 	//add the class id
-	_, err := doc.Update(ctx, []firestore.Update{
-		{Path: "classes", Value: firestore.ArrayUnion(cid)},
+	return d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Update(ref, []firestore.Update{
+			{Path: "classes", Value: firestore.ArrayUnion(cid)},
+		})
 	})
-
-	return err
-
 }
 
 // AddUserToClass add an uid to a given class
 func (d *DB) AddUserToClass(ctx context.Context, uid string, cid string) error {
-
 	//get the class doc
-	doc := d.Collection(ClassesPath).Doc(cid)
+	ref := d.Collection(ClassesPath).Doc(cid)
 
-	//add the class id
-	_, err := doc.Update(ctx, []firestore.Update{
-		{Path: "members", Value: firestore.ArrayUnion(uid)},
+	//add the user id
+	return d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Update(ref, []firestore.Update{
+			{Path: "members", Value: firestore.ArrayUnion(uid)},
+		})
 	})
-
-	return err
-
 }
 
 // RemoveUserFromClass removes an uid from a given class
 func (d *DB) RemoveUserFromClass(ctx context.Context, uid string, cid string) error {
-
 	//get the class doc
-	doc := d.Collection(ClassesPath).Doc(cid)
+	ref := d.Collection(ClassesPath).Doc(cid)
 
-	//add the class id
-	_, err := doc.Update(ctx, []firestore.Update{
-		{Path: "members", Value: firestore.ArrayRemove(uid)},
+	//remove the user id
+	return d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Update(ref, []firestore.Update{
+			{Path: "members", Value: firestore.ArrayRemove(uid)},
+		})
 	})
-
-	return err
-
 }
 
 // RemoveClassFromUser removes a class from a given user
 func (d *DB) RemoveClassFromUser(ctx context.Context, uid string, cid string) error {
-
 	//get the user doc
-	doc := d.Collection(UsersPath).Doc(uid)
+	ref := d.Collection(UsersPath).Doc(uid)
 
 	//remove the class id
-	_, err := doc.Update(ctx, []firestore.Update{
-		{Path: "classes", Value: firestore.ArrayRemove(cid)},
+	return d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		return tx.Update(ref, []firestore.Update{
+			{Path: "classes", Value: firestore.ArrayRemove(cid)},
+		})
 	})
-
-	return err
 
 }
 
 // GetClass takes a cid, and returns a Class struct with its parameters populated
 // The retuned value is a pointer to the struct instantiated in this function
 func (d *DB) GetClass(ctx context.Context, cid string) (*Class, error) {
+	//get the class doc
+	ref := d.Collection(ClassesPath).Doc(cid)
 
-	//get document for specified class
-	doc, err := d.Collection(ClassesPath).Doc(cid).Get(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// create struct to populate
+	//create struct to populate
 	c := &Class{}
-	// populate struct
-	if err := doc.DataTo(c); err != nil {
-		return nil, err
-	}
+
+	//populate struct
+	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		doc, err := tx.Get(ref)
+		if err != nil {
+			return err
+		}
+
+		return doc.DataTo(c)
+	})
 
 	return c, err
 }
