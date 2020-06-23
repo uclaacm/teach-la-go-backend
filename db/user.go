@@ -25,7 +25,12 @@ func (u *User) ToFirestoreUpdate() []firestore.Update {
 		{Path: "mostRecentProgram", Value: u.MostRecentProgram},
 	}
 
-	if len(u.Programs) != 0 {
+	switch {
+	case u.DisplayName != "":
+		f = append(f, firestore.Update{Path: "displayName", Value: u.DisplayName})
+	case u.PhotoName != "":
+		f = append(f, firestore.Update{Path: "photoName", Value: u.PhotoName})
+	case len(u.Programs) != 0:
 		f = append(f, firestore.Update{Path: "programs", Value: firestore.ArrayUnion(u.Programs)})
 	}
 
