@@ -1,9 +1,16 @@
 package db
 
 import (
-	"fmt"
+	"context"
+	"net/http"
+
+	"github.com/pkg/errors"
+	"github.com/uclaacm/teach-la-go-backend/httpext"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"cloud.google.com/go/firestore"
+	"github.com/labstack/echo/v4"
 )
 
 // User is a struct representation of a user document.
@@ -37,41 +44,187 @@ func (u *User) ToFirestoreUpdate() []firestore.Update {
 	return f
 }
 
-// AddClass adds a class id 'cid' to an User's class list.
-func (u *User) AddClass(cid string) {
-	u.Classes = append(u.Classes, cid)
-}
+// GetUser acquires the userdoc with the given uid.
+//
+// Query Parameters:
+//  - uid string: UID of user to get
+//
+// Returns: Status 200 with marshalled User and programs.
+func (d *DB) GetUser(c echo.Context) error {
+	resp := struct {
+		UserData User      `json:"userData"`
+		Programs []Program `json:"programs"`
+	}{}
 
-// RemoveClass removes a class id 'cid' from an User's
-// class list. An error is thrown if the User is not
-// a member of that class.
-func (u *User) RemoveClass(cid string) error {
-	// loop through all the elements.
-	// when we find the index of a match, change
-	// the array to exclude the element, and then
-	// return nil.
-	for idx, el := range u.Classes {
-		// found the element.
-		if el == cid {
-			// remove it and update.
-			half := u.Classes[:idx]
+	// get user
+	uid := c.QueryParam("uid")
+	if uid == "" {
+		return c.String(http.StatusBadRequest, "uid is a required query parameter")
+	}
 
-			// append elements of h2.
-			for _, element := range u.Classes[idx:] {
-				half = append(half, element)
+	// get user data
+	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
+		ref := d.Collection(usersPath).Doc(c.QueryParam("uid"))
+		doc, err := tx.Get(ref)
+		if err != nil {
+			return err
+		}
+		return doc.DataTo(&resp.UserData)
+	})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return c.String(http.StatusNotFound, "user does not exist")
+		}
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to get user data").Error())
+	}
+
+	// get programs, if requested
+	if c.QueryParam("programs") != "" {
+		for _, p := range resp.UserData.Programs {
+			currentProg := Program{}
+
+			progTXErr := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
+				doc, err := tx.Get(d.Collection(programsPath).Doc(p))
+				if err != nil {
+					return err
+				}
+				return doc.DataTo(&currentProg)
+			})
+			if progTXErr != nil {
+				if status.Code(progTXErr) == codes.NotFound {
+					return c.String(http.StatusNotFound, "could not retrieve user programs, invalid reference")
+				}
+				return c.String(http.StatusInternalServerError, errors.Wrap(progTXErr, "failed to get user's programs").Error())
 			}
 
-			u.Classes = half
-			return nil
+			resp.Programs = append(resp.Programs, currentProg)
 		}
 	}
 
-	// if we can't find it, throw an error.
-	return fmt.Errorf("failed to find %s in User classes", cid)
+	return c.JSON(http.StatusOK, &resp)
 }
 
-// AddProgram adds the program id 'pid' to an User's
-// program list.
-func (u *User) AddProgram(pid string) {
-	u.Programs = append(u.Programs, pid)
+// UpdateUser updates the doc with specified UID's fields
+// to match those of the request body.
+//
+// Request Body:
+// {
+//	   "uid": [REQUIRED]
+//     [User object fields]
+// }
+//
+// Returns: Status 200 on success.
+func (d *DB) UpdateUser(c echo.Context) error {
+	// unmarshal request body into an User struct.
+	requestObj := User{}
+	if err := httpext.RequestBodyTo(c.Request(), &requestObj); err != nil {
+		return err
+	}
+
+	uid := requestObj.UID
+	if uid == "" {
+		return c.String(http.StatusBadRequest, "a uid is required")
+	}
+	if len(requestObj.Programs) != 0 {
+		return c.String(http.StatusBadRequest, "program list cannot be updated via /program/update")
+	}
+
+	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
+		ref := d.Collection(usersPath).Doc(uid)
+		return tx.Update(ref, requestObj.ToFirestoreUpdate())
+	})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return c.String(http.StatusNotFound, "user could not be found")
+		}
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to update user data").Error())
+	}
+
+	return c.String(http.StatusOK, "user updated successfully")
+}
+
+// CreateUser creates a new user object with the default data.
+//
+// Parameters: none
+//
+// Returns: Status 200 with a marshalled User struct on success.
+func (d *DB) CreateUser(c echo.Context) error {
+	// create new doc for user
+	ref := d.Collection(usersPath).NewDoc()
+
+	// create structures to be used as default data
+	newUser, newProgs := defaultData()
+	newUser.UID = ref.ID
+
+	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
+		// create all new programs and associate them to the user.
+		for _, prog := range newProgs {
+			// create program in database.
+			newProg := d.Collection(programsPath).NewDoc()
+			if err := tx.Create(newProg, prog); err != nil {
+				return err
+			}
+
+			// establish association in user doc.
+			newUser.Programs = append(newUser.Programs, newProg.ID)
+		}
+
+		return tx.Create(ref, newUser)
+	})
+	if err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to create user").Error())
+	}
+
+	return c.JSON(http.StatusCreated, &newUser)
+}
+
+// DeleteUser deletes an user along with all their programs
+// from the database.
+//
+// Request Body:
+// {
+//     "uid": REQUIRED
+// }
+//
+// Returns: status 200 on deletion.
+func (d *DB) DeleteUser(c echo.Context) error {
+	var body struct {
+		UID string `json:"uid"`
+	}
+	if err := httpext.RequestBodyTo(c.Request(), &body); err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
+	}
+	if body.UID == "" {
+		return c.String(http.StatusBadRequest, "uid is required")
+	}
+	userRef := d.Collection(usersPath).Doc(body.UID)
+
+	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
+		userSnap, err := tx.Get(userRef)
+		if err != nil {
+			return err
+		}
+
+		u := User{}
+		if err := userSnap.DataTo(&u); err != nil {
+			return err
+		}
+
+		for _, prog := range u.Programs {
+			progRef := d.Collection(programsPath).Doc(prog)
+			// if we can't find a program, then it's not a problem.
+			if err := tx.Delete(progRef); status.Code(err) != codes.NotFound {
+				return err
+			}
+		}
+
+		return tx.Delete(userRef)
+	})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return c.String(http.StatusNotFound, "could not find user")
+		}
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to delete user").Error())
+	}
+	return c.String(http.StatusOK, "user deleted successfully")
 }

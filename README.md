@@ -1,8 +1,24 @@
 # teach-la-go-backend
 
-Hey there! This is the repo for our **experimental** Go Backend, which we're using for our online editor. Eventually, the goal of this project is to replace [the current Express-based backend](https://github.com/uclaacm/TeachLAJSBackend), bringing it up to feature parity and using all the benefits that Go provides!
+Hey there! This is the repo for the Go Backend for the Teach LA editor. If you're a frontend dev and are just looking for documentation of our endpoints, you can find that [right here](https://documenter.getpostman.com/view/10224331/SzYgSFSU?version=latest). If you're a backend dev (or prospective dev) looking to get involved, then read on for info on how to get up and running!
 
-If you're on the TeachLA Slack, feel free to @leo with any questions. Thanks!
+# Quickstart
+
+```sh
+go get github.com/uclaacm/teach-la-go-backend
+
+cd $GOPATH/src/github.com/uclaacm/teach-la-go-backend
+# add a remote here if you aren't going to use ours
+
+go get -d ./...
+go build
+
+# source your credentials or create your own
+
+./teach-la-go-backend
+```
+
+For formatting, we use `gofmt`. For linting, we use `golint` and `golangci-lint`.
 
 # Developer Setup
 
@@ -30,171 +46,86 @@ go build
 
 # run the server
 ./teach-la-go-backend
-
 ```
-If you try running the server at this point (with `./teach-la-go-backend`), you'll probably get a message like this: `could not find firebase config file! Did you set your CFGPATH variable? stat : no such file or directory`. To **run** the project, one needs to be able to interact with the TeachLA Firebase through service account credentials (usually a single JSON file). These can be obtained during a TeachLA dev team meeting, or by messaging the #go-backend channel on the TLA Slack. 
 
-Once acquired, save the JSON file in the root directory. **It is recommended that you chnage the file extension to `.env` so `gitignore` will prevent it from being accidentally uploaded to the public repo**. Once you have done that, specify the location of your credentials by setting the environment variable `$CFGPATH`:
+If you try running the server at this point (with `./teach-la-go-backend`), the program will crash with a message complaining that a DB client could not be opened. To be precise, it will complain with:
+
+```json
+{
+    "time": "2020-07-10T02:34:46.7357463-07:00",
+    "level": "FATAL",
+    "prefix": "echo",
+    "file": "server.go",
+    "line": "37",
+    "message": "no $TLACFG environment variable provided"
+}
 ```
-export CFGPATH=./secret.env
+
+To **run** the project for live development - not just build it - one needs to be able to interact with the TeachLA Firebase through service account credentials (usually a single JSON file). These can be obtained during a TeachLA dev team meeting, or by messaging the #go-backend channel on the TLA Slack.
+
+**You must change the file extension to `.env` so our `.gitignore` will prevent it from being accidentally uploaded to the public repo**. Once you have done so, simply enter the file, surround the json with single quotes (`'`), and prepend `export TLACFG=` to the first file. It should look something like:
+
+```sh
+export TLACFG='{
+    // ...
+}'
 ```
 
 You can now run the server you built!
 
 ## Testing
 
-Run the following command to run tests:
+Development is largely test-driven. Any code you contribute should have tests to go with it. Tests should be placed in another file in the same directory with the naming convention `my_file_name_test.go`.
+
+Run tests with the following commands:
 
 ```sh
 # run all tests
 go test ./...
 
+# do so with **verbosity**
+go test -v ./...
+
 # run a specific test
-go test ./server_test.go
-
-# run tests with log output
-go test -v ./server_test.go
+go test -run TestNameHere
 ```
 
-With this, you can build, test, and run the actual backend. If you'd like to get working, you can stop reading here. Otherwise, you can scan through the documentation below.
+With this, you can build, test, and run the actual backend. If you'd like to get working, you can stop reading here. Otherwise, you can scan through some of the FAQ below.
 
-# About the backend
+## Go FAQ
 
-Response codes we use:
+Go is an new language to a great many people. Hopefully the questions you have might be answered below:
 
-Event | `net/http` Constant | Response Code
----|---|:-:
-Nominal | `http.StatusOK` | `200`
-Bad request | `http.StatusBadRequest` | `400`
-Missing resource | `http.StatusNotFound` | `404`
-Something unexpected happened server side | `http.StatusInternalServerError` | `500`
+### Q: Why even use Go?
 
-## What files do what
-* Descriptions of document types can be found in `db/user.go` and `db/program.go`.
-* Endpoint functionality is divided up into `db/userManagement.go` and `db/programManagement.go`.
-* All tests are of the form `fileToTestName_test.go`.
-* Middleware that handles certain request-specific options prior to handing off the request to the default handler can be found in `middleware/`.
-* `hooks/` harbors our git pre-commit hooks that enforce coding style.
+Go is a modern, well-abstracted language for writing performant backends and web applications. It has un*paralleled* support for parallelism out of the box -- so much so that it provides primitive types for concurrency out of the box. It is compiled and garbage-collected. All binaries are statically linked.
 
-## Endpoints
+### Q: What are the naming conventions?
 
-### `GET /programs/:id`, `GET /userData/:id`
+Go has some interesting naming conventions. Here's the clif notes:
+* Filenames should be `snake_cased.go`
+* Function and variable names should be `camelCased()`
+* Any functions and variables in a package with names that are `UpperCamelCased` are exported types and can be imported to other packages.
+* Exported constants should be in `CAPS`.
+* Test filenames should be `snake_cased_and_end_in_test.go`
+* Test routine names should begin with `Test` and mention the function or feature they intend to test (i.e. `TestCreateProgram`).
 
-Get an `User` or `Program` document with UID `:id` in JSON form.
+### Q: What should my coding style be?
 
-Example nominal response:
+Please, please, **please** use `gofmt` to format your code. Use `golint` (or, better yet, `golangci-lint`) for linting. This makes life easier down the line when others read your code.
 
-```json
-// example /programs/ response
-// response code 200
-{
-    "code": "def howdy():\n  print('hi')\n",
-    "dateCreated": "2019-12-14T19:14:08.457733Z",
-    "language": "python",
-    "name": "Program name",
-    "thumbnail": 0
-}
+Also make sure that you:
+* Comment all exported symbols.
+* Keep names idiomatic.
 
-// example /userData/ response
-// response code 200
-{
-    "displayName": "Joe Bruin",
-    "photoName": "",
-    "mostRecentProgram": "PROGHASH",
-    "programs": [
-        "HASH0",
-        "HASH1",
-        "HASH2"
-    ],
-    "classes": null
-}
-```
+### Q: Where should I put my code?
 
-### `PUT /programs/:id`, `PUT /userData/:id`
+We keep our code for handlers in the `db` folder. Each file name describes the class of handlers and associated database types it deals with. For example, `db/program.go` contains the definition for the `Program` type and all handlers that work with it.
 
-Updates the user or program document with uid `:id` with the data provided in the request body. The `/programs/` endpoint takes an array of `Program`s in the request body, while the `/userData/` endpoint takes one or more `User` fields. These endpoints, actually, **aren't properly implemented yet**. Here's what the requests should look like:
+If you have any code that extends functionality of an existing package -- say, `pkg` -- place it in another folder `pkgext`. You can take a look at `httpext` for an example of this.
 
-Example Request:
+## Didn't answer your question?
 
-```json
-// sample user request body
-{
-    "displayName": "TLA Dev Team"
-}
+If you're on the TeachLA Slack, feel free to @leo with any questions or shoot a message off to the #go-backend channel.
 
-// sample program request body
-{
-    "HASH0": {
-        "name": "my updated program name",
-        "code": "print('here\'s my new code for the program!')"
-    },
-    "HASH1": {
-        "name": "another program, this time just updating the name."
-    }
-}
-```
-
-Example nominal response: `200`
-
-### `POST /programs/`
-
-Creates a new program document associated to a user with information as supplied through the request body:
-
-```json
-{
-	"uid": "my cool user ID!",
-	"name": "my neato processing program!",
-	"language": "processing",
-	"thumbnail": 25
-}
-```
-
-Example nominal response:
-
-```json
-// response code: 200
-{
-    "displayName": "J Bruin",
-    "photoName": "",
-    "mostRecentProgram": "",
-    "programs": [
-        "HASH0",
-        "HASH1",
-        "HASH2"
-    ],
-    "classes": null
-}
-```
-
-### `POST /userData/`
-
-Creates a new `User` document with the default programs. There are no special requirements for the request body.
-
-Example nominal response:
-
-```json
-// response code: 200
-{
-    "displayName": "J Bruin",
-    "photoName": "",
-    "mostRecentProgram": "",
-    "programs": [
-        "HASH0",
-        "HASH1",
-        "HASH2"
-    ],
-    "classes": null
-}
-```
-
-### `DELETE /programs/:id`
-
-Delete the program with uid `:id` from the user with uid `:uid`, as provided in the request body.
-
-```json
-{
-    "uid": "my cool program ID"
-}
-```
-
-Example nominal response: `200`
+If you're not on our Slack, feel free to shoot an email off to @krashanoff on GitHub.
