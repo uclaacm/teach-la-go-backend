@@ -2,90 +2,76 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"time"
 
-	_ "github.com/heroku/x/hmetrics/onload"
 	"github.com/uclaacm/teach-la-go-backend/db"
-	m "github.com/uclaacm/teach-la-go-backend/middleware"
+
+	_ "github.com/heroku/x/hmetrics/onload"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"github.com/pkg/errors"
 )
 
 // DEFAULTPORT to serve on.
 const DEFAULTPORT = "8081"
 
 func main() {
-	var (
-		d   *db.DB
-		err error
-	)
+	e := echo.New()
+	e.HideBanner = true
 
-	if d, err = db.OpenFromEnv(context.Background()); err != nil {
-		log.Fatalf("failed to open DB client. %s", err)
+	// middleware
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	e.Use(middleware.Gzip())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"https://editor.uclaacm.com", "http://localhost:8080"},
+		AllowHeaders: []string{echo.HeaderContentType},
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+	}))
+
+	// try to set up firestore connection through env vars
+	cfg := os.Getenv(db.DefaultEnvVar)
+	if cfg == "" {
+		e.Logger.Fatalf("no $%s environment variable provided", db.DefaultEnvVar)
+	}
+	d, err := db.Open(context.Background(), cfg)
+	if err != nil {
+		e.Logger.Fatal(errors.Wrap(err, "failed to open connection to firestore"))
 	}
 	defer d.Close()
-	log.Printf("initialized database client")
-
-	// set up multiplexer.
-	router := http.NewServeMux()
 
 	// user management
-	router.HandleFunc("/user/get", m.WithCORS(d.HandleGetUser))
-	router.HandleFunc("/user/update", m.WithCORS(d.HandleUpdateUser))
-	router.HandleFunc("/user/create", m.WithCORS(d.HandleInitializeUser))
+	e.GET("/user/get", d.GetUser)
+	e.PUT("/user/update", d.UpdateUser)
+	e.POST("/user/create", d.CreateUser)
 
 	// program management
-	router.HandleFunc("/program/get", m.WithCORS(d.HandleGetProgram))
-	router.HandleFunc("/program/update", m.WithCORS(d.HandleUpdateProgram))
-	router.HandleFunc("/program/create", m.WithCORS(d.HandleInitializeProgram))
-	router.HandleFunc("/program/delete", m.WithCORS(d.HandleDeleteProgram))
+	e.GET("/program/get", d.GetProgram)
+	e.PUT("/program/update", d.UpdateProgram)
+	e.POST("/program/create", d.CreateProgram)
+	e.DELETE("/program/delete", d.DeleteProgram)
 
 	//class management
-	router.HandleFunc("/class/create", d.HandleCreateClass)
-	router.HandleFunc("/class/get", d.HandleGetClass)
-	router.HandleFunc("/class/join", d.HandleJoinClass)
-	router.HandleFunc("/class/leave", d.HandleLeaveClass)
-
-	// fallback route
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "", http.StatusNotFound)
-	})
-
-	log.Printf("endpoints initialized.")
+	e.GET("/class/get", d.GetClass)
+	e.POST("/class/create", d.CreateClass)
+	e.PUT("/class/join", d.JoinClass)
+	e.PUT("/class/leave", d.LeaveClass)
 
 	// check for PORT variable.
 	port := os.Getenv("PORT")
 	if port == "" {
-		log.Printf("no $PORT environment variable provided, defaulting to '%s'", DEFAULTPORT)
-		port = "8081"
+		e.Logger.Debugf("no $PORT environment variable provided, defaulting to '%s'", DEFAULTPORT)
+		port = DEFAULTPORT
 	}
 
 	// server configuration
 	s := &http.Server{
 		Addr:           ":" + port,
-		Handler:        m.LogRequest(router),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-
-	// serve backend via anonymous goroutine, cancelling on
-	// system interrupt.
-	kill := make(chan os.Signal, 1)
-	signal.Notify(kill, os.Interrupt)
-	go func() {
-		log.Printf("serving on :%s", port)
-		log.Fatal(s.ListenAndServe())
-	}()
-
-	// wait for system interrupt to call shutdown on the server.
-	<-kill
-	log.Printf("received kill signal, attempting to gracefully shut down.")
-
-	// server has 10 seconds from interrupt to gracefully shutdown.
-	timeout, terminate := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
-	defer terminate()
-	s.Shutdown(timeout)
+	e.Logger.Fatal(e.StartServer(s))
 }

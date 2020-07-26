@@ -1,108 +1,80 @@
 package db
 
 import (
-	"errors"
 	"time"
-
-	"github.com/uclaacm/teach-la-go-backend/tools/log"
 )
 
 const (
-	notALanguage = -1
-	python       = iota
-	processing
-	html
-
-	// LanguageCount is the number of programming languages
-	// available.
-	LanguageCount
-
-	// ThumbnailCount describes the number of program
-	// thumbnails available to choose from.
-	ThumbnailCount = 58
-
 	// DefaultEnvVar describes the default environment
-	// variable used by the server.
-	DefaultEnvVar = "CFGPATH"
+	// variable used to open a connection to the database.
+	DefaultEnvVar = "TLACFG"
 
-	// ProgramsPath describes the path to the program
+	python     = 0
+	processing = iota
+	html
+	langCount
+
+	// the number of program thumbnails available to choose from.
+	thumbnailCount = 58
+
+	// programsPath describes the path to the program
 	// management endpoint.
-	ProgramsPath = "programs"
+	programsPath = "programs"
 
-	// UsersPath describes the path to the user management
+	// usersPath describes the path to the user management
 	// endpoint
-	UsersPath = "users"
+	usersPath = "users"
 
-	// ClassesPath describes the path to the classes
+	// classesPath describes the path to the classes
 	// management endpoint.
-	ClassesPath = "classes"
+	classesPath = "classes"
 
-	// ProgramsAliasPath describes the path to the collection with 3 word id => hash mapping for programs
-	ProgramsAliasPath = "programs_alias"
+	// classesAliasPath describes the path to the collection with 3 word id => hash mapping for classes
+	classesAliasPath = "classes_alias"
 
-	// ClassesAliasPath describes the path to the collection with 3 word id => hash mapping for classes
-	ClassesAliasPath = "classes_alias"
+	shardName    = "--shards--"
+	numShards    = 8                                 // number of shards
+	aliasSize    = int64(16777216)                   // number of total unique IDs we can allocate
+	divider      = int64(1024)                       // a factor used to divide each shards into "blocks"
+	maxSize      = aliasSize / (divider * numShards) // number of blocks per shard
+	slotPerShard = aliasSize / numShards             // how many IDs we have per shard
+	shardCap     = slotPerShard
 )
 
-// LanguageName acquires the name for the language desecribed
-// by the code, returning an error if such a language does not
-// exist.
-func LanguageName(code int) (string, error) {
-	switch code {
+func langString(langCode int) string {
+	switch langCode {
 	case python:
-		return "python", nil
-
+		return "python"
 	case processing:
-		return "processing", nil
-
+		return "processing"
 	case html:
-		return "html", nil
+		return "html"
+	default:
+		return "DNE"
 	}
-
-	return "", errors.New("language does not exist")
-}
-
-// LanguageCode acquires the code for the language described
-// by the string, returning an error if such a language does not
-// exist.
-func LanguageCode(name string) (int, error) {
-	switch name {
-	case "python":
-		return python, nil
-
-	case "processing":
-		return processing, nil
-
-	case "html":
-		return html, nil
-	}
-
-	return notALanguage, errors.New("language does not exist")
 }
 
 // defaultProgram returns a Program struct initialized to
 // default values for a given Language.
-func defaultProgram(languageCode int) (defaultProg Program) {
-	var defaultCode string
+// if the language does not exist, it returns nil.
+func defaultProgram(language string) (defaultProg Program) {
+	defaultCode := ""
 
-	switch languageCode {
-	case python:
+	switch language {
+	case "python":
 		defaultCode = "import turtle\n\nt = turtle.Turtle()\n\nt.color('red')\nt.forward(75)\nt.left(90)\n\n\nt.color('blue')\nt.forward(75)\nt.left(90)\n"
-	case processing:
+	case "processing":
 		defaultCode = "function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(220);\n  ellipse(mouseX, mouseY, 100, 100);\n}"
-	case html:
+	case "html":
 		defaultCode = "<html>\n  <head>\n  </head>\n  <body>\n    <div style='width: 100px; height: 100px; background-color: black'>\n    </div>\n  </body>\n</html>"
-	case notALanguage:
-		log.Debugf("language does not exist.")
-		return
+	default:
+		return Program{}
 	}
 
-	//defaultProg.UID = uid
 	defaultProg.Code = defaultCode
-	defaultProg.Language, _ = LanguageName(languageCode)
-	defaultProg.DateCreated = time.Now().UTC()
-
-	return
+	defaultProg.Language = language
+	defaultProg.DateCreated = time.Now().UTC().String()
+	return defaultProg
 }
 
 // defaultData is the factory function
@@ -111,14 +83,14 @@ func defaultProgram(languageCode int) (defaultProg Program) {
 // between said UserData and Programs are not
 // automatically applied in the database.
 func defaultData() (User, []Program) {
-	var defaultProgs []Program
-	for k := 0; k < LanguageCount; k++ {
-		defaultProgs = append(defaultProgs, defaultProgram(k))
+	defaultProgs := []Program{}
+	for i := 0; i < langCount; i++ {
+		defaultProgs = append(defaultProgs, defaultProgram(langString(i)))
 	}
 
 	u := User{
 		DisplayName: "J Bruin",
-		//UID:		 	uid,
+		PhotoName:   "icecream",
 	}
 	return u, defaultProgs
 }
