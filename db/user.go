@@ -19,7 +19,7 @@ import (
 type User struct {
 	Classes           []string `firestore:"classes" json:"classes"`
 	DisplayName       string   `firestore:"displayName" json:"displayName"`
-	MostRecentProgram int64    `firestore:"mostRecentProgram" json:"mostRecentProgram"`
+	MostRecentProgram string   `firestore:"mostRecentProgram" json:"mostRecentProgram"`
 	PhotoName         string   `firestore:"photoName" json:"photoName"`
 	Programs          []string `firestore:"programs" json:"programs"`
 	UID               string   `json:"uid"`
@@ -52,9 +52,12 @@ func (u *User) ToFirestoreUpdate() []firestore.Update {
 // Returns: Status 200 with marshalled User and programs.
 func (d *DB) GetUser(c echo.Context) error {
 	resp := struct {
-		UserData User      `json:"userData"`
-		Programs []Program `json:"programs"`
-	}{}
+		UserData User               `json:"userData"`
+		Programs map[string]Program `json:"programs"`
+	}{
+		UserData: User{},
+		Programs: make(map[string]Program),
+	}
 
 	// get user
 	uid := c.QueryParam("uid")
@@ -97,7 +100,7 @@ func (d *DB) GetUser(c echo.Context) error {
 				return c.String(http.StatusInternalServerError, errors.Wrap(progTXErr, "failed to get user's programs").Error())
 			}
 
-			resp.Programs = append(resp.Programs, currentProg)
+			resp.Programs[p] = currentProg
 		}
 	}
 
