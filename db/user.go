@@ -194,6 +194,8 @@ func (d *DB) CreateUser(c echo.Context) error {
 			newUser.Programs = append(newUser.Programs, newProg.ID)
 		}
 
+		// set MRP and return
+		newUser.MostRecentProgram = newUser.Programs[0]
 		return tx.Create(ref, newUser)
 	})
 	if err != nil {

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"math/rand"
 	"time"
 )
 
@@ -73,7 +74,9 @@ func defaultProgram(language string) (defaultProg Program) {
 
 	defaultProg.Code = defaultCode
 	defaultProg.Language = language
+	defaultProg.Name = language
 	defaultProg.DateCreated = time.Now().UTC().String()
+	defaultProg.Thumbnail = rand.Int63n(thumbnailCount)
 	return defaultProg
 }
 
