@@ -86,7 +86,7 @@ func defaultProgram(language string) (defaultProg Program) {
 // between said UserData and Programs are not
 // automatically applied in the database.
 func defaultData() (User, []Program) {
-	defaultProgs := []Program{}
+	var defaultProgs []Program
 	for i := 0; i < langCount; i++ {
 		defaultProgs = append(defaultProgs, defaultProgram(langString(i)))
 	}
