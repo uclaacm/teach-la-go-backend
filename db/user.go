@@ -160,6 +160,7 @@ func (d *DB) CreateUser(c echo.Context) error {
 	var body struct {
 		UID string `json:"uid"`
 	}
+	
 	if err := httpext.RequestBodyTo(c.Request(), &body); err != nil {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to marshal request body").Error())
 	}

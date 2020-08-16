@@ -32,10 +32,12 @@ func TestCreateClass(t *testing.T) {
 
 	// Create a new user to host the class
 	t.Run("Create a new user to host class", func(t *testing.T) {
+	
 		req, err := http.NewRequest("POST", "/", nil)
 		if err != nil {
 			t.Fatal("Failed to create http request")
 		}
+		
 		rec := httptest.NewRecorder()
 		c := echo.New().NewContext(req, rec)
 

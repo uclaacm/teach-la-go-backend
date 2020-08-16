@@ -118,6 +118,7 @@ func (d *DB) CreateClass(c echo.Context) error {
 	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
+	
 	switch {
 	case req.UID == "":
 		return c.String(http.StatusBadRequest, "uid is required")
@@ -162,6 +163,8 @@ func (d *DB) CreateClass(c echo.Context) error {
 	}); err != nil {
 		return c.String(http.StatusInternalServerError, "failed to create class alias")
 	}
+
+	class.WID = wid
 
 	//add this class to the user's "Classes" list
 	err = d.AddClassToUser(c.Request().Context(), req.UID, class.CID)
