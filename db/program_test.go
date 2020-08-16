@@ -155,13 +155,13 @@ func TestDeleteProgram(t *testing.T) {
 		// request struct
 		request := struct {
 			UID string `json:"uid"`
-			IDX int64  `json:"idx"`
+			PID string `json:"pid"`
 		}{
 			UID: randomUser.UID,
-			IDX: 0,
+			PID: randomUser.Programs[0],
 		}
-		t.Logf("trying to delete program with pid (%s)", randomUser.Programs[request.IDX])
-		programToDelete := d.Collection(programsPath).Doc(randomUser.Programs[request.IDX])
+		t.Logf("trying to delete program with pid (%s)", request.PID)
+		programToDelete := d.Collection(programsPath).Doc(request.PID)
 		b, err := json.Marshal(&request)
 		require.NoError(t, err)
 

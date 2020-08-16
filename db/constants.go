@@ -1,6 +1,7 @@
 package db
 
 import (
+	"math/rand"
 	"time"
 )
 
@@ -73,7 +74,9 @@ func defaultProgram(language string) (defaultProg Program) {
 
 	defaultProg.Code = defaultCode
 	defaultProg.Language = language
+	defaultProg.Name = language
 	defaultProg.DateCreated = time.Now().UTC().String()
+	defaultProg.Thumbnail = rand.Int63n(thumbnailCount)
 	return defaultProg
 }
 
@@ -83,7 +86,7 @@ func defaultProgram(language string) (defaultProg Program) {
 // between said UserData and Programs are not
 // automatically applied in the database.
 func defaultData() (User, []Program) {
-	defaultProgs := []Program{}
+	var defaultProgs []Program
 	for i := 0; i < langCount; i++ {
 		defaultProgs = append(defaultProgs, defaultProgram(langString(i)))
 	}
