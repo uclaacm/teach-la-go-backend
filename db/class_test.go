@@ -17,6 +17,11 @@ import (
 
 )
 
+const (
+	color_info = "\033[32m"
+	color_warn = "\033[31m]"
+	color_end =  "\033[0m"
+)
 
 /* Variables to store data persistant across tests*/
 var (
@@ -30,7 +35,6 @@ func TestCreateClass(t *testing.T) {
 	d, err := Open(context.Background(), os.Getenv("TLACFG"))
 	require.NoError(t, err)
 
-	// Create a new user to host the class
 	t.Run("Create a new user to host class", func(t *testing.T) {
 	
 		req, err := http.NewRequest("POST", "/", nil)
@@ -44,20 +48,19 @@ func TestCreateClass(t *testing.T) {
 		if assert.NoError(t, d.CreateUser(c)) {
 			assert.Equal(t, http.StatusCreated, rec.Code)
 			assert.NotEmpty(t, rec.Result().Body)
-			defer rec.Result().Body.Close()
-			/* store the user */
 			j, err := ioutil.ReadAll(rec.Result().Body)
+			defer rec.Result().Body.Close()
+
 			if err != nil {
 				t.Fatal("Failed to read response")
 			}
 			json.Unmarshal([]byte(j), &user_ClassOwner)
-		}
-	
+
+			t.Logf(color_info + "Created class owner user: %s" + color_end, user_ClassOwner.UID)
+		}	
 	})
 
-	// Test creating a class from the user
 	t.Run("Create Class", func(t *testing.T){
-		// create JSON for a new program 
 		pr := struct {
 			Uid 		string
 			Name 		string
@@ -67,7 +70,6 @@ func TestCreateClass(t *testing.T) {
 			"TestClass",
 			1,
 		}
-
 		pro, err := json.Marshal(&pr) 
 		if err != nil {
 			t.Fatal("Failed to create JSON")
@@ -84,14 +86,15 @@ func TestCreateClass(t *testing.T) {
 		if assert.NoError(t, d.CreateClass(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
 			assert.NotEmpty(t, rec.Result().Body)
-			/* store the class */
 			j, err := ioutil.ReadAll(rec.Result().Body)
+			defer rec.Result().Body.Close()
+
 			if err != nil {
 				t.Fatal("Failed to read response")
 			}
 			json.Unmarshal([]byte(j), &class)
-			t.Logf(string([]byte(j)))
-			defer rec.Result().Body.Close()
+			
+			t.Logf(color_info + "CreateClass returned: \n%s" + color_end, string([]byte(j)))
 		}
 	})
 }
@@ -100,7 +103,6 @@ func TestJoinClass(t *testing.T) {
 	d, err := Open(context.Background(), os.Getenv("TLACFG"))
 	require.NoError(t, err)
 
-	// Create a new user to join the class
 	t.Run("Create a new user to join class", func(t *testing.T) {
 		req, err := http.NewRequest("POST", "/", nil)
 		if err != nil {
@@ -112,21 +114,19 @@ func TestJoinClass(t *testing.T) {
 		if assert.NoError(t, d.CreateUser(c)) {
 			assert.Equal(t, http.StatusCreated, rec.Code)
 			assert.NotEmpty(t, rec.Result().Body)
-			defer rec.Result().Body.Close()
-			/* store the user */
 			j, err := ioutil.ReadAll(rec.Result().Body)
+			defer rec.Result().Body.Close()
+
 			if err != nil {
 				t.Fatal("Failed to read response")
 			}
 			json.Unmarshal([]byte(j), &user)
+
+			t.Logf(color_info + "JoinClass returned: \n%s" + color_end, string([]byte(j)))
 		}
-	
 	})
 
-	// Test adding a user to class
 	t.Run("Add student to class", func(t *testing.T){
-
-		// create JSON to request adding user to class
 		pr := struct {
 			Uid 		string
 			Cid			string
@@ -134,12 +134,13 @@ func TestJoinClass(t *testing.T) {
 			user.UID,
 			class.WID,
 		}
-
 		pro, err := json.Marshal(&pr) 
 		if err != nil {
 			t.Fatal("Failed to create JSON")
 		}
-		t.Logf(string(pro))
+
+		t.Logf(color_info + "Adding student: \t%s \nto class: \t%s" + color_end, user.UID, class.WID)
+
 		req, err := http.NewRequest("PUT", "/", bytes.NewBuffer(pro))
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
@@ -163,7 +164,6 @@ func TestGetClass(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Send request to get class", func(t *testing.T) {
-		// create JSON to get class 
 		pr := struct {
 			Uid 		string
 			Wid 		string
@@ -175,7 +175,8 @@ func TestGetClass(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to create JSON")
 		}
-		t.Logf(string(pro))
+
+		t.Logf(color_info + "Get class: %s" + color_end, class.WID)
 
 		req, err := http.NewRequest("GET", "/", bytes.NewBuffer(pro))
 		if err != nil {
@@ -188,9 +189,9 @@ func TestGetClass(t *testing.T) {
 		if assert.NoError(t, d.GetClass(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
 			assert.NotEmpty(t, rec.Result().Body)
-			defer rec.Result().Body.Close()
-			/* store the class */
 			j, err := ioutil.ReadAll(rec.Result().Body)
+			defer rec.Result().Body.Close()
+
 			if err != nil {
 				t.Fatal("Failed to read response")
 			}
@@ -199,11 +200,9 @@ func TestGetClass(t *testing.T) {
 	})
 
 	t.Run("Check contents of returned class", func(t *testing.T){
-
-		// TODO make sure class == class_ret
-
+		assert.Equal(t, class.CID, class_ret.CID)
+		assert.Equal(t, class.WID, class_ret.WID)
 	})
-
 }
 
 func TestLeaveClass(t *testing.T) {
@@ -211,7 +210,6 @@ func TestLeaveClass(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Remove a student from a class", func(t *testing.T) {
-		// create JSON to get class 
 		pr := struct {
 			Uid 		string
 			Cid 		string
@@ -223,6 +221,8 @@ func TestLeaveClass(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to create JSON")
 		}
+
+		t.Logf(color_info + "Leave student: \t%s \nfrom class: \t%s" + color_end, user.UID, class.WID)
 
 		req, err := http.NewRequest("PUT", "/", bytes.NewBuffer(pro))
 		if err != nil {
@@ -240,7 +240,6 @@ func TestLeaveClass(t *testing.T) {
 	})
 
 	t.Run("Get class...", func(t *testing.T) {
-		// create JSON to get class 
 		pr := struct {
 			Uid 		string
 			Wid 		string
@@ -264,22 +263,21 @@ func TestLeaveClass(t *testing.T) {
 		if assert.NoError(t, d.GetClass(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
 			assert.NotEmpty(t, rec.Result().Body)
-			defer rec.Result().Body.Close()
-			/* store the class */
 			j, err := ioutil.ReadAll(rec.Result().Body)
+			defer rec.Result().Body.Close()
+
 			if err != nil {
 				t.Fatal("Failed to read response")
 			}
 			json.Unmarshal([]byte(j), &class_ret)
+			assert.Equal(t, class.CID, class_ret.CID)
 		}
 	})
 
 	t.Run("... and check its contents", func(t *testing.T){
-
-		// TODO fail if the deleted student is still in class
-
+		assert.Empty(t, class_ret.Members)
+		// TODO: more testing
 	})
-
 }
 
 func TestClassCleanup(t *testing.T) {
@@ -296,7 +294,9 @@ func TestClassCleanup(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to create JSON")
 		}
-		t.Logf(user.UID)
+
+		t.Logf(color_info + "Removing user %s" + color_end, user.UID)
+
 		req, err := http.NewRequest("DELETE", "/", bytes.NewBuffer(pro))
 		if err != nil {
 			t.Fatal("Failed to create http request")
@@ -308,8 +308,7 @@ func TestClassCleanup(t *testing.T) {
 		if assert.NoError(t, d.DeleteUser(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
 			assert.NotEmpty(t, rec.Result().Body)
-			t.Logf(string(rec.Code))
-			//defer rec.Result().Body.Close()
+			defer rec.Result().Body.Close()
 		}
 	})
 
@@ -323,6 +322,8 @@ func TestClassCleanup(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to create JSON")
 		}
+
+		t.Logf(color_info + "Removing class %s" + color_end, class.CID)
 
 		req, err := http.NewRequest("DELETE", "/", bytes.NewBuffer(pro))
 		if err != nil {
@@ -348,6 +349,8 @@ func TestClassCleanup(t *testing.T) {
 		if err != nil {
 			t.Fatal("Failed to create JSON")
 		}
+
+		t.Logf(color_info + "Removing user %s" + color_end, user_ClassOwner.UID)
 
 		req, err := http.NewRequest("DELETE", "/", bytes.NewBuffer(pro))
 		if err != nil {
