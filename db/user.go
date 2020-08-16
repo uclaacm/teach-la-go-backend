@@ -100,7 +100,6 @@ func (d *DB) GetUser(c echo.Context) error {
 			resp.Programs = append(resp.Programs, currentProg)
 		}
 	}
-
 	return c.JSON(http.StatusOK, &resp)
 }
 
@@ -188,16 +187,16 @@ func (d *DB) CreateUser(c echo.Context) error {
 //
 // Returns: status 200 on deletion.
 func (d *DB) DeleteUser(c echo.Context) error {
-	var body struct {
+	var req struct {
 		UID string `json:"uid"`
 	}
-	if err := httpext.RequestBodyTo(c.Request(), &body); err != nil {
+	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
 	}
-	if body.UID == "" {
+	if req.UID == "" {
 		return c.String(http.StatusBadRequest, "uid is required")
 	}
-	userRef := d.Collection(usersPath).Doc(body.UID)
+	userRef := d.Collection(usersPath).Doc(req.UID)
 
 	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
 		userSnap, err := tx.Get(userRef)
@@ -205,15 +204,15 @@ func (d *DB) DeleteUser(c echo.Context) error {
 			return err
 		}
 
-		u := User{}
-		if err := userSnap.DataTo(&u); err != nil {
+		usr := User{}
+		if err := userSnap.DataTo(&usr); err != nil {
 			return err
 		}
 
-		for _, prog := range u.Programs {
+		for _, prog := range usr.Programs {
 			progRef := d.Collection(programsPath).Doc(prog)
 			// if we can't find a program, then it's not a problem.
-			if err := tx.Delete(progRef); status.Code(err) != codes.NotFound {
+			if err := tx.Delete(progRef); (err != nil && status.Code(err) != codes.NotFound) {
 				return err
 			}
 		}
