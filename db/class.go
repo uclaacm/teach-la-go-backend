@@ -118,7 +118,7 @@ func (d *DB) CreateClass(c echo.Context) error {
 	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
-	
+
 	switch {
 	case req.UID == "":
 		return c.String(http.StatusBadRequest, "uid is required")
@@ -343,49 +343,47 @@ func (d *DB) LeaveClass(c echo.Context) error {
 	return c.String(http.StatusOK, "")
 }
 
-
-/* DeleteClass takes a wid and deletes it.
- * Any programs associated with the class will also be deleted.
- * Users that are in the class will still contain a reference to this class,
- * thus it is the user's responsibility to remove references to a deleted class.
- */
+// DeleteClass takes a wid and deletes it.
+// Any programs associated with the class will also be deleted.
+// Users that are in the class will still contain a reference to this class,
+// thus it is the user's responsibility to remove references to a deleted class.
 func (d *DB) DeleteClass(c echo.Context) error {
 	var req struct {
-			CID string `json:"cid"`
+		CID string `json:"cid"`
 	}
 	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
-			return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
 	}
 	if req.CID == "" {
-			return c.String(http.StatusBadRequest, "cid is required")
+		return c.String(http.StatusBadRequest, "cid is required")
 	}
 	classRef := d.Collection(classesPath).Doc(req.CID)
 
 	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
-			classSnap, err := tx.Get(classRef)
-			if err != nil {
-					return err
-			}
+		classSnap, err := tx.Get(classRef)
+		if err != nil {
+			return err
+		}
 
-			class := Class{}
-			if err := classSnap.DataTo(&class); err != nil {
-					return err
+		class := Class{}
+		if err := classSnap.DataTo(&class); err != nil {
+			return err
+		}
+		for _, prog := range class.Programs {
+			progRef := d.Collection(programsPath).Doc(prog)
+			// if we can't find a program, then it's not a problem.
+			if err := tx.Delete(progRef); status.Code(err) != codes.NotFound {
+				return err
 			}
-			for _, prog := range class.Programs {
-					progRef := d.Collection(programsPath).Doc(prog)
-					// if we can't find a program, then it's not a problem.
-					if err := tx.Delete(progRef); status.Code(err) != codes.NotFound {
-							return err
-					}
-			}
+		}
 
-			return tx.Delete(classRef)
+		return tx.Delete(classRef)
 	})
 	if err != nil {
-			if status.Code(err) == codes.NotFound {
-					return c.String(http.StatusNotFound, "could not find class")
-			}
-			return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to delete class").Error())
+		if status.Code(err) == codes.NotFound {
+			return c.String(http.StatusNotFound, "could not find class")
+		}
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to delete class").Error())
 	}
 
 	return c.String(http.StatusOK, "")

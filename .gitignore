@@ -3,3 +3,6 @@
 
 # Output binary
 teach-la-go-backend
+
+# ignore bin in case you installed golangci-lint in here
+bin
