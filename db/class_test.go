@@ -55,6 +55,12 @@ func TestCreateClass(t *testing.T) {
 		}
 	})
 
+
+	t.Run("Init shards", func(t *testing.T) {
+		err := d.InitShards(context.Background(), classesAliasPath)
+		assert.Nil(t, err)
+	})
+
 	t.Run("Create Class", func(t *testing.T) {
 		pr := struct {
 			Uid       string
