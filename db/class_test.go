@@ -35,9 +35,9 @@ type ReqParam struct {
 	HttpMethod	string 
 	Path		string 
 	Body 		io.Reader
-	Function	TestFunc
-	ExpCode		int
-	Returns		bool
+	Function	TestFunc	// function to close response body
+	ExpCode		int			// expected return code. 
+	Returns		bool		// specify if this call returns a body or not
 }
 
 func CallFunc(t *testing.T, par *ReqParam) ([]byte, func() error) {
@@ -47,18 +47,16 @@ func CallFunc(t *testing.T, par *ReqParam) ([]byte, func() error) {
 	require.NoError(t, err)
 	rec := httptest.NewRecorder()
 	assert.NotNil(t, req, rec)
-	//defer rec.Result().Body.Close()
 	req.Header.Set("Content-Type", "application/json")
 	c := echo.New().NewContext(req, rec)
 
 	require.NoError(t, par.Function(c)) 
-	//assert.Equal(t, rec.Code, par.ExpCode)
+	assert.Equal(t, par.ExpCode, rec.Code)
 	var b []byte
 	if par.Returns == true {
 		assert.NotEmpty(t, rec.Result().Body)
 		b, err = ioutil.ReadAll(rec.Result().Body)
 		require.NoError(t, err)
-		//t.Logf("Log: %s", string(b))
 		assert.NoError(t, err)
 	} else { 
 		b = []byte{'{', '}'}
@@ -74,11 +72,11 @@ func CreateTestUser(t *testing.T, o *TestObj, i int) {
 		"/", 
 		nil,
 		o.D.CreateUser,
-		http.StatusOK,
+		http.StatusCreated,
 		true,
 	}
-	b, f := CallFunc(t, &par)
-	defer f()
+	b, close := CallFunc(t, &par)
+	defer close()
 
 	assert.NoError(t, json.Unmarshal([]byte(b), &o.User[i]))
 	t.Logf(color_info+"Created user: %s"+color_end, o.User[i].UID)
@@ -101,8 +99,8 @@ func DeleteTestUser(t *testing.T, o *TestObj, i int) {
 		http.StatusOK,
 		false,
 	}
-	_, f := CallFunc(t, &par)
-	defer f()
+	_, close := CallFunc(t, &par)
+	defer close()
 
 	t.Logf(color_info+"Removed user %s"+color_end, o.User[i].UID)
 }
@@ -133,8 +131,6 @@ func GetTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int) {
 }
 
 func CreateTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int){
-
-
 	pr := struct 	{
 		Uid			string	
 		Name		string
@@ -155,15 +151,14 @@ func CreateTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int){
 		http.StatusOK,
 		true,
 	}
-	b, f := CallFunc(t, &par)
-	defer f()
+	b, close := CallFunc(t, &par)
+	defer close()
 	assert.NoError(t, json.Unmarshal([]byte(b), &o.Class[classIndex]))
 
 	t.Logf(color_info+"CreateClass returned: \n%s"+color_end, string([]byte(b)))
 }
 
 func DeleteTestClass(t *testing.T, o *TestObj, classIndex int){
-
 	pr := struct {
 		Cid 	string
 	}{
@@ -215,7 +210,7 @@ func TestCreateClass(t *testing.T) {
 	DeleteTestUser(t, &obj, 0)
 }
 
-
+// Test that classes can be retrieved 
 func TestGetClass(t *testing.T) {
 
 	obj := TestObj {
@@ -238,12 +233,13 @@ func TestGetClass(t *testing.T) {
 	t.Logf("%v+", obj.Class[0])
 	t.Logf("%v+", obj.ClassBuf[0])
 	// Make sure classes are same. 	
-	// Compare manually, since DeepEqual and cmp.Equal both fails for some reason...
+	// Compare manually, since DeepEqual and cmp.Equal both does not work
 	assert.True(t, obj.Class[0].CID == obj.ClassBuf[0].CID)
 	assert.True(t, obj.Class[0].WID == obj.ClassBuf[0].WID)
 	assert.True(t, obj.Class[0].Name == obj.ClassBuf[0].Name)
 }
 
+// Make sure student can join and leave class
 func TestJoinLeaveClass(t *testing.T) {
 
 	obj := TestObj {
@@ -262,7 +258,6 @@ func TestJoinLeaveClass(t *testing.T) {
 	defer DeleteTestClass(t, &obj, 0)
 	defer DeleteTestUser(t, &obj, 0)
 
-	// Create student to join class
 	CreateTestUser(t, &obj, 1)
 	defer DeleteTestUser(t, &obj, 1)
 
