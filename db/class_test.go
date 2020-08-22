@@ -76,7 +76,7 @@ func CreateTestUser(t *testing.T, o *TestObj, i int) {
 		true,
 	}
 	b, close := CallFunc(t, &par)
-	defer close()
+	defer assert.NoError(t, close())
 
 	assert.NoError(t, json.Unmarshal([]byte(b), &o.User[i]))
 	t.Logf(color_info+"Created user: %s"+color_end, o.User[i].UID)
@@ -100,7 +100,7 @@ func DeleteTestUser(t *testing.T, o *TestObj, i int) {
 		false,
 	}
 	_, close := CallFunc(t, &par)
-	defer close()
+	defer assert.NoError(t, close())
 
 	t.Logf(color_info+"Removed user %s"+color_end, o.User[i].UID)
 }
@@ -124,8 +124,8 @@ func GetTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int) {
 		http.StatusOK,
 		true,
 	}
-	b, f := CallFunc(t, &par)
-	defer f()
+	b, close := CallFunc(t, &par)
+	defer assert.NoError(t, close())
 
 	assert.NoError(t, json.Unmarshal([]byte(b), &o.ClassBuf[classIndex]))
 }
@@ -152,7 +152,7 @@ func CreateTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int){
 		true,
 	}
 	b, close := CallFunc(t, &par)
-	defer close()
+	defer assert.NoError(t, close())
 	assert.NoError(t, json.Unmarshal([]byte(b), &o.Class[classIndex]))
 
 	t.Logf(color_info+"CreateClass returned: \n%s"+color_end, string([]byte(b)))
@@ -175,7 +175,8 @@ func DeleteTestClass(t *testing.T, o *TestObj, classIndex int){
 		http.StatusOK,
 		false,
 	}
-	CallFunc(t, &par)
+	_, close := CallFunc(t, &par)
+	defer assert.NoError(t, close())
 
 	t.Logf(color_info+"Removed class %s"+color_end, o.Class[classIndex].CID)
 }
@@ -199,8 +200,8 @@ func TestCreateClass(t *testing.T) {
 		make([]User, 1),
 	}
 
-	var err error = nil
-	obj.D, err = Open(context.Background(), os.Getenv("TLACFG"))
+	ptr, err := Open(context.Background(), os.Getenv("TLACFG"))
+	obj.D = ptr
 	require.NoError(t, err)
 
 	CreateTestUser(t, &obj, 0)
@@ -220,9 +221,9 @@ func TestGetClass(t *testing.T) {
 		make([]User, 1),
 	}
 
-	var err error = nil
-	obj.D, err = Open(context.Background(), os.Getenv("TLACFG"))
+	ptr, err := Open(context.Background(), os.Getenv("TLACFG"))
 	require.NoError(t, err)
+	obj.D = ptr 
 
 	CreateTestUser(t, &obj, 0)
 	CreateTestClass(t, &obj, 0, 0)
@@ -249,9 +250,9 @@ func TestJoinLeaveClass(t *testing.T) {
 		make([]User, 2),
 	}
 
-	var err error = nil
-	obj.D, err = Open(context.Background(), os.Getenv("TLACFG"))
+	ptr, err := Open(context.Background(), os.Getenv("TLACFG"))
 	require.NoError(t, err)
+	obj.D = ptr
 
 	CreateTestUser(t, &obj, 0)
 	CreateTestClass(t, &obj, 0, 0)
@@ -280,9 +281,9 @@ func TestJoinLeaveClass(t *testing.T) {
 		http.StatusOK,
 		true,
 	}
-	b, f := CallFunc(t, &par)
-	assert.NoError(t, json.Unmarshal([]byte(b), &obj.ClassBuf[0]))
-	f()
+	bJoin, close := CallFunc(t, &par)
+	assert.NoError(t, json.Unmarshal([]byte(bJoin), &obj.ClassBuf[0]))
+	assert.NoError(t, close())
 
 	t.Logf(color_info+"Adding student: \t%s \nto class: \t%s"+color_end, obj.User[1].UID, obj.ClassBuf[0].WID)
 	
@@ -313,7 +314,8 @@ func TestJoinLeaveClass(t *testing.T) {
 		http.StatusOK,
 		false,
 	}
-	b, _ = CallFunc(t, &par)
+	_, close = CallFunc(t, &par)
+	defer assert.NoError(t, close())
 
 	GetTestClass(t, &obj, 0, 0)
 	assert.False(t, IsIn(obj.User[1].UID, obj.ClassBuf[0].Members))
