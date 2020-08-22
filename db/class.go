@@ -118,6 +118,7 @@ func (d *DB) CreateClass(c echo.Context) error {
 	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
+
 	switch {
 	case req.UID == "":
 		return c.String(http.StatusBadRequest, "uid is required")
@@ -163,6 +164,8 @@ func (d *DB) CreateClass(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "failed to create class alias")
 	}
 
+	class.WID = wid
+
 	//add this class to the user's "Classes" list
 	err = d.AddClassToUser(c.Request().Context(), req.UID, class.CID)
 	if err != nil {
@@ -177,15 +180,18 @@ func (d *DB) CreateClass(c echo.Context) error {
 // and a CID (wid) as a JSON, and returns an object representing the class.
 // If the given UID is not a member or an instructor, error is returned
 func (d *DB) GetClass(c echo.Context) error {
-	uid, wid := c.QueryParam("uid"), c.QueryParam("wid")
-
-	// check if UID and WID are in the query parameters
-	if uid == "" {
-		return c.String(http.StatusBadRequest, "uid is required")
+	var req struct {
+		UID string `json:"uid"`
+		WID string `json:"wid"`
 	}
-	if wid == "" {
-		return c.String(http.StatusBadRequest, "wid is required")
+	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
 	}
+	if req.UID == "" || req.WID == "" {
+		return c.String(http.StatusBadRequest, "uid and wid fields are both required")
+	}
+	uid := req.UID
+	wid := req.WID
 
 	cid, err := d.GetUIDFromWID(c.Request().Context(), wid, classesAliasPath)
 	if err != nil {
@@ -334,5 +340,51 @@ func (d *DB) LeaveClass(c echo.Context) error {
 	}
 
 	// return the latest state of the user
+	return c.String(http.StatusOK, "")
+}
+
+// DeleteClass takes a wid and deletes it.
+// Any programs associated with the class will also be deleted.
+// Users that are in the class will still contain a reference to this class,
+// thus it is the user's responsibility to remove references to a deleted class.
+func (d *DB) DeleteClass(c echo.Context) error {
+	var req struct {
+		CID string `json:"cid"`
+	}
+	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
+	}
+	if req.CID == "" {
+		return c.String(http.StatusBadRequest, "cid is required")
+	}
+	classRef := d.Collection(classesPath).Doc(req.CID)
+
+	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
+		classSnap, err := tx.Get(classRef)
+		if err != nil {
+			return err
+		}
+
+		class := Class{}
+		if err := classSnap.DataTo(&class); err != nil {
+			return err
+		}
+		for _, prog := range class.Programs {
+			progRef := d.Collection(programsPath).Doc(prog)
+			// if we can't find a program, then it's not a problem.
+			if err := tx.Delete(progRef); status.Code(err) != codes.NotFound {
+				return err
+			}
+		}
+
+		return tx.Delete(classRef)
+	})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return c.String(http.StatusNotFound, "could not find class")
+		}
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to delete class").Error())
+	}
+
 	return c.String(http.StatusOK, "")
 }

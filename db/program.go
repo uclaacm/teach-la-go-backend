@@ -217,7 +217,7 @@ func (d *DB) CreateProgram(c echo.Context) error {
 // Request Body:
 // {
 //    uid: string
-//    idx: int64
+//    pid: string
 // }
 //
 // Returns status 200 OK on deletion.
@@ -225,12 +225,12 @@ func (d *DB) DeleteProgram(c echo.Context) error {
 	// acquire parameters via anonymous struct.
 	var req struct {
 		UID string `json:"uid"`
-		IDX int64  `json:"idx"`
+		PID string `json:"pid"`
 	}
 	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
 	}
-	if req.UID == "" || req.IDX < 0 {
+	if req.UID == "" || req.PID == "" {
 		return c.String(http.StatusBadRequest, "uid and idx fields are both required")
 	}
 
@@ -246,14 +246,19 @@ func (d *DB) DeleteProgram(c echo.Context) error {
 			return err
 		}
 
-		// check if request idx is OOB
-		if req.IDX > int64(len(userDoc.Programs)) {
-			return errors.New("idx is out of bounds")
-		}
-
 		// get pid to delete then remove the entry
-		toDelete := userDoc.Programs[int(req.IDX)]
-		userDoc.Programs = append(userDoc.Programs[:int(req.IDX)], userDoc.Programs[int(req.IDX)+1:]...)
+		idx := 0
+		for i, p := range userDoc.Programs {
+			if p == req.PID {
+				idx = i
+				break
+			}
+		}
+		if idx >= len(userDoc.Programs) {
+			return errors.New("invalid PID")
+		}
+		toDelete := userDoc.Programs[idx]
+		userDoc.Programs = append(userDoc.Programs[:idx], userDoc.Programs[idx+1:]...)
 		if err := tx.Set(uref, &userDoc); err != nil {
 			return err
 		}

@@ -12,8 +12,13 @@ import (
 // successfully in the event of partial filling. Empty bodies
 // are also accepted.
 // Returns error on failure.
+// If body is empty, nil is returned, and i is untouched. 
 func RequestBodyTo(r *http.Request, i interface{}) error {
-	if bytesBody, err := ioutil.ReadAll(r.Body); err != nil {
+	var body = r.Body
+	if body == nil {
+		return nil
+	} 
+	if bytesBody, err := ioutil.ReadAll(body); err != nil {
 		return err
 	} else if len(bytesBody) == 0 {
 		return nil
