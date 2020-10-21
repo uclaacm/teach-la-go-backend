@@ -89,8 +89,8 @@ func (d *DB) GetProgram(c echo.Context) error {
 // Returns status 200 OK on nominal request.
 func (d *DB) UpdateProgram(c echo.Context) error {
 	var body struct {
-		UID      string            `json:"uid"`
-		Programs map[int64]Program `json:"programs"`
+		UID      string             `json:"uid"`
+		Programs map[string]Program `json:"programs"`
 	}
 	if err := httpext.RequestBodyTo(c.Request(), &body); err != nil {
 		return c.String(http.StatusInternalServerError, "failed to read request body")
@@ -109,14 +109,21 @@ func (d *DB) UpdateProgram(c echo.Context) error {
 			return err
 		}
 
-		for i, p := range body.Programs {
+		for id, p := range body.Programs {
 			// confirm that the program specified is owned by UID.
-			if i >= int64(len(owner.Programs)) || i < 0 {
+			belongsTo := false
+			for _, userProg := range owner.Programs {
+				if id == userProg {
+					belongsTo = true
+					break
+				}
+			}
+			if !belongsTo {
 				return errors.Errorf("specified program is out of bounds for user %s", body.UID)
 			}
 
 			// update the program
-			pref := d.Collection(programsPath).Doc(owner.Programs[i])
+			pref := d.Collection(programsPath).Doc(id)
 			if err := tx.Update(pref, p.ToFirestoreUpdate()); err != nil {
 				return err
 			}
