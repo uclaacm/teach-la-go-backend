@@ -26,7 +26,7 @@ func main() {
 	e.Use(middleware.Recover())
 	e.Use(middleware.Gzip())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"https://editor.uclaacm.com", "http://localhost:8080"},
+		AllowOrigins: []string{"*"},
 		AllowHeaders: []string{echo.HeaderContentType},
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 	}))
