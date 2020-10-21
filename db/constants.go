@@ -10,8 +10,8 @@ const (
 	// variable used to open a connection to the database.
 	DefaultEnvVar = "TLACFG"
 
-	python     = 0
-	processing = iota
+	python = iota
+	processing
 	html
 	langCount
 
@@ -86,8 +86,8 @@ func defaultProgram(language string) (defaultProg Program) {
 // between said UserData and Programs are not
 // automatically applied in the database.
 func defaultData() (User, []Program) {
-	var defaultProgs []Program
-	for i := 0; i < langCount; i++ {
+	defaultProgs := make([]Program, 0)
+	for i := python; i < langCount; i++ {
 		defaultProgs = append(defaultProgs, defaultProgram(langString(i)))
 	}
 
