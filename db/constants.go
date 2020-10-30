@@ -13,6 +13,7 @@ const (
 	python = iota
 	processing
 	html
+	react
 	langCount
 
 	// the number of program thumbnails available to choose from.
@@ -50,6 +51,8 @@ func langString(langCode int) string {
 		return "processing"
 	case html:
 		return "html"
+	case react:
+		return "react"
 	default:
 		return "DNE"
 	}
@@ -68,6 +71,8 @@ func defaultProgram(language string) (defaultProg Program) {
 		defaultCode = "function setup() {\n  createCanvas(400, 400);\n}\n\nfunction draw() {\n  background(220);\n  ellipse(mouseX, mouseY, 100, 100);\n}"
 	case "html":
 		defaultCode = "<html>\n  <head>\n  </head>\n  <body>\n    <div style='width: 100px; height: 100px; background-color: black'>\n    </div>\n  </body>\n</html>"
+	case "react":
+		defaultCode = "const {\n  Button,\n} = MaterialUI;\n\nconst App = () => (\n  <LikeButton />\n);\n\nconst LikeButton = () => {\n  const [liked, setLiked] = React.useState(false);\n\n  if (liked) {\n    return 'You liked this.';\n  }\n\n  return <Button variant=\"contained\" onClick={() => setLiked(true)}>Like</Button>;\n}"
 	default:
 		return Program{}
 	}
