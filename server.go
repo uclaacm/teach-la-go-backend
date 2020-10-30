@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -11,15 +12,21 @@ import (
 	_ "github.com/heroku/x/hmetrics/onload"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/gommon/log"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
 )
 
 // DEFAULTPORT to serve on.
 const DEFAULTPORT = "8081"
 
-func main() {
+func serve(c *cli.Context) error {
 	e := echo.New()
 	e.HideBanner = true
+
+	if c.Bool("verbose") {
+		e.Logger.SetLevel(log.DEBUG)
+	}
 
 	// middleware
 	e.Use(middleware.Logger())
@@ -74,4 +81,31 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 	e.Logger.Fatal(e.StartServer(s))
+
+	return nil
+}
+
+func main() {
+	app := &cli.App{
+		Name: "Teach LA Go Backend",
+		Flags: []cli.Flag{
+			&cli.IntFlag{
+				Name:    "port",
+				Aliases: []string{"p"},
+				Value:   8081,
+				Usage:   "Port to serve the backend on",
+			},
+			&cli.BoolFlag{
+				Name:    "verbose",
+				Aliases: []string{"v"},
+				Value:   false,
+				Usage:   "Enable verbosity",
+			},
+		},
+		Action: serve,
+	}
+
+	if err := app.Run(os.Args); err != nil {
+		fmt.Printf("Failed to start! %v", err)
+	}
 }
