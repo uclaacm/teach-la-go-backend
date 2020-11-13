@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"strconv"
+	"io/ioutil"
 
 	"github.com/uclaacm/teach-la-go-backend/db"
 
@@ -15,6 +17,7 @@ import (
 	"github.com/labstack/gommon/log"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
+	"github.com/joho/godotenv"
 )
 
 // DEFAULTPORT to serve on.
@@ -38,12 +41,32 @@ func serve(c *cli.Context) error {
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 	}))
 
-	// try to set up firestore connection through env vars
-	cfg := os.Getenv(db.DefaultEnvVar)
-	if cfg == "" {
-		e.Logger.Fatalf("no $%s environment variable provided", db.DefaultEnvVar)
+	CfgPath := c.String("cred")
+	cfg := ""
+
+	// if env-cred is NOT set, and json- cred is set, open json credentials
+	// otherwise, open env credentials
+	if !c.Bool("env-cred") && c.Bool("json-cred") {
+		bytes, err := ioutil.ReadFile(CfgPath + "cred.json")
+		if err != nil {
+			e.Logger.Fatal(errors.Wrap(err, "failed to open .json file"))
+		}
+		cfg = string(bytes)
+		if cfg == "" {
+			e.Logger.Fatalf("no config provided", db.DefaultEnvVar)
+		}
+	} else {
+		if err := godotenv.Load(CfgPath + ".env"); err != nil {
+			e.Logger.Fatal(errors.Wrap(err, "failed to open .env file"))
+		}
+		cfg = os.Getenv(db.DefaultEnvVar)
+		if cfg == "" {
+			e.Logger.Fatalf("no $%s environment variable provided", db.DefaultEnvVar)
+		}
 	}
+
 	d, err := db.Open(context.Background(), cfg)
+
 	if err != nil {
 		e.Logger.Fatal(errors.Wrap(err, "failed to open connection to firestore"))
 	}
@@ -67,15 +90,11 @@ func serve(c *cli.Context) error {
 	e.PUT("/class/leave", d.LeaveClass)
 
 	// check for PORT variable.
-	port := os.Getenv("PORT")
-	if port == "" {
-		e.Logger.Debugf("no $PORT environment variable provided, defaulting to '%s'", DEFAULTPORT)
-		port = DEFAULTPORT
-	}
+	port := c.Int("port")
 
 	// server configuration
 	s := &http.Server{
-		Addr:           ":" + port,
+		Addr:           ":" + strconv.Itoa(port),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
@@ -89,18 +108,37 @@ func main() {
 	app := &cli.App{
 		Name: "Teach LA Go Backend",
 		Flags: []cli.Flag{
-			&cli.IntFlag{
-				Name:    "port",
-				Aliases: []string{"p"},
-				Value:   8081,
-				Usage:   "Port to serve the backend on",
+			&cli.StringFlag{
+				Name:    "creds",
+				Aliases: []string{"c"},
+				Value:   "./",
+				Usage:   "Provide a path to the database credentials being used (defaults to `.env` and `*.json`, in that order).",
+			},
+			&cli.BoolFlag{
+				Name:    "env-cred",
+				Aliases: []string{"e"},
+				Value:   false,
+				Usage:   "use an env file to specify credentias",
+			},
+			&cli.BoolFlag{
+				Name:    "json-cred",
+				Aliases: []string{"j"},
+				Value:   false,
+				Usage:   "use a JSON file to specify credentials",
 			},
 			&cli.BoolFlag{
 				Name:    "verbose",
 				Aliases: []string{"v"},
 				Value:   false,
-				Usage:   "Enable verbosity",
+				Usage:   "Change the log level used by echo's logger middleware.",
 			},
+			&cli.IntFlag{
+				Name:    "port",
+				Aliases: []string{"p"},
+				Value:   8081,
+				Usage:   "Change the port number",
+			},
+			
 		},
 		Action: serve,
 	}
