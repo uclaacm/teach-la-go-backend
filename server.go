@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/uclaacm/teach-la-go-backend/db"
 
 	_ "github.com/heroku/x/hmetrics/onload"
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
@@ -38,22 +40,23 @@ func serve(c *cli.Context) error {
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 	}))
 
-	// try to set up firestore connection.
-	// check the following resources in order:
-	// * $TLACFG environment variable
-	// * creds.json file (or other)
-	envCfg, jsonPath := c.String("env-var"), c.String("config-path")
+	// if env-cred is NOT set, and json- cred is set, open json credentials
+	// otherwise, open env credentials
+	jsonPath, dotenvPath := c.String("json"), c.String("env")
 	var (
 		d   *db.DB
 		err error
 	)
 	switch {
-	case envCfg != "":
-		d, err = db.Open(context.Background(), os.Getenv(envCfg))
 	case jsonPath != "":
 		d, err = db.OpenFromJSON(context.Background(), jsonPath)
+	case dotenvPath != "":
+		if err := godotenv.Load(dotenvPath); err != nil {
+			e.Logger.Fatal(errors.Wrap(err, "failed to open .env file"))
+		}
+		d, err = db.Open(context.Background(), os.Getenv(db.DefaultEnvVar))
 	default:
-		return fmt.Errorf("failed to locate credentials")
+		return fmt.Errorf("invalid credentials supplied")
 	}
 	if err != nil {
 		e.Logger.Fatal(errors.Wrap(err, "failed to open connection to firestore"))
@@ -64,7 +67,6 @@ func serve(c *cli.Context) error {
 	e.GET("/user/get", d.GetUser)
 	e.PUT("/user/update", d.UpdateUser)
 	e.POST("/user/create", d.CreateUser)
-	e.POST("/user/classes", d.GetClasses)
 
 	// program management
 	e.GET("/program/get", d.GetProgram)
@@ -79,15 +81,11 @@ func serve(c *cli.Context) error {
 	e.PUT("/class/leave", d.LeaveClass)
 
 	// check for PORT variable.
-	port := os.Getenv("PORT")
-	if port == "" {
-		e.Logger.Debugf("no $PORT environment variable provided, defaulting to '%s'", DEFAULTPORT)
-		port = DEFAULTPORT
-	}
+	port := c.Int("port")
 
 	// server configuration
 	s := &http.Server{
-		Addr:           ":" + port,
+		Addr:           ":" + strconv.Itoa(port),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
@@ -98,6 +96,17 @@ func serve(c *cli.Context) error {
 }
 
 func main() {
+	cli.VersionFlag = &cli.BoolFlag{
+		Name:    "version",
+		Aliases: []string{"V"},
+		Usage:   "Print the version and exit",
+	}
+	cli.HelpFlag = &cli.BoolFlag{
+		Name:    "help",
+		Aliases: []string{"h"},
+		Usage:   "Show help",
+	}
+
 	app := &cli.App{
 		Name:                 "Teach LA Go Backend",
 		Description:          "Binary application for Teach LA's editor backend!",
@@ -105,31 +114,31 @@ func main() {
 		HideHelpCommand:      true,
 		EnableBashCompletion: true,
 		Flags: []cli.Flag{
-			&cli.BoolFlag{
-				Name:  "verbose",
-				Value: false,
-				Usage: "Enable verbosity",
-			},
-			&cli.IntFlag{
-				Name:     "port",
-				Aliases:  []string{"p"},
+			&cli.StringFlag{
+				Name:     "dotenv",
+				Aliases:  []string{"e"},
 				Required: false,
-				Value:    8081,
-				Usage:    "Port to serve the backend on",
+				Value:    ".env",
+				Usage:    "Specify a path to an env file to specify credentias",
 			},
 			&cli.StringFlag{
-				Name:     "config-path",
-				Aliases:  []string{"c"},
+				Name:     "json",
+				Aliases:  []string{"j"},
 				Required: false,
 				Value:    "creds.json",
-				Usage:    "Specify a path to JSON Firebase credentials",
+				Usage:    "Specify a path to a JSON file to specify credentials",
 			},
-			&cli.StringFlag{
-				Name:     "env-var",
-				Aliases:  []string{"ev"},
-				Required: false,
-				Value:    db.DefaultEnvVar,
-				Usage:    "Specify an alternative environment variable to scan for credentials",
+			&cli.BoolFlag{
+				Name:    "verbose",
+				Aliases: []string{"v"},
+				Value:   false,
+				Usage:   "Change the log level used by echo's logger middleware.",
+			},
+			&cli.IntFlag{
+				Name:    "port",
+				Aliases: []string{"p"},
+				Value:   8081,
+				Usage:   "Change the port number",
 			},
 		},
 		Action: serve,
