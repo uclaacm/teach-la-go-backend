@@ -38,12 +38,23 @@ func serve(c *cli.Context) error {
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 	}))
 
-	// try to set up firestore connection through env vars
-	cfg := os.Getenv(db.DefaultEnvVar)
-	if cfg == "" {
-		e.Logger.Fatalf("no $%s environment variable provided", db.DefaultEnvVar)
+	// try to set up firestore connection.
+	// check the following resources in order:
+	// * $TLACFG environment variable
+	// * creds.json file (or other)
+	envCfg, jsonPath := c.String("env-var"), c.String("config-path")
+	var (
+		d   *db.DB
+		err error
+	)
+	switch {
+	case envCfg != "":
+		d, err = db.Open(context.Background(), os.Getenv(envCfg))
+	case jsonPath != "":
+		d, err = db.OpenFromJSON(context.Background(), jsonPath)
+	default:
+		return fmt.Errorf("failed to locate credentials")
 	}
-	d, err := db.Open(context.Background(), cfg)
 	if err != nil {
 		e.Logger.Fatal(errors.Wrap(err, "failed to open connection to firestore"))
 	}
@@ -53,6 +64,7 @@ func serve(c *cli.Context) error {
 	e.GET("/user/get", d.GetUser)
 	e.PUT("/user/update", d.UpdateUser)
 	e.POST("/user/create", d.CreateUser)
+	e.POST("/user/classes", d.GetClasses)
 
 	// program management
 	e.GET("/program/get", d.GetProgram)
@@ -87,19 +99,37 @@ func serve(c *cli.Context) error {
 
 func main() {
 	app := &cli.App{
-		Name: "Teach LA Go Backend",
+		Name:                 "Teach LA Go Backend",
+		Description:          "Binary application for Teach LA's editor backend!",
+		Version:              "1.0.0",
+		HideHelpCommand:      true,
+		EnableBashCompletion: true,
 		Flags: []cli.Flag{
-			&cli.IntFlag{
-				Name:    "port",
-				Aliases: []string{"p"},
-				Value:   8081,
-				Usage:   "Port to serve the backend on",
-			},
 			&cli.BoolFlag{
-				Name:    "verbose",
-				Aliases: []string{"v"},
-				Value:   false,
-				Usage:   "Enable verbosity",
+				Name:  "verbose",
+				Value: false,
+				Usage: "Enable verbosity",
+			},
+			&cli.IntFlag{
+				Name:     "port",
+				Aliases:  []string{"p"},
+				Required: false,
+				Value:    8081,
+				Usage:    "Port to serve the backend on",
+			},
+			&cli.StringFlag{
+				Name:     "config-path",
+				Aliases:  []string{"c"},
+				Required: false,
+				Value:    "creds.json",
+				Usage:    "Specify a path to JSON Firebase credentials",
+			},
+			&cli.StringFlag{
+				Name:     "env-var",
+				Aliases:  []string{"ev"},
+				Required: false,
+				Value:    db.DefaultEnvVar,
+				Usage:    "Specify an alternative environment variable to scan for credentials",
 			},
 		},
 		Action: serve,
