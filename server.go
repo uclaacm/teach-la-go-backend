@@ -109,6 +109,7 @@ func main() {
 
 	app := &cli.App{
 		Name:                 "Teach LA Go Backend",
+		Usage:                "tlabe [options]",
 		Description:          "Binary application for Teach LA's editor backend!",
 		Version:              "1.0.0",
 		HideHelpCommand:      true,
@@ -118,14 +119,12 @@ func main() {
 				Name:     "dotenv",
 				Aliases:  []string{"e"},
 				Required: false,
-				Value:    ".env",
-				Usage:    "Specify a path to an env file to specify credentias",
+				Usage:    "Specify a path to an env file to specify credentials",
 			},
 			&cli.StringFlag{
 				Name:     "json",
 				Aliases:  []string{"j"},
 				Required: false,
-				Value:    "creds.json",
 				Usage:    "Specify a path to a JSON file to specify credentials",
 			},
 			&cli.BoolFlag{

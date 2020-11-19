@@ -8,7 +8,7 @@ PLATFORMS=windows/386 \
 	linux/arm
 
 .PHONY: default
-default: clean host
+default: host
 
 .PHONY: all
 all: host $(PLATFORMS)
