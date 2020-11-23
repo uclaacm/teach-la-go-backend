@@ -40,8 +40,10 @@ func serve(c *cli.Context) error {
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 	}))
 
-	// if env-cred is NOT set, and json- cred is set, open json credentials
-	// otherwise, open env credentials
+	// Check for working credentials in the following partial order:
+	// - JSON
+	// - .env
+	// - TLACFG
 	jsonPath, dotenvPath := c.String("json"), c.String("env")
 	var (
 		d   *db.DB
@@ -56,10 +58,11 @@ func serve(c *cli.Context) error {
 		}
 		d, err = db.Open(context.Background(), os.Getenv(db.DefaultEnvVar))
 	default:
-		return fmt.Errorf("invalid credentials supplied")
+		d, err = db.Open(context.Background(), os.Getenv(db.DefaultEnvVar))
 	}
 	if err != nil {
 		e.Logger.Fatal(errors.Wrap(err, "failed to open connection to firestore"))
+		return err
 	}
 	defer d.Close()
 
@@ -110,7 +113,7 @@ func main() {
 	app := &cli.App{
 		Name:                 "Teach LA Go Backend",
 		Usage:                "tlabe [options]",
-		Description:          "Binary application for Teach LA's editor backend!",
+		Description:          "Teach LA's editor backend.",
 		Version:              "1.0.0",
 		HideHelpCommand:      true,
 		EnableBashCompletion: true,
@@ -118,8 +121,9 @@ func main() {
 			&cli.StringFlag{
 				Name:     "dotenv",
 				Aliases:  []string{"e"},
+				Value:    ".env",
 				Required: false,
-				Usage:    "Specify a path to an env file to specify credentials",
+				Usage:    "Specify a path to a dotenv file to specify credentials",
 			},
 			&cli.StringFlag{
 				Name:     "json",
@@ -131,7 +135,7 @@ func main() {
 				Name:    "verbose",
 				Aliases: []string{"v"},
 				Value:   false,
-				Usage:   "Change the log level used by echo's logger middleware.",
+				Usage:   "Change the log level used by echo's logger middleware",
 			},
 			&cli.IntFlag{
 				Name:    "port",
