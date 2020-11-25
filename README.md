@@ -27,25 +27,25 @@ Here's what you need and how to **build** the project:
 * [Go](https://golang.org/)
 
 ```sh
-git clone git@github.com:uclaacm/teach-la-go-backend.git
+export TLAPATH=${GOPATH}/src/github.com/uclaacm/teach-la-go-backend
+
+git clone git@github.com:uclaacm/teach-la-go-backend.git $TLAPATH
 # alternatively, using HTTPS:
 # git clone https://github.com/uclaacm/teach-la-go-backend.git
 
-cd teach-la-go-backend
-
-# set up git pre-commit hook
-chmod +x hooks/pre-commit
-cp hooks/pre-commit .git/hooks/
+cd $TLAPATH
 
 # go get dependencies
 go get -d ./...
 # Note: ./... unrolls the current directory.
 
-# build the server
-go build
+# build the server for your platform
+make
+# ...or build it for all platforms
+# make all
 
 # run the server
-./teach-la-go-backend
+./bin/tlabe --help
 ```
 
 If you try running the server at this point (with `./teach-la-go-backend`), the program will crash with a message complaining that a DB client could not be opened. To be precise, it will complain with:

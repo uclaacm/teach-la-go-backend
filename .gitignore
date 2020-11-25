@@ -1,5 +1,6 @@
 # secrets
 *.env
+*.json
 
-# Output binary
-teach-la-go-backend
+# Output binaries
+bin/

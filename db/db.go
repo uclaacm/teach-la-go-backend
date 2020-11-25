@@ -34,3 +34,17 @@ func Open(ctx context.Context, cfg string) (*DB, error) {
 	client, err := app.Firestore(ctx)
 	return &DB{Client: client}, err
 }
+
+// OpenFromJSON returns a pointer to a new database client based
+// on a JSON file given by the provided path.
+// Returns an error if it fails at any point.
+func OpenFromJSON(ctx context.Context, path string) (*DB, error) {
+	opt := option.WithCredentialsFile(path)
+	app, err := firebase.NewApp(ctx, nil, opt)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := app.Firestore(ctx)
+	return &DB{Client: client}, err
+}
