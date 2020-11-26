@@ -228,7 +228,28 @@ func (d *DB) GetClass(c echo.Context) error {
 		return c.String(http.StatusNotFound, "given user not in class")
 	}
 
-	// TODO: get the programs for the class.
+	if WithPrograms := c.QueryParam("programs"); WithPrograms != "" {
+		err = d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
+			tempProg := Program{}
+			res.ProgramData = make([]Program, 0)
+			for _, prog := range res.Programs {
+				// Retrieve Program object from UID
+				progRef := d.Collection(programsPath).Doc(prog)
+				snap, err := tx.Get(progRef)
+				if err != nil {
+					return err
+				}
+				snap.DataTo(&tempProg)
+
+				// Append to ProgramData
+				res.ProgramData = append(res.ProgramData, tempProg)
+			}
+			return nil
+		})
+		if err != nil {
+			return c.String(http.StatusInternalServerError, err.Error())
+		}
+	}
 
 	// otherwise, convert the class struct into JSON and send it back
 	return c.JSON(http.StatusOK, res)
