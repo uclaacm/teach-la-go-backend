@@ -239,7 +239,10 @@ func (d *DB) GetClass(c echo.Context) error {
 				if err != nil {
 					return err
 				}
-				snap.DataTo(&tempProg)
+
+				if err := snap.DataTo(&tempProg); err != nil {
+					return err
+				}
 
 				// Append to ProgramData
 				res.ProgramData = append(res.ProgramData, tempProg)
