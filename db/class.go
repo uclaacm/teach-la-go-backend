@@ -228,23 +228,24 @@ func (d *DB) GetClass(c echo.Context) error {
 		return c.String(http.StatusNotFound, "given user not in class")
 	}
 
-	if WithPrograms := c.QueryParam("programs"); WithPrograms != "" {
+	// Process "programs" query
+	if WithPrograms := c.QueryParam("programs"); WithPrograms != "" && WithPrograms != "false" {
 		err = d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
 			tempProg := Program{}
 			res.ProgramData = make([]Program, 0)
 			for _, prog := range res.Programs {
-				// Retrieve Program object from UID
+				// retrieve Program object from UID
 				progRef := d.Collection(programsPath).Doc(prog)
-				snap, err := tx.Get(progRef)
+				progSnap, err := tx.Get(progRef)
 				if err != nil {
 					return err
 				}
 
-				if err := snap.DataTo(&tempProg); err != nil {
+				if err := progSnap.DataTo(&tempProg); err != nil {
 					return err
 				}
 
-				// Append to ProgramData
+				// append Program to ProgramData
 				res.ProgramData = append(res.ProgramData, tempProg)
 			}
 			return nil
