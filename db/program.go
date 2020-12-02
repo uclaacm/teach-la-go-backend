@@ -20,7 +20,7 @@ type Program struct {
 	Name        string `firestore:"name" json:"name"`
 	Thumbnail   int64  `firestore:"thumbnail" json:"thumbnail"`
 	UID         string `json:"uid"`
-	WID         string `json:"wid"`
+	WID         string `json:"wid"` // Optional WID of class associated with program
 }
 
 // ToFirestoreUpdate returns the []firestore.Update representation
@@ -147,7 +147,7 @@ func (d *DB) UpdateProgram(c echo.Context) error {
 // Request Body:
 // {
 //    uid: UID for the user the program belongs to
-//	  cid: [optional CID for the class the program should be added to]
+//	  wid: [optional WID for the class the program should be added to]
 //    program: {
 //        thumbnail: index of the desired thumbnail
 //        language: language string
