@@ -199,20 +199,24 @@ func (d *DB) GetClass(c echo.Context) error {
 	}
 
 	// get the class as a struct (pointer)
-	class, err := d.loadClass(c.Request().Context(), cid)
-	if err != nil || class == nil {
+	var res struct {
+		*Class
+		ProgramData []Program `json:"programData"`
+	}
+	res.Class, err = d.loadClass(c.Request().Context(), cid)
+	if err != nil || res.Class == nil {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get class: %s", err))
 	}
 
 	// check if the uid exists in the members list or instructor list
 	isIn := false
-	for _, m := range class.Members {
+	for _, m := range res.Members {
 		if m == uid {
 			isIn = true
 			break
 		}
 	}
-	for _, i := range class.Instructors {
+	for _, i := range res.Instructors {
 		if i == uid {
 			isIn = true
 			break
@@ -224,8 +228,35 @@ func (d *DB) GetClass(c echo.Context) error {
 		return c.String(http.StatusNotFound, "given user not in class")
 	}
 
+	// Process "programs" query
+	if WithPrograms := c.QueryParam("programs"); WithPrograms != "" && WithPrograms != "false" {
+		err = d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
+			tempProg := Program{}
+			res.ProgramData = make([]Program, 0)
+			for _, prog := range res.Programs {
+				// retrieve Program object from UID
+				progRef := d.Collection(programsPath).Doc(prog)
+				progSnap, err := tx.Get(progRef)
+				if err != nil {
+					return err
+				}
+
+				if err := progSnap.DataTo(&tempProg); err != nil {
+					return err
+				}
+
+				// append Program to ProgramData
+				res.ProgramData = append(res.ProgramData, tempProg)
+			}
+			return nil
+		})
+		if err != nil {
+			return c.String(http.StatusInternalServerError, err.Error())
+		}
+	}
+
 	// otherwise, convert the class struct into JSON and send it back
-	return c.JSON(http.StatusOK, class)
+	return c.JSON(http.StatusOK, res)
 }
 
 // JoinClass takes a UID and cid(wid) as a JSON, and attempts to
