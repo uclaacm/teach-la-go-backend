@@ -20,6 +20,7 @@ type Program struct {
 	Name        string `firestore:"name" json:"name"`
 	Thumbnail   int64  `firestore:"thumbnail" json:"thumbnail"`
 	UID         string `json:"uid"`
+	WID         string `json:"wid"` // Optional WID of class associated with program
 }
 
 // ToFirestoreUpdate returns the []firestore.Update representation
@@ -146,6 +147,7 @@ func (d *DB) UpdateProgram(c echo.Context) error {
 // Request Body:
 // {
 //    uid: UID for the user the program belongs to
+//	  wid: [optional WID for the class the program should be added to]
 //    program: {
 //        thumbnail: index of the desired thumbnail
 //        language: language string
@@ -158,6 +160,7 @@ func (d *DB) UpdateProgram(c echo.Context) error {
 func (d *DB) CreateProgram(c echo.Context) error {
 	var requestBody struct {
 		UID  string  `json:"uid"`
+		WID  string  `json:"wid"`
 		Prog Program `json:"program"`
 	}
 	if err := httpext.RequestBodyTo(c.Request(), &requestBody); err != nil {
@@ -186,6 +189,22 @@ func (d *DB) CreateProgram(c echo.Context) error {
 		p.Name = requestBody.Prog.Name
 	}
 
+	wid := requestBody.WID
+	var cid string
+	var class *Class
+	if wid != "" {
+		var err error
+		cid, err = d.GetUIDFromWID(c.Request().Context(), wid, classesAliasPath)
+		if err != nil {
+			return err
+		}
+
+		class, err = d.loadClass(c.Request().Context(), cid)
+		if err != nil {
+			return err
+		}
+	}
+
 	// create the program doc.
 	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
 		// create program
@@ -202,18 +221,30 @@ func (d *DB) CreateProgram(c echo.Context) error {
 			return err
 		}
 		u.Programs = append(u.Programs, pRef.ID)
+		if wid != "" {
+			classRef := d.Collection(classesPath).Doc(cid)
+			err := tx.Update(classRef, []firestore.Update{
+				{Path: "programs", Value: firestore.ArrayUnion(pRef.ID)},
+			})
+
+			p.WID = class.WID
+			if err != nil {
+				return err
+			}
+		}
 		if err := tx.Set(uRef, u); err != nil {
 			return err
 		}
 
 		p.UID = pRef.ID
+
 		return tx.Create(pRef, p)
 	})
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
 			return c.String(http.StatusNotFound, errors.Wrap(err, "failed to find user document").Error())
 		}
-		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to create program and associate to user").Error())
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to create program and associate to user or class").Error())
 	}
 
 	return c.JSON(http.StatusCreated, p)
@@ -266,12 +297,35 @@ func (d *DB) DeleteProgram(c echo.Context) error {
 		}
 		toDelete := userDoc.Programs[idx]
 		userDoc.Programs = append(userDoc.Programs[:idx], userDoc.Programs[idx+1:]...)
-		if err := tx.Set(uref, &userDoc); err != nil {
+
+		pref := d.Collection(programsPath).Doc(toDelete)
+
+		// remove program from class if is in class
+		pSnap, err := tx.Get(pref)
+		if err != nil {
 			return err
+		}
+		programDoc := Program{}
+		if err := pSnap.DataTo(&programDoc); err != nil {
+			return err
+		}
+		if programDoc.WID != "" {
+			cid, err := d.GetUIDFromWID(c.Request().Context(), programDoc.WID, classesAliasPath)
+			if err != nil {
+				return err
+			}
+			classRef := d.Collection(classesPath).Doc(cid)
+			if err := tx.Update(classRef, []firestore.Update{
+				{Path: "programs", Value: firestore.ArrayRemove(toDelete)},
+			}); err != nil {
+				return err
+			}
 		}
 
 		// attempt to delete program doc
-		pref := d.Collection(programsPath).Doc(toDelete)
+		if err := tx.Set(uref, &userDoc); err != nil {
+			return err
+		}
 		return tx.Delete(pref)
 	})
 	if err != nil {

@@ -243,7 +243,7 @@ func (d *DB) DeleteUser(c echo.Context) error {
 		for _, prog := range usr.Programs {
 			progRef := d.Collection(programsPath).Doc(prog)
 			// if we can't find a program, then it's not a problem.
-			if err := tx.Delete(progRef); (err != nil && status.Code(err) != codes.NotFound) {
+			if err := tx.Delete(progRef); err != nil && status.Code(err) != codes.NotFound {
 				return err
 			}
 		}
