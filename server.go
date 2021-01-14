@@ -77,11 +77,14 @@ func serve(c *cli.Context) error {
 	e.POST("/program/create", d.CreateProgram)
 	e.DELETE("/program/delete", d.DeleteProgram)
 
-	//class management
+	// class management
 	e.GET("/class/get", d.GetClass)
 	e.POST("/class/create", d.CreateClass)
 	e.PUT("/class/join", d.JoinClass)
 	e.PUT("/class/leave", d.LeaveClass)
+
+	// collaborative coding management
+	e.POST("/collab/create", d.CreateCollab)
 
 	// check for PORT variable.
 	port := c.Int("port")

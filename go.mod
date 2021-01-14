@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.61.0 // indirect
 	cloud.google.com/go/firestore v1.2.0
 	firebase.google.com/go v3.13.0+incompatible
+	github.com/google/uuid v1.1.1
 	github.com/heroku/x v0.0.25
 	github.com/joho/godotenv v1.3.0
 	github.com/labstack/echo/v4 v4.1.16
@@ -17,6 +18,7 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/valyala/fasttemplate v1.2.0 // indirect
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899 // indirect
+	golang.org/x/net v0.0.0-20200707034311-ab3426394381
 	golang.org/x/sys v0.0.0-20200724161237-0e2f3a69832c // indirect
 	golang.org/x/tools v0.0.0-20200725200936-102e7d357031 // indirect
 	google.golang.org/api v0.29.0
