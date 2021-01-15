@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,11 +15,12 @@ import (
 // Session describes a collaborative coding environment.
 type Session struct {
 	// Map UIDs to their websocket.Conn
-	Conns map[string]*websocket.Conn `json:"conns"`
+	Conns map[string]*websocket.Conn
 }
 
 // Maps session IDs to Session object
 var sessions map[string]Session
+var sessionsLock sync.Mutex
 
 func init() {
 	sessions = make(map[string]Session)
@@ -40,17 +42,17 @@ func (d *DB) CreateCollab(c echo.Context) error {
 	// Kill session if no connections every minute
 	go func() {
 		ticker := time.NewTicker(time.Minute)
-		for {
-			select {
-			case <-ticker.C:
-				fmt.Printf("%+v\n", sessions)
-				if session, ok := sessions[sessionId]; ok && len(session.Conns) == 0 {
-					fmt.Printf("Deleting session")
-					delete(sessions, sessionId)
-					ticker.Stop()
-					return
-				}
+		for range ticker.C {
+			fmt.Printf("%+v\n", sessions)
+			sessionsLock.Lock()
+			if session, ok := sessions[sessionId]; ok && len(session.Conns) == 0 {
+				fmt.Printf("Deleting session")
+				delete(sessions, sessionId)
+				sessionsLock.Unlock()
+				ticker.Stop()
+				return
 			}
+			sessionsLock.Unlock()
 		}
 	}()
 
