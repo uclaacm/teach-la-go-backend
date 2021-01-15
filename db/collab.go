@@ -35,15 +35,16 @@ func (d *DB) CreateCollab(c echo.Context) error {
 	}
 
 	sessionId := uuid.New().String()
+	sessionsLock.Lock()
 	sessions[sessionId] = Session{
 		Conns: make(map[string]*websocket.Conn),
 	}
+	sessionsLock.Unlock()
 
 	// Kill session if no connections every minute
 	go func() {
 		ticker := time.NewTicker(time.Minute)
 		for range ticker.C {
-			fmt.Printf("%+v\n", sessions)
 			sessionsLock.Lock()
 			if session, ok := sessions[sessionId]; ok && len(session.Conns) == 0 {
 				fmt.Printf("Deleting session")
