@@ -19,8 +19,10 @@ type Session struct {
 }
 
 // Maps session IDs to Session object
-var sessions map[string]Session
-var sessionsLock sync.Mutex
+var (
+	sessions     map[string]Session
+	sessionsLock sync.Mutex
+)
 
 func init() {
 	sessions = make(map[string]Session)
