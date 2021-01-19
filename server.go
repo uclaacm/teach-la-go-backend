@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/uclaacm/teach-la-go-backend/db"
@@ -19,8 +18,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// DEFAULTPORT to serve on.
-const DEFAULTPORT = 8081
+// Default port to serve on, as provided by
+// the operating system.
+var defaultPort = os.Getenv("PORT")
 
 func serve(c *cli.Context) error {
 	e := echo.New()
@@ -87,11 +87,11 @@ func serve(c *cli.Context) error {
 	e.POST("/collab/create", d.CreateCollab)
 
 	// check for PORT variable.
-	port := c.Int("port")
+	port := c.String("port")
 
 	// server configuration
 	s := &http.Server{
-		Addr:           ":" + strconv.Itoa(port),
+		Addr:           ":" + port,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
@@ -140,10 +140,10 @@ func main() {
 				Value:   false,
 				Usage:   "Change the log level used by echo's logger middleware",
 			},
-			&cli.IntFlag{
+			&cli.StringFlag{
 				Name:    "port",
 				Aliases: []string{"p"},
-				Value:   DEFAULTPORT,
+				Value:   defaultPort,
 				Usage:   "Change the port number",
 			},
 		},
