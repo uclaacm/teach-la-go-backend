@@ -20,7 +20,7 @@ import (
 )
 
 // DEFAULTPORT to serve on.
-const DEFAULTPORT = "8081"
+const DEFAULTPORT = 8081
 
 func serve(c *cli.Context) error {
 	e := echo.New()
@@ -143,7 +143,7 @@ func main() {
 			&cli.IntFlag{
 				Name:    "port",
 				Aliases: []string{"p"},
-				Value:   8081,
+				Value:   DEFAULTPORT,
 				Usage:   "Change the port number",
 			},
 		},
