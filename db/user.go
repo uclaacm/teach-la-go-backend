@@ -67,19 +67,12 @@ func (d *DB) GetUser(c echo.Context) error {
 	}
 
 	// get user data
-	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
-		ref := d.Collection(usersPath).Doc(c.QueryParam("uid"))
-		doc, err := tx.Get(ref)
-		if err != nil {
-			return err
-		}
-		return doc.DataTo(&resp.UserData)
-	})
+	doc, err := d.Collection(usersPath).Doc(c.QueryParam("uid")).Get(c.Request().Context())
 	if err != nil {
-		if status.Code(err) == codes.NotFound {
-			return c.String(http.StatusNotFound, "user does not exist")
-		}
-		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to get user data").Error())
+		return c.String(http.StatusNotFound, err.Error())
+	}
+	if err := doc.DataTo(&resp.UserData); err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
 	}
 
 	// get programs, if requested
@@ -87,18 +80,13 @@ func (d *DB) GetUser(c echo.Context) error {
 		for _, p := range resp.UserData.Programs {
 			currentProg := Program{}
 
-			progTXErr := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
-				doc, err := tx.Get(d.Collection(programsPath).Doc(p))
-				if err != nil {
-					return err
-				}
-				return doc.DataTo(&currentProg)
-			})
-			if progTXErr != nil {
-				if status.Code(progTXErr) == codes.NotFound {
-					return c.String(http.StatusNotFound, "could not retrieve user programs, invalid reference")
-				}
-				return c.String(http.StatusInternalServerError, errors.Wrap(progTXErr, "failed to get user's programs").Error())
+			// If error in retrieving program, ignore it.
+			doc, err := d.Collection(programsPath).Doc(p).Get(c.Request().Context())
+			if err != nil {
+				continue
+			}
+			if err := doc.DataTo(&currentProg); err != nil {
+				continue
 			}
 
 			resp.Programs[p] = currentProg
