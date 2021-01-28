@@ -13,9 +13,15 @@ import (
 )
 
 // Session describes a collaborative coding environment.
+type Message struct {
+	Author string
+	Type   string
+	Body   string
+}
 type Session struct {
 	// Map UIDs to their websocket.Conn
 	Conns map[string]*websocket.Conn
+	Lock  sync.Mutex
 }
 
 // Maps session IDs to Session object
@@ -26,6 +32,29 @@ var (
 
 func init() {
 	sessions = make(map[string]Session)
+}
+
+func (s *Session) AddConn(uid string, conn *websocket.Conn) error {
+	s.Lock.Lock()
+	s.Conns[uid] = conn
+	s.Lock.Unlock()
+	return nil
+}
+
+func (s *Session) RemoveConn(uid string) error {
+	s.Lock.Lock()
+	delete(s.Conns, uid)
+	s.Lock.Unlock()
+	return nil
+}
+
+func (s *Session) Broadcast(msg Message) error {
+	s.Lock.Lock()
+	for _, conn := range s.Conns {
+		websocket.JSON.Send(conn, msg)
+	}
+	s.Lock.Unlock()
+	return nil
 }
 
 func (d *DB) CreateCollab(c echo.Context) error {
@@ -60,4 +89,39 @@ func (d *DB) CreateCollab(c echo.Context) error {
 	}()
 
 	return c.String(http.StatusCreated, sessionId)
+}
+
+func (d *DB) JoinCollab(c echo.Context) error {
+	sessionId := c.Param("id")
+	uid := uuid.New().String() // What will we be using as identifiers?
+	session, ok := sessions[sessionId]
+
+	if !ok {
+		return c.String(http.StatusNotFound, "Session does not exist.")
+	}
+
+	websocket.Handler(func(ws *websocket.Conn) {
+		if err := session.AddConn(uid, ws); err != nil {
+			return
+		}
+
+		for {
+			var msg Message
+			err := websocket.JSON.Receive(ws, &msg)
+			if err != nil {
+				errorMsg := Message{
+					Author: uid,
+					Type:   "ERROR",
+					Body:   err.Error(),
+				}
+				session.Broadcast(errorMsg)
+				session.RemoveConn(uid)
+				break
+			}
+
+			session.Broadcast(msg)
+		}
+	}).ServeHTTP(c.Response(), c.Request())
+
+	return nil
 }
