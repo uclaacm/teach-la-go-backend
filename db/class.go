@@ -180,29 +180,28 @@ func (d *DB) CreateClass(c echo.Context) error {
 // and a CID (wid) as a JSON, and returns an object representing the class.
 // If the given UID is not a member or an instructor, error is returned
 func (d *DB) GetClass(c echo.Context) error {
-	var req struct {
-		UID string `json:"uid"`
-		WID string `json:"wid"`
-	}
+	var (
+		req struct {
+			UID string `json:"uid"`
+			CID string `json:"cid"`
+		}
+		res struct {
+			*Class
+			ProgramData []Program `json:"programData"`
+		}
+		err error
+	)
+
 	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
 	}
-	if req.UID == "" || req.WID == "" {
+	if req.UID == "" || req.CID == "" {
 		return c.String(http.StatusBadRequest, "uid and wid fields are both required")
 	}
 	uid := req.UID
-	wid := req.WID
-
-	cid, err := d.GetUIDFromWID(c.Request().Context(), wid, classesAliasPath)
-	if err != nil {
-		return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get class: %s", err))
-	}
+	cid := req.CID
 
 	// get the class as a struct (pointer)
-	var res struct {
-		*Class
-		ProgramData []Program `json:"programData"`
-	}
 	res.Class, err = d.loadClass(c.Request().Context(), cid)
 	if err != nil || res.Class == nil {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get class: %s", err))
