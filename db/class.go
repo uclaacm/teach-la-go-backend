@@ -178,7 +178,7 @@ func (d *DB) CreateClass(c echo.Context) error {
 
 // GetClass takes the UID (either of a member or an instructor)
 // and a CID (wid) as a JSON, and returns an object representing the class.
-// If the given UID is not a member or an instructor, error is returned
+// If the given UID is not a member or an instructor, an error is returned.
 func (d *DB) GetClass(c echo.Context) error {
 	var (
 		req struct {
@@ -188,6 +188,7 @@ func (d *DB) GetClass(c echo.Context) error {
 		res struct {
 			*Class
 			ProgramData []Program `json:"programData"`
+			UserData []User `json:"userData"`
 		}
 		err error
 	)
@@ -208,23 +209,12 @@ func (d *DB) GetClass(c echo.Context) error {
 	}
 
 	// check if the uid exists in the members list or instructor list
-	isIn := false
-	for _, m := range res.Members {
-		if m == uid {
-			isIn = true
-			break
-		}
-	}
+	isInstructor := false
 	for _, i := range res.Instructors {
 		if i == uid {
-			isIn = true
+			isInstructor = true
 			break
 		}
-	}
-
-	// if UID was not in class, return error
-	if !isIn {
-		return c.String(http.StatusNotFound, "given user not in class")
 	}
 
 	// Process "programs" query
@@ -251,6 +241,24 @@ func (d *DB) GetClass(c echo.Context) error {
 		})
 		if err != nil {
 			return c.String(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	// If user data was requested and user is an instructor, append to response.
+	if withUserData := c.QueryParam("userData"); isInstructor && withUserData != "" && withUserData != "false" {
+		for _, uid := range res.Class.Members {
+			userSnap, err := d.Collection(usersPath).Doc(uid).Get(c.Request().Context())
+			if err != nil {
+				continue
+			}
+
+			tmpUser := User{}
+			err = userSnap.DataTo(&tmpUser)
+			if err != nil {
+				continue
+			}
+
+			res.UserData = append(res.UserData, tmpUser)
 		}
 	}
 
