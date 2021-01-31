@@ -187,8 +187,8 @@ func (d *DB) GetClass(c echo.Context) error {
 		}
 		res struct {
 			*Class
-			ProgramData []Program `json:"programData"`
-			UserData    []User    `json:"userData"`
+			ProgramData []Program       `json:"programData"`
+			UserData    map[string]User `json:"userData"`
 		}
 		err error
 	)
@@ -258,7 +258,7 @@ func (d *DB) GetClass(c echo.Context) error {
 				continue
 			}
 
-			res.UserData = append(res.UserData, tmpUser)
+			res.UserData[uid] = tmpUser
 		}
 	}
 
