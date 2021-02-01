@@ -50,6 +50,10 @@ func (d *DB) CreateCollab(c echo.Context) error {
 		sessionId = body.Name
 	}
 
+	if _, ok := sessions[sessionId]; ok {
+		return c.String(http.StatusBadRequest, "session with same name already exists")
+	}
+
 	sessionsLock.Lock()
 	sessions[sessionId] = Session{
 		Conns: make(map[string]*websocket.Conn),
