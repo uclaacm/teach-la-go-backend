@@ -46,6 +46,10 @@ func (d *DB) CreateCollab(c echo.Context) error {
 	}
 
 	sessionId := uuid.New().String()
+	if body.Name != "" {
+		sessionId = body.Name
+	}
+
 	sessionsLock.Lock()
 	sessions[sessionId] = Session{
 		Conns: make(map[string]*websocket.Conn),
@@ -68,8 +72,5 @@ func (d *DB) CreateCollab(c echo.Context) error {
 		}
 	}()
 
-	if body.Name == "" {
-		return c.String(http.StatusCreated, sessionId)
-	}
-	return c.String(http.StatusCreated, body.Name)
+	return c.String(http.StatusCreated, sessionId)
 }
