@@ -28,9 +28,18 @@ func init() {
 	sessions = make(map[string]Session)
 }
 
+// CreateCollab creates a collaborative session, setting up the session's websocket.
+// Request Body:
+// {
+//    uid: UID for the user the program belongs to
+//	  name: optional name identifier for the session, defaults to random UUID.
+// }
+//
+// Returns status 201 created on success.
 func (d *DB) CreateCollab(c echo.Context) error {
 	var body struct {
-		UID string `json:"uid"`
+		Name string `json:"name"`
+		UID  string `json:"uid"`
 	}
 	if err := httpext.RequestBodyTo(c.Request(), &body); err != nil {
 		return c.String(http.StatusInternalServerError, "failed to read request body")
@@ -59,5 +68,8 @@ func (d *DB) CreateCollab(c echo.Context) error {
 		}
 	}()
 
-	return c.String(http.StatusCreated, sessionId)
+	if body.Name == "" {
+		return c.String(http.StatusCreated, sessionId)
+	}
+	return c.String(http.StatusCreated, body.Name)
 }
