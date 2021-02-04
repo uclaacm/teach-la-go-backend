@@ -15,9 +15,9 @@ import (
 
 // Session describes a collaborative coding environment.
 type Message struct {
-	Author string
-	Type   string
-	Body   string
+	Author string `json:"author"`
+	Type   string `json:"type"`
+	Body   string `json:"body"`
 }
 type Session struct {
 	// Map UIDs to their websocket.Conn
