@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 	"github.com/uclaacm/teach-la-go-backend/httpext"
 	"golang.org/x/net/websocket"
 )
@@ -36,6 +37,10 @@ func init() {
 
 func (s *Session) AddConn(uid string, conn *websocket.Conn) error {
 	s.Lock.Lock()
+	if s.Conns[uid] != nil {
+		s.Lock.Unlock()
+		return errors.New("User is already connected")
+	}
 	s.Conns[uid] = conn
 	s.Lock.Unlock()
 	return nil
@@ -43,18 +48,25 @@ func (s *Session) AddConn(uid string, conn *websocket.Conn) error {
 
 func (s *Session) RemoveConn(uid string) error {
 	s.Lock.Lock()
+	if s.Conns[uid] != nil {
+		s.Lock.Unlock()
+		return errors.New("Could not remove unconnected user")
+	}
 	delete(s.Conns, uid)
 	s.Lock.Unlock()
 	return nil
 }
 
 func (s *Session) Broadcast(msg Message) error {
+	var mostRecentError error = nil
 	s.Lock.Lock()
 	for _, conn := range s.Conns {
-		websocket.JSON.Send(conn, msg)
+		if err := websocket.JSON.Send(conn, msg); err != nil {
+			mostRecentError = err
+		}
 	}
 	s.Lock.Unlock()
-	return nil
+	return mostRecentError
 }
 
 func (d *DB) CreateCollab(c echo.Context) error {
@@ -107,19 +119,27 @@ func (d *DB) JoinCollab(c echo.Context) error {
 
 		for {
 			var msg Message
-			err := websocket.JSON.Receive(ws, &msg)
-			if err != nil {
+
+			if err := websocket.JSON.Receive(ws, &msg); err != nil {
 				errorMsg := Message{
 					Author: uid,
 					Type:   "ERROR",
 					Body:   err.Error(),
 				}
-				session.Broadcast(errorMsg)
-				session.RemoveConn(uid)
+				if broadcastErr := session.Broadcast(errorMsg); broadcastErr != nil {
+					break
+				}
+
+				if removeErr := session.RemoveConn(uid); removeErr != nil {
+					break
+				}
+
 				break
 			}
 
-			session.Broadcast(msg)
+			if broadcastErr := session.Broadcast(msg); broadcastErr != nil {
+				break
+			}
 		}
 	}).ServeHTTP(c.Response(), c.Request())
 
