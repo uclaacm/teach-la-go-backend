@@ -37,35 +37,33 @@ func init() {
 
 func (s *Session) AddConn(uid string, conn *websocket.Conn) error {
 	s.Lock.Lock()
+	defer s.Lock.Unlock()
 	if s.Conns[uid] != nil {
-		s.Lock.Unlock()
 		return errors.New("User is already connected")
 	}
 	s.Conns[uid] = conn
-	s.Lock.Unlock()
 	return nil
 }
 
 func (s *Session) RemoveConn(uid string) error {
 	s.Lock.Lock()
+	defer s.Lock.Unlock()
 	if s.Conns[uid] != nil {
-		s.Lock.Unlock()
 		return errors.New("Could not remove unconnected user")
 	}
 	delete(s.Conns, uid)
-	s.Lock.Unlock()
 	return nil
 }
 
 func (s *Session) Broadcast(msg Message) error {
-	var mostRecentError error = nil
+	var mostRecentError error
 	s.Lock.Lock()
+	defer s.Lock.Unlock()
 	for _, conn := range s.Conns {
 		if err := websocket.JSON.Send(conn, msg); err != nil {
 			mostRecentError = err
 		}
 	}
-	s.Lock.Unlock()
 	return mostRecentError
 }
 
