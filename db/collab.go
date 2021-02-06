@@ -67,15 +67,32 @@ func (s *Session) Broadcast(msg Message) error {
 	return mostRecentError
 }
 
+// CreateCollab creates a collaborative session, setting up the session's websocket.
+// Request Body:
+// {
+//    uid: UID for the user the program belongs to
+//    name: optional name identifier for the session, defaults to random UUID.
+// }
+//
+// Returns status 201 created on success.
 func (d *DB) CreateCollab(c echo.Context) error {
 	var body struct {
-		UID string `json:"uid"`
+		Name string `json:"name"`
+		UID  string `json:"uid"`
 	}
 	if err := httpext.RequestBodyTo(c.Request(), &body); err != nil {
 		return c.String(http.StatusInternalServerError, "failed to read request body")
 	}
 
 	sessionId := uuid.New().String()
+	if body.Name != "" {
+		sessionId = body.Name
+	}
+
+	if _, ok := sessions[sessionId]; ok {
+		return c.String(http.StatusBadRequest, "session with same name already exists")
+	}
+
 	sessionsLock.Lock()
 	sessions[sessionId] = Session{
 		Conns: make(map[string]*websocket.Conn),
