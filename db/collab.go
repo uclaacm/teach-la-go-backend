@@ -71,7 +71,7 @@ func (s *Session) Broadcast(msg Message) error {
 // Request Body:
 // {
 //    uid: UID for the user the program belongs to
-//	  name: optional name identifier for the session, defaults to random UUID.
+//    name: optional name identifier for the session, defaults to random UUID.
 // }
 //
 // Returns status 201 created on success.
