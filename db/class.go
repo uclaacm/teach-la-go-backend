@@ -197,7 +197,7 @@ func (d *DB) GetClass(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
 	}
 	if req.UID == "" || req.CID == "" {
-		return c.String(http.StatusBadRequest, "uid and wid fields are both required")
+		return c.String(http.StatusBadRequest, "uid and cid fields are both required")
 	}
 	uid := req.UID
 	cid := req.CID
