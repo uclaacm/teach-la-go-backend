@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -25,32 +25,32 @@ const (
 type TestFunc func(echo.Context) error
 
 type TestObj struct {
-	D			*DB
-	Class		[]Class
-	ClassBuf 	[]Class
-	User		[]User
+	D        *DB
+	Class    []Class
+	ClassBuf []Class
+	User     []User
 }
 
 type ReqParam struct {
-	HttpMethod	string 
-	Path		string 
-	Body 		io.Reader
-	Function	TestFunc	// function to close response body
-	ExpCode		int			// expected return code. 
-	Returns		bool		// specify if this call returns a body or not
+	HttpMethod string
+	Path       string
+	Body       io.Reader
+	Function   TestFunc // function to close response body
+	ExpCode    int      // expected return code.
+	Returns    bool     // specify if this call returns a body or not
 }
 
 func CallFunc(t *testing.T, par *ReqParam) ([]byte, func() error) {
-	req, err := http.NewRequest(	par.HttpMethod, 
-									par.Path, 
-									par.Body)
+	req, err := http.NewRequest(par.HttpMethod,
+		par.Path,
+		par.Body)
 	require.NoError(t, err)
 	rec := httptest.NewRecorder()
 	assert.NotNil(t, req, rec)
 	req.Header.Set("Content-Type", "application/json")
 	c := echo.New().NewContext(req, rec)
 
-	require.NoError(t, par.Function(c)) 
+	require.NoError(t, par.Function(c))
 	assert.Equal(t, par.ExpCode, rec.Code)
 	var b []byte
 	if par.Returns == true {
@@ -58,7 +58,7 @@ func CallFunc(t *testing.T, par *ReqParam) ([]byte, func() error) {
 		b, err = ioutil.ReadAll(rec.Result().Body)
 		require.NoError(t, err)
 		assert.NoError(t, err)
-	} else { 
+	} else {
 		b = []byte{'{', '}'}
 	}
 
@@ -67,9 +67,9 @@ func CallFunc(t *testing.T, par *ReqParam) ([]byte, func() error) {
 
 func CreateTestUser(t *testing.T, o *TestObj, i int) {
 
-	par := ReqParam {
-		"POST", 
-		"/", 
+	par := ReqParam{
+		"POST",
+		"/",
 		nil,
 		o.D.CreateUser,
 		http.StatusCreated,
@@ -91,7 +91,7 @@ func DeleteTestUser(t *testing.T, o *TestObj, i int) {
 	pro, err := json.Marshal(&pr)
 	require.NoError(t, err)
 
-	par := ReqParam {
+	par := ReqParam{
 		"DELETE",
 		"/",
 		bytes.NewBuffer(pro),
@@ -116,9 +116,9 @@ func GetTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int) {
 	pro, err := json.Marshal(&pr)
 	require.NoError(t, err)
 
-	par := ReqParam {
-		"GET", 
-		"/", 
+	par := ReqParam{
+		"GET",
+		"/",
 		bytes.NewBuffer(pro),
 		o.D.GetClass,
 		http.StatusOK,
@@ -130,11 +130,11 @@ func GetTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int) {
 	assert.NoError(t, json.Unmarshal([]byte(b), &o.ClassBuf[classIndex]))
 }
 
-func CreateTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int){
-	pr := struct 	{
-		Uid			string	
-		Name		string
-		Thumbnail 	int
+func CreateTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int) {
+	pr := struct {
+		Uid       string
+		Name      string
+		Thumbnail int
 	}{
 		o.User[userIndex].UID,
 		"TestClass",
@@ -143,9 +143,9 @@ func CreateTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int){
 	pro, err := json.Marshal(&pr)
 	require.NoError(t, err)
 
-	par := ReqParam {
-		"POST", 
-		"/", 
+	par := ReqParam{
+		"POST",
+		"/",
 		bytes.NewBuffer(pro),
 		o.D.CreateClass,
 		http.StatusOK,
@@ -158,16 +158,16 @@ func CreateTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int){
 	t.Logf(color_info+"CreateClass returned: \n%s"+color_end, string([]byte(b)))
 }
 
-func DeleteTestClass(t *testing.T, o *TestObj, classIndex int){
+func DeleteTestClass(t *testing.T, o *TestObj, classIndex int) {
 	pr := struct {
-		Cid 	string
+		Cid string
 	}{
 		o.Class[classIndex].CID,
 	}
 	pro, err := json.Marshal(&pr)
 	require.NoError(t, err)
 
-	par := ReqParam {
+	par := ReqParam{
 		"DELETE",
 		"/",
 		bytes.NewBuffer(pro),
@@ -192,8 +192,8 @@ func IsIn(str string, list []string) bool {
 
 // Ensure classes can be created w/o any errors
 func TestCreateClass(t *testing.T) {
-	
-	obj := TestObj {
+
+	obj := TestObj{
 		nil,
 		make([]Class, 1),
 		make([]Class, 1),
@@ -206,15 +206,15 @@ func TestCreateClass(t *testing.T) {
 
 	CreateTestUser(t, &obj, 0)
 	CreateTestClass(t, &obj, 0, 0)
-	
+
 	DeleteTestClass(t, &obj, 0)
 	DeleteTestUser(t, &obj, 0)
 }
 
-// Test that classes can be retrieved 
+// Test that classes can be retrieved
 func TestGetClass(t *testing.T) {
 
-	obj := TestObj {
+	obj := TestObj{
 		nil,
 		make([]Class, 1),
 		make([]Class, 1),
@@ -223,7 +223,7 @@ func TestGetClass(t *testing.T) {
 
 	ptr, err := Open(context.Background(), os.Getenv("TLACFG"))
 	require.NoError(t, err)
-	obj.D = ptr 
+	obj.D = ptr
 
 	CreateTestUser(t, &obj, 0)
 	CreateTestClass(t, &obj, 0, 0)
@@ -233,7 +233,7 @@ func TestGetClass(t *testing.T) {
 	GetTestClass(t, &obj, 0, 0)
 	t.Logf("%v+", obj.Class[0])
 	t.Logf("%v+", obj.ClassBuf[0])
-	// Make sure classes are same. 	
+	// Make sure classes are same.
 	// Compare manually, since DeepEqual and cmp.Equal both does not work
 	assert.True(t, obj.Class[0].CID == obj.ClassBuf[0].CID)
 	assert.True(t, obj.Class[0].WID == obj.ClassBuf[0].WID)
@@ -243,7 +243,7 @@ func TestGetClass(t *testing.T) {
 // Make sure student can join and leave class
 func TestJoinLeaveClass(t *testing.T) {
 
-	obj := TestObj {
+	obj := TestObj{
 		nil,
 		make([]Class, 1),
 		make([]Class, 1),
@@ -273,9 +273,9 @@ func TestJoinLeaveClass(t *testing.T) {
 	pro, err := json.Marshal(&pr)
 	require.NoError(t, err)
 
-	par := ReqParam {
-		"PUT", 
-		"/", 
+	par := ReqParam{
+		"PUT",
+		"/",
 		bytes.NewBuffer(pro),
 		obj.D.JoinClass,
 		http.StatusOK,
@@ -286,8 +286,8 @@ func TestJoinLeaveClass(t *testing.T) {
 	assert.NoError(t, close())
 
 	t.Logf(color_info+"Adding student: \t%s \nto class: \t%s"+color_end, obj.User[1].UID, obj.ClassBuf[0].WID)
-	
-	// JoinClass returns the class struct BEFORE adding the student 
+
+	// JoinClass returns the class struct BEFORE adding the student
 	GetTestClass(t, &obj, 0, 0)
 
 	// Make sure student is in class
@@ -306,9 +306,9 @@ func TestJoinLeaveClass(t *testing.T) {
 
 	t.Logf(color_info+"Leave student: \t%s \nfrom class: \t%s"+color_end, obj.User[1].UID, obj.Class[0].CID)
 
-	par = ReqParam {
-		"PUT", 
-		"/", 
+	par = ReqParam{
+		"PUT",
+		"/",
 		bytes.NewBuffer(pro),
 		obj.D.LeaveClass,
 		http.StatusOK,
@@ -320,4 +320,3 @@ func TestJoinLeaveClass(t *testing.T) {
 	GetTestClass(t, &obj, 0, 0)
 	assert.False(t, IsIn(obj.User[1].UID, obj.ClassBuf[0].Members))
 }
-
