@@ -85,6 +85,7 @@ func serve(c *cli.Context) error {
 
 	// collaborative coding management
 	e.POST("/collab/create", d.CreateCollab)
+	e.GET("/collab/join/:id", d.JoinCollab)
 
 	// check for PORT variable.
 	port := c.String("port")
