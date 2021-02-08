@@ -178,54 +178,43 @@ func (d *DB) CreateClass(c echo.Context) error {
 
 // GetClass takes the UID (either of a member or an instructor)
 // and a CID (wid) as a JSON, and returns an object representing the class.
-// If the given UID is not a member or an instructor, error is returned
+// If the given UID is not a member or an instructor, an error is returned.
 func (d *DB) GetClass(c echo.Context) error {
-	var req struct {
-		UID string `json:"uid"`
-		WID string `json:"wid"`
-	}
+	var (
+		req struct {
+			UID string `json:"uid"`
+			CID string `json:"cid"`
+		}
+		res struct {
+			*Class
+			ProgramData []Program       `json:"programData"`
+			UserData    map[string]User `json:"userData"`
+		}
+		err error
+	)
+
 	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
 	}
-	if req.UID == "" || req.WID == "" {
-		return c.String(http.StatusBadRequest, "uid and wid fields are both required")
+	if req.UID == "" || req.CID == "" {
+		return c.String(http.StatusBadRequest, "uid and cid fields are both required")
 	}
 	uid := req.UID
-	wid := req.WID
-
-	cid, err := d.GetUIDFromWID(c.Request().Context(), wid, classesAliasPath)
-	if err != nil {
-		return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get class: %s", err))
-	}
+	cid := req.CID
 
 	// get the class as a struct (pointer)
-	var res struct {
-		*Class
-		ProgramData []Program `json:"programData"`
-	}
 	res.Class, err = d.loadClass(c.Request().Context(), cid)
 	if err != nil || res.Class == nil {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get class: %s", err))
 	}
 
 	// check if the uid exists in the members list or instructor list
-	isIn := false
-	for _, m := range res.Members {
-		if m == uid {
-			isIn = true
-			break
-		}
-	}
+	isInstructor := false
 	for _, i := range res.Instructors {
 		if i == uid {
-			isIn = true
+			isInstructor = true
 			break
 		}
-	}
-
-	// if UID was not in class, return error
-	if !isIn {
-		return c.String(http.StatusNotFound, "given user not in class")
 	}
 
 	// Process "programs" query
@@ -252,6 +241,24 @@ func (d *DB) GetClass(c echo.Context) error {
 		})
 		if err != nil {
 			return c.String(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	// If user data was requested and user is an instructor, append to response.
+	if withUserData := c.QueryParam("userData"); isInstructor && withUserData != "" && withUserData != "false" {
+		for _, uid := range res.Class.Members {
+			userSnap, err := d.Collection(usersPath).Doc(uid).Get(c.Request().Context())
+			if err != nil {
+				continue
+			}
+
+			tmpUser := User{}
+			err = userSnap.DataTo(&tmpUser)
+			if err != nil {
+				continue
+			}
+
+			res.UserData[uid] = tmpUser
 		}
 	}
 
