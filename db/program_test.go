@@ -146,11 +146,7 @@ func TestCreateProgram(t *testing.T) {
 		}{
 			UID: userDoc.ID,
 			WID: class.WID,
-			Prog: Program{
-				Language:  "python",
-				Name:      "some random name",
-				Thumbnail: 0,
-			},
+			Prog: defaultProgram("python"),
 		}
 		b, err := json.Marshal(&sampleDoc)
 		require.NoError(t, err)
