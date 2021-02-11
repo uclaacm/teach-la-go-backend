@@ -55,23 +55,17 @@ func (d *DB) GetProgram(c echo.Context) error {
 	}
 
 	// attempt to acquire doc.
-	ref := d.Collection(programsPath).Doc(pid)
 	p := Program{}
-	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
-		doc, err := tx.Get(ref)
-		if err != nil {
-			return err
-		}
-
-		return doc.DataTo(&p)
-	})
+	ref := d.Collection(programsPath).Doc(pid)
+	doc, err := ref.Get(c.Request().Context())
 	if err != nil {
-		if status.Code(err) == codes.NotFound {
-			return c.String(http.StatusNotFound, "program could not be found")
-		}
-		return c.String(http.StatusInternalServerError, errors.Wrap(err, "program could not be acquired").Error())
+		return c.String(http.StatusNotFound, errors.Wrap(err, "failed to locate program").Error())
+	}
+	if err := doc.DataTo(&p); err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to marshal data").Error())
 	}
 
+	// update UID field and respond.
 	p.UID = ref.ID
 	return c.JSON(http.StatusOK, &p)
 }

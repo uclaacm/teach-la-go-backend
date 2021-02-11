@@ -84,22 +84,17 @@ func (d *DB) RemoveClassFromUser(ctx context.Context, uid string, cid string) er
 // loadClass takes a cid, and returns a Class struct with its parameters populated
 // The retuned value is a pointer to the struct instantiated in this function
 func (d *DB) loadClass(ctx context.Context, cid string) (*Class, error) {
-	//get the class doc
-	ref := d.Collection(classesPath).Doc(cid)
+	// get the class doc
+	doc, err := d.Collection(classesPath).Doc(cid).Get(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	//create struct to populate
+	// populate
 	c := &Class{}
-
-	//populate struct
-	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		doc, err := tx.Get(ref)
-		if err != nil {
-			return err
-		}
-
-		return doc.DataTo(c)
-	})
-
+	if err := doc.DataTo(&c); err != nil {
+		return nil, err
+	}
 	return c, err
 }
 
@@ -209,39 +204,45 @@ func (d *DB) GetClass(c echo.Context) error {
 	}
 
 	// check if the uid exists in the members list or instructor list
-	isInstructor := false
+	isIn, isInstructor := false, false
+	for _, m := range res.Members {
+		if m == uid {
+			isIn = true
+			break
+		}
+	}
 	for _, i := range res.Instructors {
 		if i == uid {
-			isInstructor = true
+			isIn, isInstructor = true, true
 			break
 		}
 	}
 
-	// Process "programs" query
-	if WithPrograms := c.QueryParam("programs"); WithPrograms != "" && WithPrograms != "false" {
-		err = d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
-			tempProg := Program{}
-			res.ProgramData = make([]Program, 0)
-			for _, prog := range res.Programs {
-				// retrieve Program object from UID
-				progRef := d.Collection(programsPath).Doc(prog)
-				progSnap, err := tx.Get(progRef)
-				if err != nil {
-					return err
-				}
+	// if UID was not in class, return error
+	if !isIn {
+		return c.String(http.StatusNotFound, "given user not in class")
+	}
 
-				if err := progSnap.DataTo(&tempProg); err != nil {
-					return err
-				}
+	// early return in event of program query
+	withPrograms := c.QueryParam("programs")
+	if withPrograms != "true" {
+		return c.JSON(http.StatusOK, res)
+	}
 
-				// append Program to ProgramData
-				res.ProgramData = append(res.ProgramData, tempProg)
-			}
-			return nil
-		})
+	// otherwise, add programs to response.
+	for _, prog := range res.Programs {
+		// if a program is missing, ignore it.
+		progSnap, err := d.Collection(programsPath).Doc(prog).Get(c.Request().Context())
 		if err != nil {
-			return c.String(http.StatusInternalServerError, err.Error())
+			continue
 		}
+
+		p := Program{}
+		if err := progSnap.DataTo(&p); err != nil {
+			continue
+		}
+
+		res.ProgramData = append(res.ProgramData, p)
 	}
 
 	// If user data was requested and user is an instructor, append to response.
