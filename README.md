@@ -1,6 +1,6 @@
 # teach-la-go-backend
 
-Hey there! This is the repo for the Go Backend for the Teach LA editor. If you're a frontend dev and are just looking for documentation of our endpoints, you can find that [right here](https://documenter.getpostman.com/view/10224331/SzYgSFSU?version=latest). If you're a backend dev (or prospective dev) looking to get involved, then read on for info on how to get up and running!
+Hey there! This is the repo for the Go Backend for the Teach LA editor. If you're a frontend dev and are just looking for documentation of our endpoints, you can find that [right here](https://documenter.getpostman.com/view/10224331/TW6xmnn2). If you're a backend dev (or prospective dev) looking to get involved, then read on for info on how to get up and running!
 
 # Quickstart
 
