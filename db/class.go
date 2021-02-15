@@ -427,3 +427,11 @@ func (d *DB) DeleteClass(c echo.Context) error {
 
 	return c.String(http.StatusOK, "")
 }
+
+func (d *DB) GetClassMembers(c echo.Context) error {
+	var req struct {
+		CID string `json:"cid"`
+		UID string `json:"uid"`
+	}
+	// TODO: implement GetClassMembers
+}
