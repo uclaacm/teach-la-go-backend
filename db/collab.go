@@ -21,8 +21,9 @@ type Message struct {
 }
 type Session struct {
 	// Map UIDs to their websocket.Conn
-	Conns map[string]*websocket.Conn
-	Lock  sync.Mutex
+	Conns   map[string]*websocket.Conn
+	Teacher string
+	Lock    sync.Mutex
 }
 
 // Maps session IDs to Session object
@@ -130,6 +131,17 @@ func (d *DB) JoinCollab(c echo.Context) error {
 	websocket.Handler(func(ws *websocket.Conn) {
 		if err := session.AddConn(uid, ws); err != nil {
 			return
+		}
+		if len(session.Conns) == 1 {
+			session.Teacher = uid
+			defer func() {
+				if len(session.Conns) >= 1 {
+					// If teacher leaves, choose arbitrary member to be teacher
+					for k, _ := range session.Conns {
+						session.Teacher = k
+					}
+				}
+			}()
 		}
 
 		for {
