@@ -453,8 +453,8 @@ func (d *DB) GetClassMembers(c echo.Context) error {
 	cid := req.CID
 
 	// get the class as a struct (pointer)
-	class, err = d.loadClass(c.Request().Context(), cid)
-	if err != nil || res.Class == nil {
+	class, err := d.loadClass(c.Request().Context(), cid)
+	if err != nil || class == nil {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get class: %s", err))
 	}
 
@@ -470,7 +470,7 @@ func (d *DB) GetClassMembers(c echo.Context) error {
 	if !isIn {
 		return c.String(http.StatusNotFound, "given user not in class")
 	}
-	for _, uid := range res.Class.Members {
+	for _, uid := range class.Members {
 		userSnap, err := d.Collection(usersPath).Doc(uid).Get(c.Request().Context())
 		if err != nil {
 			continue
