@@ -137,7 +137,7 @@ func (d *DB) JoinCollab(c echo.Context) error {
 			defer func() {
 				if len(session.Conns) >= 1 {
 					// If teacher leaves, choose arbitrary member to be teacher
-					for k, _ := range session.Conns {
+					for k := range session.Conns {
 						session.Teacher = k
 					}
 				}
