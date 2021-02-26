@@ -273,7 +273,7 @@ func (d *DB) GetClass(c echo.Context) error {
 func (d *DB) JoinClass(c echo.Context) error {
 	req := struct {
 		UID string `json:"uid"`
-		WID string `json:"cid"`
+		WID string `json:"wid"`
 	}{}
 
 	// read JSON from request body
