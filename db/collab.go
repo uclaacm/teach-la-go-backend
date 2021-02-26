@@ -17,13 +17,17 @@ import (
 type Message struct {
 	Author string `json:"author"`
 	Type   string `json:"type"`
+	Target string `json:"target"`
 	Body   string `json:"body"`
 }
+type StringSet map[string]bool
 type Session struct {
 	// Map UIDs to their websocket.Conn
 	Conns   map[string]*websocket.Conn
 	Teacher string
-	Lock    sync.Mutex
+	// Map UIDs to the other UIDs they send messages to
+	SendTo map[string]StringSet
+	Lock   sync.Mutex
 }
 
 // Maps session IDs to Session object
@@ -43,6 +47,7 @@ func (s *Session) AddConn(uid string, conn *websocket.Conn) error {
 		return errors.New("User is already connected")
 	}
 	s.Conns[uid] = conn
+	s.SendTo[uid] = make(StringSet)
 	return nil
 }
 
@@ -53,15 +58,56 @@ func (s *Session) RemoveConn(uid string) error {
 		return errors.New("Could not remove unconnected user")
 	}
 	delete(s.Conns, uid)
+	delete(s.SendTo, uid)
+	// Stop other connections from sending to removed connection
+	for _, v := range s.SendTo {
+		delete(v, uid)
+	}
 	return nil
 }
 
-func (s *Session) Broadcast(msg Message) error {
+func (s *Session) BroadcastAll(msg Message) error {
 	var mostRecentError error
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
 	for _, conn := range s.Conns {
 		if err := websocket.JSON.Send(conn, msg); err != nil {
+			mostRecentError = err
+		}
+	}
+	return mostRecentError
+}
+
+func (s *Session) BroadcastError(uid string, err string) error {
+	errorMsg := Message{
+		Author: uid,
+		Type:   "ERROR",
+		Body:   err,
+	}
+	if broadcastErr := s.BroadcastTo(errorMsg, uid); broadcastErr != nil {
+		return broadcastErr
+	}
+	return nil
+}
+
+func (s *Session) BroadcastTo(msg Message, uids ...string) error {
+	var mostRecentError error
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
+	for _, uid := range uids {
+		if err := websocket.JSON.Send(s.Conns[uid], msg); err != nil {
+			mostRecentError = err
+		}
+	}
+	return mostRecentError
+}
+
+func (s *Session) BroadcastToSet(msg Message, uids StringSet) error {
+	var mostRecentError error
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
+	for uid := range uids {
+		if err := websocket.JSON.Send(s.Conns[uid], msg); err != nil {
 			mostRecentError = err
 		}
 	}
@@ -96,7 +142,8 @@ func (d *DB) CreateCollab(c echo.Context) error {
 
 	sessionsLock.Lock()
 	sessions[sessionId] = Session{
-		Conns: make(map[string]*websocket.Conn),
+		Conns:  make(map[string]*websocket.Conn),
+		SendTo: make(map[string]StringSet),
 	}
 	sessionsLock.Unlock()
 
@@ -148,12 +195,7 @@ func (d *DB) JoinCollab(c echo.Context) error {
 			var msg Message
 
 			if err := websocket.JSON.Receive(ws, &msg); err != nil {
-				errorMsg := Message{
-					Author: uid,
-					Type:   "ERROR",
-					Body:   err.Error(),
-				}
-				if broadcastErr := session.Broadcast(errorMsg); broadcastErr != nil {
+				if err2 := session.BroadcastError(uid, err.Error()); err2 != nil {
 					break
 				}
 
@@ -164,8 +206,25 @@ func (d *DB) JoinCollab(c echo.Context) error {
 				break
 			}
 
-			if broadcastErr := session.Broadcast(msg); broadcastErr != nil {
-				break
+			switch msg.Type {
+			case "READ":
+				if msg.Author == session.Teacher {
+					if studentSendTo, ok := session.SendTo[msg.Target]; ok {
+						studentSendTo[uid] = true
+					} else {
+						if err := session.BroadcastError(uid, "Student does not exist"); err != nil {
+							break
+						}
+					}
+				} else {
+					if err := session.BroadcastError(uid, "Teacher permission required to request access to student"); err != nil {
+						break
+					}
+				}
+			default:
+				if err := session.BroadcastToSet(msg, session.SendTo[uid]); err != nil {
+					break
+				}
 			}
 		}
 	}).ServeHTTP(c.Response(), c.Request())
