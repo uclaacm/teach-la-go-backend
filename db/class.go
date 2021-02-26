@@ -273,7 +273,7 @@ func (d *DB) GetClass(c echo.Context) error {
 func (d *DB) JoinClass(c echo.Context) error {
 	req := struct {
 		UID string `json:"uid"`
-		WID string `json:"cid"`
+		CID string `json:"cid"`
 	}{}
 
 	// read JSON from request body
@@ -283,18 +283,12 @@ func (d *DB) JoinClass(c echo.Context) error {
 	if req.UID == "" {
 		return c.String(http.StatusBadRequest, "uid is required")
 	}
-	if req.WID == "" {
-		return c.String(http.StatusBadRequest, "wid is required")
-	}
-
-	//TODO
-	cid, err := d.GetUIDFromWID(c.Request().Context(), req.WID, classesAliasPath)
-	if err != nil {
-		return c.String(http.StatusNotFound, "alias does not correspond to a class ID")
+	if req.CID == "" {
+		return c.String(http.StatusBadRequest, "cid is required")
 	}
 
 	// get the class as a struct
-	class, err := d.loadClass(c.Request().Context(), cid)
+	class, err := d.loadClass(c.Request().Context(), req.CID)
 	if err != nil || class == nil {
 		return c.String(http.StatusNotFound, "class does not exist")
 	}
@@ -314,13 +308,13 @@ func (d *DB) JoinClass(c echo.Context) error {
 	}
 
 	// add user to the class
-	err = d.AddUserToClass(c.Request().Context(), req.UID, cid)
+	err = d.AddUserToClass(c.Request().Context(), req.UID, req.CID)
 	if err != nil {
 		return c.String(http.StatusNotFound, "failed to add user to class")
 	}
 
 	// add this class to the user's "Classes" list
-	err = d.AddClassToUser(c.Request().Context(), req.UID, cid)
+	err = d.AddClassToUser(c.Request().Context(), req.UID, req.CID)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to add user to class list").Error())
 	}
