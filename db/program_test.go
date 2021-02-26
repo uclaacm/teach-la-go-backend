@@ -129,44 +129,6 @@ func TestCreateProgram(t *testing.T) {
 			assert.NotEmpty(t, rec.Result().Body)
 		}
 	})
-
-	t.Run("AddToClass", func(t *testing.T) {
-		// get some random user and class doc to pull UID from
-		userDoc, err := d.Collection(usersPath).DocumentRefs(context.Background()).Next()
-		require.NoError(t, err)
-		classDoc, err := d.Collection(classesPath).DocumentRefs(context.Background()).Next()
-		require.NoError(t, err)
-		class, err := d.loadClass(context.Background(), classDoc.ID)
-		require.NoError(t, err)
-
-		sampleDoc := struct {
-			WID  string  `json:"wid"`
-			UID  string  `json:"uid"`
-			Prog Program `json:"program"`
-		}{
-			UID: userDoc.ID,
-			WID: class.WID,
-			Prog: defaultProgram("python"),
-		}
-		b, err := json.Marshal(&sampleDoc)
-		require.NoError(t, err)
-
-		req, rec := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(string(b))), httptest.NewRecorder()
-		c := echo.New().NewContext(req, rec)
-		if assert.NoError(t, d.CreateProgram(c)) {
-			assert.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-			assert.NotEmpty(t, rec.Result().Body)
-
-			p := Program{}
-			bytes, err := ioutil.ReadAll(rec.Result().Body)
-			assert.NoError(t, err)
-			assert.NoError(t, json.Unmarshal(bytes, &p))
-			assert.NotZero(t, p)
-			class, err := d.loadClass(context.Background(), classDoc.ID)
-			assert.NoError(t, err)
-			assert.Contains(t, class.Programs, p.UID)
-		}
-	})
 }
 
 func TestDeleteProgram(t *testing.T) {
