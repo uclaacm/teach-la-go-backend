@@ -23,11 +23,14 @@ type Message struct {
 type StringSet map[string]bool
 type Session struct {
 	// Map UIDs to their websocket.Conn
-	Conns   map[string]*websocket.Conn
+	Conns   map[string]*Connection
 	Teacher string
-	// Map UIDs to the other UIDs they send messages to
-	SendTo map[string]StringSet
-	Lock   sync.Mutex
+	Lock    sync.Mutex
+}
+type Connection struct {
+	*websocket.Conn
+	UID           string
+	Subscriptions StringSet
 }
 
 // Maps session IDs to Session object
@@ -46,8 +49,8 @@ func (s *Session) AddConn(uid string, conn *websocket.Conn) error {
 	if s.Conns[uid] != nil {
 		return errors.New("User is already connected")
 	}
-	s.Conns[uid] = conn
-	s.SendTo[uid] = make(StringSet)
+	connection := &Connection{Conn: conn, UID: uid, Subscriptions: make(StringSet)}
+	s.Conns[uid] = connection
 	return nil
 }
 
@@ -58,24 +61,22 @@ func (s *Session) RemoveConn(uid string) error {
 		return errors.New("Could not remove unconnected user")
 	}
 	delete(s.Conns, uid)
-	delete(s.SendTo, uid)
 	// Stop other connections from sending to removed connection
-	for _, v := range s.SendTo {
-		delete(v, uid)
+	for _, conn := range s.Conns {
+		delete(conn.Subscriptions, uid)
 	}
 	return nil
 }
 
-func (s *Session) BroadcastAll(msg Message) error {
-	var mostRecentError error
+func (s *Session) BroadcastAll(msg Message) (lastErr error) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
 	for _, conn := range s.Conns {
-		if err := websocket.JSON.Send(conn, msg); err != nil {
-			mostRecentError = err
+		if err := websocket.JSON.Send(conn.Conn, msg); err != nil {
+			lastErr = err
 		}
 	}
-	return mostRecentError
+	return
 }
 
 func (s *Session) BroadcastError(uid string, err string) error {
@@ -90,28 +91,26 @@ func (s *Session) BroadcastError(uid string, err string) error {
 	return nil
 }
 
-func (s *Session) BroadcastTo(msg Message, uids ...string) error {
-	var mostRecentError error
+func (s *Session) BroadcastTo(msg Message, uids ...string) (lastErr error) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
 	for _, uid := range uids {
-		if err := websocket.JSON.Send(s.Conns[uid], msg); err != nil {
-			mostRecentError = err
+		if err := websocket.JSON.Send(s.Conns[uid].Conn, msg); err != nil {
+			lastErr = err
 		}
 	}
-	return mostRecentError
+	return
 }
 
-func (s *Session) BroadcastToSet(msg Message, uids StringSet) error {
-	var mostRecentError error
+func (s *Session) BroadcastToSet(msg Message, uids StringSet) (lastErr error) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
 	for uid := range uids {
-		if err := websocket.JSON.Send(s.Conns[uid], msg); err != nil {
-			mostRecentError = err
+		if err := websocket.JSON.Send(s.Conns[uid].Conn, msg); err != nil {
+			lastErr = err
 		}
 	}
-	return mostRecentError
+	return
 }
 
 // CreateCollab creates a collaborative session, setting up the session's websocket.
@@ -142,8 +141,7 @@ func (d *DB) CreateCollab(c echo.Context) error {
 
 	sessionsLock.Lock()
 	sessions[sessionId] = Session{
-		Conns:  make(map[string]*websocket.Conn),
-		SendTo: make(map[string]StringSet),
+		Conns: make(map[string]*Connection),
 	}
 	sessionsLock.Unlock()
 
@@ -195,7 +193,7 @@ func (d *DB) JoinCollab(c echo.Context) error {
 			var msg Message
 
 			if err := websocket.JSON.Receive(ws, &msg); err != nil {
-				if err2 := session.BroadcastError(uid, err.Error()); err2 != nil {
+				if err := session.BroadcastError(uid, err.Error()); err != nil {
 					break
 				}
 
@@ -209,8 +207,8 @@ func (d *DB) JoinCollab(c echo.Context) error {
 			switch msg.Type {
 			case "READ":
 				if msg.Author == session.Teacher {
-					if studentSendTo, ok := session.SendTo[msg.Target]; ok {
-						studentSendTo[uid] = true
+					if conn, ok := session.Conns[msg.Target]; ok {
+						conn.Subscriptions[uid] = true
 					} else {
 						if err := session.BroadcastError(uid, "Student does not exist"); err != nil {
 							break
@@ -222,7 +220,7 @@ func (d *DB) JoinCollab(c echo.Context) error {
 					}
 				}
 			default:
-				if err := session.BroadcastToSet(msg, session.SendTo[uid]); err != nil {
+				if err := session.BroadcastToSet(msg, session.Conns[uid].Subscriptions); err != nil {
 					break
 				}
 			}
