@@ -431,9 +431,7 @@ func (d *DB) GetClassMembers(c echo.Context) error {
 			UID string `json:"uid"`
 		}
 
-		res struct {
-			UserData map[string]User `json:"userData"`
-		}
+		res map[string]User
 		err error
 	)
 
@@ -465,7 +463,7 @@ func (d *DB) GetClassMembers(c echo.Context) error {
 		return c.String(http.StatusNotFound, "given user not in class")
 	}
 
-	res.UserData = make(map[string]User)
+	res = make(map[string]User)
 
 	for _, uid := range class.Members {
 		userSnap, err := d.Collection(usersPath).Doc(uid).Get(c.Request().Context())
@@ -479,7 +477,7 @@ func (d *DB) GetClassMembers(c echo.Context) error {
 			continue
 		}
 
-		res.UserData[uid] = tmpUser
+		res[uid] = tmpUser
 	}
 
 	// convert to JSON and return
