@@ -464,6 +464,9 @@ func (d *DB) GetClassMembers(c echo.Context) error {
 	if !isIn {
 		return c.String(http.StatusNotFound, "given user not in class")
 	}
+
+	res.UserData = make(map[string]User)
+
 	for _, uid := range class.Members {
 		userSnap, err := d.Collection(usersPath).Doc(uid).Get(c.Request().Context())
 		if err != nil {
