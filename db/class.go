@@ -425,15 +425,10 @@ func (d *DB) DeleteClass(c echo.Context) error {
 // GetClassMembers returns the user IDs and display names of each member in the requested class.
 // It takes a class id and checks that the given uid is in the class first
 func (d *DB) GetClassMembers(c echo.Context) error {
-	var (
-		req struct {
-			CID string `json:"cid"`
-			UID string `json:"uid"`
-		}
-
-		res map[string]User
-		err error
-	)
+	var req struct {
+		CID string `json:"cid"`
+		UID string `json:"uid"`
+	}
 
 	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
