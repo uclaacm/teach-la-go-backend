@@ -113,6 +113,19 @@ func (s *Session) BroadcastToSet(msg Message, uids StringSet) (lastErr error) {
 	return
 }
 
+func (s *Session) RequestAccess(uid string, msg Message) error {
+	if msg.Author == s.Teacher {
+		if conn, ok := s.Conns[msg.Target]; ok {
+			conn.Subscriptions[uid] = true
+		} else {
+			return s.BroadcastError(uid, "Student does not exist")
+		}
+	} else {
+		return s.BroadcastError(uid, "Teacher permission required to request access to student")
+	}
+	return nil
+}
+
 // CreateCollab creates a collaborative session, setting up the session's websocket.
 // Request Body:
 // {
@@ -206,18 +219,8 @@ func (d *DB) JoinCollab(c echo.Context) error {
 
 			switch msg.Type {
 			case "READ":
-				if msg.Author == session.Teacher {
-					if conn, ok := session.Conns[msg.Target]; ok {
-						conn.Subscriptions[uid] = true
-					} else {
-						if err := session.BroadcastError(uid, "Student does not exist"); err != nil {
-							break
-						}
-					}
-				} else {
-					if err := session.BroadcastError(uid, "Teacher permission required to request access to student"); err != nil {
-						break
-					}
+				if err := session.RequestAccess(uid, msg); err != nil {
+					break
 				}
 			default:
 				if err := session.BroadcastToSet(msg, session.Conns[uid].Subscriptions); err != nil {
