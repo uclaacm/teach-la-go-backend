@@ -421,3 +421,60 @@ func (d *DB) DeleteClass(c echo.Context) error {
 
 	return c.String(http.StatusOK, "")
 }
+
+// GetClassMembers returns the user IDs and display names of each member in the requested class.
+// It takes a class id and checks that the given uid is in the class first
+func (d *DB) GetClassMembers(c echo.Context) error {
+	var req struct {
+		CID string `json:"cid"`
+		UID string `json:"uid"`
+	}
+
+	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
+	}
+	if req.UID == "" || req.CID == "" {
+		return c.String(http.StatusBadRequest, "uid and cid fields are both required")
+	}
+	uid := req.UID
+	cid := req.CID
+
+	// get the class as a struct (pointer)
+	class, err := d.loadClass(c.Request().Context(), cid)
+	if err != nil || class == nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get class: %s", err))
+	}
+
+	// Check if user is in class
+	isIn := false
+	for _, m := range class.Members {
+		if m == uid {
+			isIn = true
+			break
+		}
+	}
+
+	if !isIn {
+		return c.String(http.StatusNotFound, "given user not in class")
+	}
+
+	res := make(map[string]User)
+
+	for _, uid := range class.Members {
+		userSnap, err := d.Collection(usersPath).Doc(uid).Get(c.Request().Context())
+		if err != nil {
+			continue
+		}
+
+		tmpUser := User{}
+		err = userSnap.DataTo(&tmpUser)
+		if err != nil {
+			continue
+		}
+
+		res[uid] = tmpUser
+	}
+
+	// convert to JSON and return
+	return c.JSON(http.StatusOK, res)
+}
