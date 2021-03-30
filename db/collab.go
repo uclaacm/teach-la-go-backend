@@ -20,7 +20,7 @@ type Message struct {
 	Target string `json:"target"`
 	Body   string `json:"body"`
 }
-type StringSet map[string]bool
+type stringSet map[string]bool
 type Session struct {
 	// Map UIDs to their websocket.Conn
 	Conns   map[string]*Connection
@@ -29,8 +29,9 @@ type Session struct {
 }
 type Connection struct {
 	*websocket.Conn
-	UID           string
-	Subscriptions StringSet
+	UID string
+	// Set of UIDs which are notified when this connection has changes
+	Subscriptions stringSet
 }
 
 // Maps session IDs to Session object
@@ -49,7 +50,7 @@ func (s *Session) AddConn(uid string, conn *websocket.Conn) error {
 	if s.Conns[uid] != nil {
 		return errors.New("User is already connected")
 	}
-	connection := &Connection{Conn: conn, UID: uid, Subscriptions: make(StringSet)}
+	connection := &Connection{Conn: conn, UID: uid, Subscriptions: make(stringSet)}
 	s.Conns[uid] = connection
 	return nil
 }
@@ -68,6 +69,7 @@ func (s *Session) RemoveConn(uid string) error {
 	return nil
 }
 
+// BroadcastAll sends a message to all active connections
 func (s *Session) BroadcastAll(msg Message) (lastErr error) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
@@ -79,10 +81,12 @@ func (s *Session) BroadcastAll(msg Message) (lastErr error) {
 	return
 }
 
+// BroadcastError creates and sends an Error message given a string err
+// to a given uid
 func (s *Session) BroadcastError(uid string, err string) error {
 	errorMsg := Message{
 		Author: uid,
-		Type:   "ERROR",
+		Type:   msgTypeError,
 		Body:   err,
 	}
 	if broadcastErr := s.BroadcastTo(errorMsg, uid); broadcastErr != nil {
@@ -91,6 +95,8 @@ func (s *Session) BroadcastError(uid string, err string) error {
 	return nil
 }
 
+// BroadcastTo sends a Message msg to the connections associated with the
+// provided uids
 func (s *Session) BroadcastTo(msg Message, uids ...string) (lastErr error) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
@@ -102,7 +108,9 @@ func (s *Session) BroadcastTo(msg Message, uids ...string) (lastErr error) {
 	return
 }
 
-func (s *Session) BroadcastToSet(msg Message, uids StringSet) (lastErr error) {
+// BroadcastToSet sends a Message msg to the connections associated with the
+// provided uids in a stringSet
+func (s *Session) BroadcastToSet(msg Message, uids stringSet) (lastErr error) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
 	for uid := range uids {
@@ -114,6 +122,8 @@ func (s *Session) BroadcastToSet(msg Message, uids StringSet) (lastErr error) {
 }
 
 func (s *Session) RequestAccess(uid string, msg Message) error {
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
 	if msg.Author == s.Teacher {
 		if conn, ok := s.Conns[msg.Target]; ok {
 			conn.Subscriptions[uid] = true
@@ -218,7 +228,7 @@ func (d *DB) JoinCollab(c echo.Context) error {
 			}
 
 			switch msg.Type {
-			case "READ":
+			case msgTypeRead:
 				if err := session.RequestAccess(uid, msg); err != nil {
 					break
 				}

@@ -41,6 +41,9 @@ const (
 	maxSize      = aliasSize / (divider * numShards) // number of blocks per shard
 	slotPerShard = aliasSize / numShards             // how many IDs we have per shard
 	shardCap     = slotPerShard
+
+	msgTypeRead  = "READ"
+	msgTypeError = "ERROR"
 )
 
 func langString(langCode int) string {
