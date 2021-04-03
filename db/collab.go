@@ -17,13 +17,21 @@ import (
 type Message struct {
 	Author string `json:"author"`
 	Type   string `json:"type"`
+	Target string `json:"target"`
 	Body   string `json:"body"`
 }
+type stringSet map[string]bool
 type Session struct {
 	// Map UIDs to their websocket.Conn
-	Conns   map[string]*websocket.Conn
+	Conns   map[string]*Connection
 	Teacher string
 	Lock    sync.Mutex
+}
+type Connection struct {
+	*websocket.Conn
+	UID string
+	// Set of UIDs which are notified when this connection has changes
+	Subscriptions stringSet
 }
 
 // Maps session IDs to Session object
@@ -42,7 +50,8 @@ func (s *Session) AddConn(uid string, conn *websocket.Conn) error {
 	if s.Conns[uid] != nil {
 		return errors.New("User is already connected")
 	}
-	s.Conns[uid] = conn
+	connection := &Connection{Conn: conn, UID: uid, Subscriptions: make(stringSet)}
+	s.Conns[uid] = connection
 	return nil
 }
 
@@ -53,19 +62,78 @@ func (s *Session) RemoveConn(uid string) error {
 		return errors.New("Could not remove unconnected user")
 	}
 	delete(s.Conns, uid)
+	// Stop other connections from sending to removed connection
+	for _, conn := range s.Conns {
+		delete(conn.Subscriptions, uid)
+	}
 	return nil
 }
 
-func (s *Session) Broadcast(msg Message) error {
-	var mostRecentError error
+// BroadcastAll sends a message to all active connections
+func (s *Session) BroadcastAll(msg Message) (lastErr error) {
 	s.Lock.Lock()
 	defer s.Lock.Unlock()
 	for _, conn := range s.Conns {
-		if err := websocket.JSON.Send(conn, msg); err != nil {
-			mostRecentError = err
+		if err := websocket.JSON.Send(conn.Conn, msg); err != nil {
+			lastErr = err
 		}
 	}
-	return mostRecentError
+	return
+}
+
+// BroadcastError creates and sends an Error message given a string err
+// to a given uid
+func (s *Session) BroadcastError(uid string, err string) error {
+	errorMsg := Message{
+		Author: uid,
+		Type:   msgTypeError,
+		Body:   err,
+	}
+	if broadcastErr := s.BroadcastTo(errorMsg, uid); broadcastErr != nil {
+		return broadcastErr
+	}
+	return nil
+}
+
+// BroadcastTo sends a Message msg to the connections associated with the
+// provided uids
+func (s *Session) BroadcastTo(msg Message, uids ...string) (lastErr error) {
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
+	for _, uid := range uids {
+		if err := websocket.JSON.Send(s.Conns[uid].Conn, msg); err != nil {
+			lastErr = err
+		}
+	}
+	return
+}
+
+// BroadcastToSet sends a Message msg to the connections associated with the
+// provided uids in a stringSet
+func (s *Session) BroadcastToSet(msg Message, uids stringSet) (lastErr error) {
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
+	for uid := range uids {
+		if err := websocket.JSON.Send(s.Conns[uid].Conn, msg); err != nil {
+			lastErr = err
+		}
+	}
+	return
+}
+
+func (s *Session) RequestAccess(uid string, msg Message) error {
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
+	if msg.Author == s.Teacher {
+		if conn, ok := s.Conns[msg.Target]; ok {
+			conn.Subscriptions[uid] = true
+		} else {
+			return s.BroadcastError(uid, "Student does not exist")
+		}
+	} else {
+		return s.BroadcastError(uid, "Teacher permission required to request access to student")
+	}
+	return nil
 }
 
 // CreateCollab creates a collaborative session, setting up the session's websocket.
@@ -96,7 +164,7 @@ func (d *DB) CreateCollab(c echo.Context) error {
 
 	sessionsLock.Lock()
 	sessions[sessionId] = Session{
-		Conns: make(map[string]*websocket.Conn),
+		Conns: make(map[string]*Connection),
 	}
 	sessionsLock.Unlock()
 
@@ -148,12 +216,7 @@ func (d *DB) JoinCollab(c echo.Context) error {
 			var msg Message
 
 			if err := websocket.JSON.Receive(ws, &msg); err != nil {
-				errorMsg := Message{
-					Author: uid,
-					Type:   "ERROR",
-					Body:   err.Error(),
-				}
-				if broadcastErr := session.Broadcast(errorMsg); broadcastErr != nil {
+				if err := session.BroadcastError(uid, err.Error()); err != nil {
 					break
 				}
 
@@ -164,8 +227,15 @@ func (d *DB) JoinCollab(c echo.Context) error {
 				break
 			}
 
-			if broadcastErr := session.Broadcast(msg); broadcastErr != nil {
-				break
+			switch msg.Type {
+			case msgTypeRead:
+				if err := session.RequestAccess(uid, msg); err != nil {
+					break
+				}
+			default:
+				if err := session.BroadcastToSet(msg, session.Conns[uid].Subscriptions); err != nil {
+					break
+				}
 			}
 		}
 	}).ServeHTTP(c.Response(), c.Request())
