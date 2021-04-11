@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	color_info = "\033[32m"
-	color_end  = "\033[0m"
+	colorInfo = "\033[32m"
+	colorEnd  = "\033[0m"
 )
 
 type TestFunc func(echo.Context) error
@@ -32,7 +32,7 @@ type TestObj struct {
 }
 
 type ReqParam struct {
-	HttpMethod string
+	HTTPMethod string
 	Path       string
 	Body       io.Reader
 	Function   TestFunc // function to close response body
@@ -41,7 +41,7 @@ type ReqParam struct {
 }
 
 func CallFunc(t *testing.T, par *ReqParam) ([]byte, func() error) {
-	req, err := http.NewRequest(par.HttpMethod,
+	req, err := http.NewRequest(par.HTTPMethod,
 		par.Path,
 		par.Body)
 	require.NoError(t, err)
@@ -79,12 +79,12 @@ func CreateTestUser(t *testing.T, o *TestObj, i int) {
 	defer assert.NoError(t, close())
 
 	assert.NoError(t, json.Unmarshal([]byte(b), &o.User[i]))
-	t.Logf(color_info+"Created user: %s"+color_end, o.User[i].UID)
+	t.Logf(colorInfo+"Created user: %s"+colorEnd, o.User[i].UID)
 }
 
 func DeleteTestUser(t *testing.T, o *TestObj, i int) {
 	pr := struct {
-		Uid string
+		UID string
 	}{
 		o.User[i].UID,
 	}
@@ -102,12 +102,12 @@ func DeleteTestUser(t *testing.T, o *TestObj, i int) {
 	_, close := CallFunc(t, &par)
 	defer assert.NoError(t, close())
 
-	t.Logf(color_info+"Removed user %s"+color_end, o.User[i].UID)
+	t.Logf(colorInfo+"Removed user %s"+colorEnd, o.User[i].UID)
 }
 
 func GetTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int) {
 	pr := struct {
-		Uid string
+		UID string
 		Wid string
 	}{
 		o.User[userIndex].UID,
@@ -132,7 +132,7 @@ func GetTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int) {
 
 func CreateTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int) {
 	pr := struct {
-		Uid       string
+		UID       string
 		Name      string
 		Thumbnail int
 	}{
@@ -155,7 +155,7 @@ func CreateTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int) {
 	defer assert.NoError(t, close())
 	assert.NoError(t, json.Unmarshal([]byte(b), &o.Class[classIndex]))
 
-	t.Logf(color_info+"CreateClass returned: \n%s"+color_end, string([]byte(b)))
+	t.Logf(colorInfo+"CreateClass returned: \n%s"+colorEnd, string([]byte(b)))
 }
 
 func DeleteTestClass(t *testing.T, o *TestObj, classIndex int) {
@@ -178,7 +178,7 @@ func DeleteTestClass(t *testing.T, o *TestObj, classIndex int) {
 	_, close := CallFunc(t, &par)
 	defer assert.NoError(t, close())
 
-	t.Logf(color_info+"Removed class %s"+color_end, o.Class[classIndex].CID)
+	t.Logf(colorInfo+"Removed class %s"+colorEnd, o.Class[classIndex].CID)
 }
 
 func IsIn(str string, list []string) bool {
@@ -264,7 +264,7 @@ func TestJoinLeaveClass(t *testing.T) {
 
 	// Join user
 	pr := struct {
-		Uid string
+		UID string
 		Cid string
 	}{
 		obj.User[1].UID,
@@ -285,7 +285,7 @@ func TestJoinLeaveClass(t *testing.T) {
 	assert.NoError(t, json.Unmarshal([]byte(bJoin), &obj.ClassBuf[0]))
 	assert.NoError(t, close())
 
-	t.Logf(color_info+"Adding student: \t%s \nto class: \t%s"+color_end, obj.User[1].UID, obj.ClassBuf[0].WID)
+	t.Logf(colorInfo+"Adding student: \t%s \nto class: \t%s"+colorEnd, obj.User[1].UID, obj.ClassBuf[0].WID)
 
 	// JoinClass returns the class struct BEFORE adding the student
 	GetTestClass(t, &obj, 0, 0)
@@ -295,7 +295,7 @@ func TestJoinLeaveClass(t *testing.T) {
 	assert.True(t, IsIn(obj.User[1].UID, students))
 
 	pr = struct {
-		Uid string
+		UID string
 		Cid string
 	}{
 		obj.User[1].UID,
@@ -304,7 +304,7 @@ func TestJoinLeaveClass(t *testing.T) {
 	pro, err = json.Marshal(&pr)
 	require.NoError(t, err)
 
-	t.Logf(color_info+"Leave student: \t%s \nfrom class: \t%s"+color_end, obj.User[1].UID, obj.Class[0].CID)
+	t.Logf(colorInfo+"Leave student: \t%s \nfrom class: \t%s"+colorEnd, obj.User[1].UID, obj.Class[0].CID)
 
 	par = ReqParam{
 		"PUT",

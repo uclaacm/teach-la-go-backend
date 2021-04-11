@@ -13,7 +13,6 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-// Session describes a collaborative coding environment.
 type Message struct {
 	Author string `json:"author"`
 	Type   string `json:"type"`
@@ -21,6 +20,8 @@ type Message struct {
 	Body   string `json:"body"`
 }
 type stringSet map[string]bool
+
+// Session describes a collaborative coding environment.
 type Session struct {
 	// Map UIDs to their websocket.Conn
 	Conns   map[string]*Connection
@@ -153,17 +154,17 @@ func (d *DB) CreateCollab(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "failed to read request body")
 	}
 
-	sessionId := uuid.New().String()
+	sessionID := uuid.New().String()
 	if body.Name != "" {
-		sessionId = body.Name
+		sessionID = body.Name
 	}
 
-	if _, ok := sessions[sessionId]; ok {
+	if _, ok := sessions[sessionID]; ok {
 		return c.String(http.StatusBadRequest, "session with same name already exists")
 	}
 
 	sessionsLock.Lock()
-	sessions[sessionId] = Session{
+	sessions[sessionID] = Session{
 		Conns: make(map[string]*Connection),
 	}
 	sessionsLock.Unlock()
@@ -173,9 +174,9 @@ func (d *DB) CreateCollab(c echo.Context) error {
 		ticker := time.NewTicker(time.Minute)
 		for range ticker.C {
 			sessionsLock.Lock()
-			if session, ok := sessions[sessionId]; ok && len(session.Conns) == 0 {
+			if session, ok := sessions[sessionID]; ok && len(session.Conns) == 0 {
 				fmt.Printf("Deleting session")
-				delete(sessions, sessionId)
+				delete(sessions, sessionID)
 				sessionsLock.Unlock()
 				ticker.Stop()
 				return
@@ -184,13 +185,13 @@ func (d *DB) CreateCollab(c echo.Context) error {
 		}
 	}()
 
-	return c.String(http.StatusCreated, sessionId)
+	return c.String(http.StatusCreated, sessionID)
 }
 
 func (d *DB) JoinCollab(c echo.Context) error {
-	sessionId := c.Param("id")
+	sessionID := c.Param("id")
 	uid := uuid.New().String() // What will we be using as identifiers?
-	session, ok := sessions[sessionId]
+	session, ok := sessions[sessionID]
 
 	if !ok {
 		return c.String(http.StatusNotFound, "Session does not exist.")
