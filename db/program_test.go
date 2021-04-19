@@ -93,7 +93,24 @@ func TestUpdateProgram(t *testing.T) {
 			assert.Equal(t, http.StatusNotFound, rec.Code)
 		}
 	})
+	t.Run("EmptyRequest", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(""))
+		rec := httptest.NewRecorder()
+		c := echo.New().NewContext(req, rec)
 
+		if assert.NoError(t, d.UpdateProgram(c)) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
+	t.Run("BadJSON", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPut, "/", strings.NewReader("Bad JSON"))
+		rec := httptest.NewRecorder()
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, d.UpdateProgram(c)) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		}
+	})
 	// TODO: more rigorous integration tests
 }
 
