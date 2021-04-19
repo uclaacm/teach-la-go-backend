@@ -3,15 +3,45 @@ package db
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
 	"google.golang.org/api/option"
 )
 
-// DB describes a common type for our database operations.
+// DB implements the TLADB interface on a Firestore
+// database. It is thread-safe.
 type DB struct {
+	// Primary database connection.
 	*firestore.Client
+
+	// Enforces atomicity at a lower level.
+	*sync.Map
+}
+
+func (d *DB) LoadProgram(ctx context.Context, p string) (Program, error) {
+	return Program{}, nil
+}
+
+func (d *DB) StoreProgram(ctx context.Context, p *Program) error {
+	return nil
+}
+
+func (d *DB) LoadClass(context.Context, string) (Class, error) {
+	return Class{}, nil
+}
+
+func (d *DB) StoreClass(context.Context, *Class) error {
+	return nil
+}
+
+func (d *DB) LoadUser(context.Context, string) (User, error) {
+	return User{}, nil
+}
+
+func (d *DB) StoreUser(context.Context, *User) error {
+	return nil
 }
 
 // Open returns a pointer to a new database client based on

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/uclaacm/teach-la-go-backend/db"
+	"github.com/uclaacm/teach-la-go-backend/echoext"
 
 	_ "github.com/heroku/x/hmetrics/onload"
 	"github.com/joho/godotenv"
@@ -65,6 +66,14 @@ func serve(c *cli.Context) error {
 		return err
 	}
 	defer d.Close()
+
+	// Register our database handler to every Echo context.
+	e.Use(func(nxt echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// TODO: create custom context here.
+			return nxt(&echoext.DBContext{c, d})
+		}
+	})
 
 	// user management
 	e.GET("/user/get", d.GetUser)
