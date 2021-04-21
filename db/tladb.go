@@ -1,6 +1,16 @@
 package db
 
-import "context"
+import (
+	"context"
+	"github.com/labstack/echo/v4"
+)
+
+// DBContext describes the basic echo context required
+// by handlers.
+type DBContext struct {
+	echo.Context
+	TLADB
+}
 
 // TLADB describes the basic set of operations
 // required by backend handlers.
