@@ -1,46 +1,77 @@
 package db
 
 import (
+	"cloud.google.com/go/firestore"
 	"context"
 	"errors"
-	"sync"
-
-	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
 	"google.golang.org/api/option"
 )
 
 // DB implements the TLADB interface on a Firestore
-// database. It is thread-safe.
+// database.
 type DB struct {
 	// Primary database connection.
 	*firestore.Client
-
-	// Enforces atomicity at a lower level.
-	*sync.Map
 }
 
-func (d *DB) LoadProgram(ctx context.Context, p string) (Program, error) {
-	return Program{}, nil
+func (d *DB) LoadProgram(ctx context.Context, pid string) (Program, error) {
+	doc, err := d.Collection(programsPath).Doc(pid).Get(ctx)
+	if err != nil {
+		return Program{}, err
+	}
+
+	p := Program{}
+	if err := doc.DataTo(&p); err != nil {
+		return Program{}, err
+	}
+	return p, nil
 }
 
-func (d *DB) StoreProgram(ctx context.Context, p *Program) error {
+func (d *DB) StoreProgram(ctx context.Context, p Program) error {
+	if _, err := d.Collection(programsPath).Doc(p.UID).Set(ctx, &p); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (d *DB) LoadClass(context.Context, string) (Class, error) {
-	return Class{}, nil
+func (d *DB) LoadClass(ctx context.Context, cid string) (Class, error) {
+	doc, err := d.Collection(programsPath).Doc(cid).Get(ctx)
+	if err != nil {
+		return Class{}, err
+	}
+
+	c := Class{}
+	if err := doc.DataTo(&c); err != nil {
+		return Class{}, err
+	}
+	return c, nil
 }
 
-func (d *DB) StoreClass(context.Context, *Class) error {
+func (d *DB) StoreClass(ctx context.Context, c Class) error {
+	if _, err := d.Collection(classesPath).Doc(c.CID).Set(ctx, &c); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (d *DB) LoadUser(context.Context, string) (User, error) {
-	return User{}, nil
+func (d *DB) LoadUser(ctx context.Context, uid string) (User, error) {
+	doc, err := d.Collection(usersPath).Doc(uid).Get(ctx)
+	if err != nil {
+		return User{}, err
+	}
+
+	u := User{}
+	if err := doc.DataTo(&u); err != nil {
+		return User{}, err
+	}
+	return u, nil
 }
 
-func (d *DB) StoreUser(context.Context, *User) error {
+func (d *DB) StoreUser(ctx context.Context, u User) error {
+	if _, err := d.Collection(usersPath).Doc(u.UID).Set(ctx, &u); err != nil {
+		return err
+	}
 	return nil
 }
 
