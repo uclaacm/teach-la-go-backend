@@ -7,15 +7,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/uclaacm/teach-la-go-backend/db"
-	"github.com/uclaacm/teach-la-go-backend/echoext"
-
 	_ "github.com/heroku/x/hmetrics/onload"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"github.com/pkg/errors"
+	"github.com/uclaacm/teach-la-go-backend/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -71,12 +69,15 @@ func serve(c *cli.Context) error {
 	e.Use(func(nxt echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// TODO: create custom context here.
-			return nxt(&echoext.DBContext{c, d})
+			return nxt(&db.DBContext{
+				Context: c,
+				TLADB:   d,
+			})
 		}
 	})
 
 	// user management
-	e.GET("/user/get", d.GetUser)
+	e.GET("/user/get", db.GetUser)
 	e.PUT("/user/update", d.UpdateUser)
 	e.POST("/user/create", d.CreateUser)
 

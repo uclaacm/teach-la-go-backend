@@ -51,7 +51,7 @@ func (u *User) ToFirestoreUpdate() []firestore.Update {
 //  - uid string: UID of user to get
 //
 // Returns: Status 200 with marshalled User and programs.
-func (d *DB) GetUser(c echo.Context) error {
+func GetUser(cc echo.Context) error {
 	resp := struct {
 		UserData User               `json:"userData"`
 		Programs map[string]Program `json:"programs"`
@@ -60,32 +60,25 @@ func (d *DB) GetUser(c echo.Context) error {
 		Programs: make(map[string]Program),
 	}
 
-	// get user
-	uid := c.QueryParam("uid")
-	if uid == "" {
-		return c.String(http.StatusBadRequest, "uid is a required query parameter")
+	c, ok := cc.(*DBContext)
+	ec := c.Context
+	if !ok {
+		return c.String(http.StatusInternalServerError, "Failed to acquire database connection!")
 	}
 
-	// get user data
-	doc, err := d.Collection(usersPath).Doc(c.QueryParam("uid")).Get(c.Request().Context())
+	// Lookup user information.
+	user, err := c.LoadUser(ec.Request().Context(), c.QueryParam("uid"))
 	if err != nil {
-		return c.String(http.StatusNotFound, err.Error())
+		return c.String(http.StatusInternalServerError, "Failed to load user.")
 	}
-	if err := doc.DataTo(&resp.UserData); err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
-	}
+	resp.UserData = user
 
 	// get programs, if requested
 	if c.QueryParam("programs") != "" {
 		for _, p := range resp.UserData.Programs {
-			currentProg := Program{}
-
 			// If error in retrieving program, ignore it.
-			doc, err := d.Collection(programsPath).Doc(p).Get(c.Request().Context())
+			currentProg, err := c.LoadProgram(ec.Request().Context(), p)
 			if err != nil {
-				continue
-			}
-			if err := doc.DataTo(&currentProg); err != nil {
 				continue
 			}
 
