@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+  pull_request:
 jobs:
   coverage: 
     runs-on: ubuntu-latest
