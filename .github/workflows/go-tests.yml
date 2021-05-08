@@ -16,19 +16,11 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - name: Passes tests
-      # TODO: once all tests are passing, 
-      # we can uncomment this line of code 
-      # 
-      # For now, we are seperating tests and coverage 
-      # because tests are failing
-      # if: ${{ !env.SHOULD_RUN_COVERAGE }}
+      if: ${{ !env.SHOULD_RUN_COVERAGE }}
       run: go test -v ./...
     - name: Calc Coverage
       if: ${{ env.SHOULD_RUN_COVERAGE }}
       run: go test -v ./... -covermode=count -coverprofile=coverage.out
-      # TODO: once all tests are passing, 
-      # we can delete this next line of code 
-      continue-on-error: true 
     - name: Convert coverage.out to coverage.lcov
       if: ${{ env.SHOULD_RUN_COVERAGE }}
       uses: jandelgado/gcov2lcov-action@v1.0.6
