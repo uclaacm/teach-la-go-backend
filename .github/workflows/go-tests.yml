@@ -1,7 +1,5 @@
 name: Go Tests
 on: [push]
-env: 
-  SHOULD_RUN_COVERAGE: ${{ !(github.event.push.branches == 'master' || github.event.issue.pull_request) }}
 jobs:
   test:
     name: test
@@ -30,14 +28,11 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - name: Calc Coverage
-      if: ${{ env.SHOULD_RUN_COVERAGE }}
       run: go test -v ./... -covermode=count -coverprofile=coverage.out
       continue-on-error: true
     - name: Convert coverage.out to coverage.lcov
-      if: ${{ env.SHOULD_RUN_COVERAGE }}
       uses: jandelgado/gcov2lcov-action@v1.0.6
     - name: Coveralls
-      if: ${{ env.SHOULD_RUN_COVERAGE }}
       uses: coverallsapp/github-action@v1.1.2
       with:
         github-token: ${{ secrets.github_token }}
