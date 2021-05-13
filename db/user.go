@@ -45,49 +45,6 @@ func (u *User) ToFirestoreUpdate() []firestore.Update {
 	return f
 }
 
-// GetUser acquires the userdoc with the given uid.
-//
-// Query Parameters:
-//  - uid string: UID of user to get
-//
-// Returns: Status 200 with marshalled User and programs.
-func GetUser(cc echo.Context) error {
-	resp := struct {
-		UserData User               `json:"userData"`
-		Programs map[string]Program `json:"programs"`
-	}{
-		UserData: User{},
-		Programs: make(map[string]Program),
-	}
-
-	c, ok := cc.(*DBContext)
-	ec := c.Context
-	if !ok {
-		return c.String(http.StatusInternalServerError, "Failed to acquire database connection!")
-	}
-
-	// Lookup user information.
-	user, err := c.LoadUser(ec.Request().Context(), c.QueryParam("uid"))
-	if err != nil {
-		return c.String(http.StatusInternalServerError, "Failed to load user.")
-	}
-	resp.UserData = user
-
-	// get programs, if requested
-	if c.QueryParam("programs") != "" {
-		for _, p := range resp.UserData.Programs {
-			// If error in retrieving program, ignore it.
-			currentProg, err := c.LoadProgram(ec.Request().Context(), p)
-			if err != nil {
-				continue
-			}
-
-			resp.Programs[p] = currentProg
-		}
-	}
-	return c.JSON(http.StatusOK, &resp)
-}
-
 // UpdateUser updates the doc with specified UID's fields
 // to match those of the request body.
 //
