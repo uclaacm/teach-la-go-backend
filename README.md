@@ -6,51 +6,64 @@ Hey there! This is the repo for the Go Backend for the Teach LA editor. If you'r
 
 # Quickstart
 
+To run the backend locally, you can download the latest build for your system from the
+[releases page](https://github.com/uclaacm/teach-la-go-backend/releases/latest). After
+doing so, follow along with the guide below!
+
 ```sh
-go get github.com/uclaacm/teach-la-go-backend
+$ # run the server
+$ ./tlabe -h
+NAME:
+   Teach LA Go Backend - tlabe [options]
 
-cd $GOPATH/src/github.com/uclaacm/teach-la-go-backend
-# add a remote here if you aren't going to use ours
+USAGE:
+   tlabe [global options] [arguments...]
 
-go get -d ./...
-go build
+VERSION:
+   1.0.0
 
-# source your credentials or create your own
+DESCRIPTION:
+   Teach LA's editor backend.
 
-./teach-la-go-backend
+GLOBAL OPTIONS:
+   --dotenv value, -e value  Specify a path to a dotenv file to specify credentials (default: ".env")
+   --json value, -j value    Specify a path to a JSON file to specify credentials
+   --verbose, -v             Change the log level used by echo's logger middleware (default: false)
+   --port value, -p value    Change the port number (default: "8081")
+   --help, -h                Show help (default: false)
+   --version, -V             Print the version and exit (default: false)
+
+$ ./tlabe -j credentials.json
+⇨ http server started on [::]:8081
+
+$ # from here, you can start up the frontend using your own backend!
 ```
-
-For formatting, we use `gofmt`. For linting, we use `golint` and `golangci-lint`.
 
 # Developer Setup
 
 Here's what you need and how to **build** the project:
 * [git](https://git-scm.com/)
-* [Go](https://golang.org/)
+* [go](https://golang.org/)
+* [make](https://www.gnu.org/software/make/manual/make.html) (optional)
+
+Here's what you need to get your code PR-ready and **contribute** to the project:
+* For formatting, we use `gofmt`. This is included with your installation of [go](https://golang.org/)
+* For linting, we use [`golangci-lint`](https://github.com/golangci/golangci-lint).
 
 ```sh
-export TLAPATH=${GOPATH}/src/github.com/uclaacm/teach-la-go-backend
-
-git clone git@github.com:uclaacm/teach-la-go-backend.git $TLAPATH
-# alternatively, using HTTPS:
-# git clone https://github.com/uclaacm/teach-la-go-backend.git
-
-cd $TLAPATH
-
-# go get dependencies
-go get -d ./...
-# Note: ./... unrolls the current directory.
+git clone https://github.com/uclaacm/teach-la-go-backend.git
+cd teach-la-go-backend
 
 # build the server for your platform
 make
-# ...or build it for all platforms
+# ...or build it for all platforms with the below command:
 # make all
 
 # run the server
 ./bin/tlabe --help
 ```
 
-If you try running the server at this point (with `./teach-la-go-backend`), the program will crash with a message complaining that a DB client could not be opened. To be precise, it will complain with:
+If you try running the server at this point (with `./bin/tlabe`), the program will crash with a message complaining that a DB client could not be opened. To be precise, it will complain with:
 
 ```json
 {
@@ -65,19 +78,17 @@ If you try running the server at this point (with `./teach-la-go-backend`), the 
 
 To **run** the project for live development - not just build it - one needs to be able to interact with the TeachLA Firebase through service account credentials (usually a single JSON file). These can be obtained during a TeachLA dev team meeting, or by messaging the #go-backend channel on the TLA Slack.
 
-**You must change the file extension to `.env` so our `.gitignore` will prevent it from being accidentally uploaded to the public repo**. Once you have done so, simply enter the file, surround the json with single quotes (`'`), and prepend `export TLACFG=` to the first file. It should look something like:
+Once you have acquired a copy of `credentials.json` or otherwise, you can specify the credentials file location:
 
 ```sh
-export TLACFG='{
-    // ...
-}'
+./tlabe -j credentials.json
 ```
 
 You can now run the server you built!
 
 ## Testing
 
-Development is largely test-driven. Any code you contribute should have tests to go with it. Tests should be placed in another file in the same directory with the naming convention `my_file_name_test.go`.
+Development is test-focused. Any code you contribute should have tests to go with it. Tests should be placed in another file in the same directory with the naming convention `my_file_name_test.go`.
 
 Run tests with the following commands:
 
@@ -94,13 +105,7 @@ go test -run TestNameHere
 
 With this, you can build, test, and run the actual backend. If you'd like to get working, you can stop reading here. Otherwise, you can scan through some of the FAQ below.
 
-## Go FAQ
-
-Go is an new language to a great many people. Hopefully the questions you have might be answered below:
-
-### Q: Why even use Go?
-
-Go is a modern, well-abstracted language for writing performant backends and web applications. It has un*paralleled* support for parallelism out of the box -- so much so that it provides primitive types for concurrency out of the box. It is compiled and garbage-collected. All binaries are statically linked.
+## FAQ
 
 ### Q: What are the naming conventions?
 
@@ -114,9 +119,9 @@ Go has some interesting naming conventions. Here's the clif notes:
 
 ### Q: What should my coding style be?
 
-Please, please, **please** use `gofmt` to format your code. Use `golint` (or, better yet, `golangci-lint`) for linting. This makes life easier down the line when others read your code.
+Please, please, **please** use `gofmt` to format your code. Use `golangci-lint` for linting. This makes life easier down the line when others read your code.
 
-Also make sure that you:
+Make sure that you:
 * Comment all exported symbols.
 * Keep names idiomatic.
 
@@ -125,9 +130,3 @@ Also make sure that you:
 We keep our code for handlers in the `db` folder. Each file name describes the class of handlers and associated database types it deals with. For example, `db/program.go` contains the definition for the `Program` type and all handlers that work with it.
 
 If you have any code that extends functionality of an existing package -- say, `pkg` -- place it in another folder `pkgext`. You can take a look at `httpext` for an example of this.
-
-## Didn't answer your question?
-
-If you're on the TeachLA Slack, feel free to @leo with any questions or shoot a message off to the #go-backend channel.
-
-If you're not on our Slack, feel free to shoot an email off to @krashanoff on GitHub.
