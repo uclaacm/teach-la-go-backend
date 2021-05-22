@@ -50,7 +50,7 @@ func serve(c *cli.Context) error {
 		d, err = db.OpenFromJSON(context.Background(), jsonPath)
 	case dotenvPath != "":
 		if err := godotenv.Load(dotenvPath); err != nil {
-			e.Logger.Fatal(errors.Wrap(err, "failed to open .env file"))
+			e.Logger.Error(errors.Wrap(err, "failed to open .env file"))
 		}
 		d, err = db.Open(context.Background(), os.Getenv(db.DefaultEnvVar))
 	default:
@@ -127,7 +127,6 @@ func main() {
 			&cli.StringFlag{
 				Name:     "dotenv",
 				Aliases:  []string{"e"},
-				Value:    ".env",
 				Required: false,
 				Usage:    "Specify a path to a dotenv file to specify credentials",
 			},

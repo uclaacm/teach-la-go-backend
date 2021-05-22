@@ -26,7 +26,7 @@ DESCRIPTION:
    Teach LA's editor backend.
 
 GLOBAL OPTIONS:
-   --dotenv value, -e value  Specify a path to a dotenv file to specify credentials (default: ".env")
+   --dotenv value, -e value  Specify a path to a dotenv file to specify credentials
    --json value, -j value    Specify a path to a JSON file to specify credentials
    --verbose, -v             Change the log level used by echo's logger middleware (default: false)
    --port value, -p value    Change the port number (default: "8081")
