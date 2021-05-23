@@ -1,9 +1,10 @@
 package db
 
 import (
-	"cloud.google.com/go/firestore"
 	"context"
 	"errors"
+
+	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
 	"google.golang.org/api/option"
 )
@@ -59,12 +60,12 @@ func (d *MockDB) StoreUser(_ context.Context, u User) error {
 	return nil
 }
 
-func OpenMock() MockDB {
+func OpenMock() *MockDB {
 	m := MockDB{db: make(map[string]map[string]interface{})}
 	m.db[usersPath] = make(map[string]interface{})
 	m.db[programsPath] = make(map[string]interface{})
 	m.db[classesPath] = make(map[string]interface{})
-	return m
+	return &m
 }
 
 func (d *DB) LoadProgram(ctx context.Context, pid string) (Program, error) {

@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -14,6 +15,8 @@ type DBContext struct {
 
 // TLADB describes the basic set of operations
 // required by backend handlers.
+// Atomicity of operations on a TLADB are
+// implementation-dependent.
 type TLADB interface {
 	LoadProgram(context.Context, string) (Program, error)
 	StoreProgram(context.Context, Program) error
