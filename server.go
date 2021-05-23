@@ -69,7 +69,6 @@ func serve(c *cli.Context) error {
 	// Register our database handler to every Echo context.
 	e.Use(func(nxt echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// TODO: create custom context here.
 			return nxt(&db.DBContext{
 				Context: c,
 				TLADB:   d,

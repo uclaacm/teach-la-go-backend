@@ -28,14 +28,18 @@ func GetUser(cc echo.Context) error {
 	}
 
 	// Lookup user information.
-	user, err := c.LoadUser(c.Request().Context(), c.QueryParam("uid"))
+	uid, programsRequested := c.QueryParam("uid"), c.QueryParam("programs")
+	if uid == "" {
+		return c.String(http.StatusBadRequest, "`uid` is a required query parameter.")
+	}
+	user, err := c.LoadUser(c.Request().Context(), uid)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "Failed to load user.")
 	}
 	resp.UserData = user
 
 	// Get programs, if requested.
-	if c.QueryParam("programs") != "" {
+	if programsRequested != "" {
 		for _, p := range resp.UserData.Programs {
 			// If error in retrieving a given program, ignore it.
 			currentProg, err := c.LoadProgram(c.Request().Context(), p)
