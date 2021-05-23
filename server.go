@@ -14,6 +14,7 @@ import (
 	"github.com/labstack/gommon/log"
 	"github.com/pkg/errors"
 	"github.com/uclaacm/teach-la-go-backend/db"
+	"github.com/uclaacm/teach-la-go-backend/handler"
 	"github.com/urfave/cli/v2"
 )
 
@@ -77,7 +78,7 @@ func serve(c *cli.Context) error {
 	})
 
 	// user management
-	e.GET("/user/get", db.GetUser)
+	e.GET("/user/get", handler.GetUser)
 	e.PUT("/user/update", d.UpdateUser)
 	e.POST("/user/create", d.CreateUser)
 

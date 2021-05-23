@@ -7,10 +7,10 @@ import (
 	"github.com/uclaacm/teach-la-go-backend/db"
 )
 
-// GetUser acquires the userdoc with the given uid.
+// GetUser acquires the user document with the given uid.
 //
 // Query Parameters:
-//  - uid string: UID of user to get
+//  - uid string: UID of user to GET
 //
 // Returns: Status 200 with marshalled User and programs.
 func GetUser(cc echo.Context) error {
@@ -23,23 +23,22 @@ func GetUser(cc echo.Context) error {
 	}
 
 	c, ok := cc.(*db.DBContext)
-	ec := c.Context
 	if !ok {
 		return c.String(http.StatusInternalServerError, "Failed to acquire database connection!")
 	}
 
 	// Lookup user information.
-	user, err := c.LoadUser(ec.Request().Context(), c.QueryParam("uid"))
+	user, err := c.LoadUser(c.Request().Context(), c.QueryParam("uid"))
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "Failed to load user.")
 	}
 	resp.UserData = user
 
-	// get programs, if requested
+	// Get programs, if requested.
 	if c.QueryParam("programs") != "" {
 		for _, p := range resp.UserData.Programs {
-			// If error in retrieving program, ignore it.
-			currentProg, err := c.LoadProgram(ec.Request().Context(), p)
+			// If error in retrieving a given program, ignore it.
+			currentProg, err := c.LoadProgram(c.Request().Context(), p)
 			if err != nil {
 				continue
 			}
