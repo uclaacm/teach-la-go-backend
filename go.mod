@@ -25,3 +25,7 @@ require (
 	google.golang.org/genproto v0.0.0-20200724131911-43cab4749ae7 // indirect
 	google.golang.org/grpc v1.30.0
 )
+
+replace (
+  github.com/joho/godotenv => github.com/x1unix/godotenv v1.3.1-0.20200910042738-acd8c1e858a6
+)
