@@ -24,6 +24,7 @@ func GetUser(cc echo.Context) error {
 
 	c, ok := cc.(*db.DBContext)
 	if !ok {
+		c.Logger().Error("Failed to cast echo context to a db.DBContext!")
 		return c.String(http.StatusInternalServerError, "Failed to acquire database connection!")
 	}
 
@@ -34,6 +35,7 @@ func GetUser(cc echo.Context) error {
 	}
 	user, err := c.LoadUser(c.Request().Context(), uid)
 	if err != nil {
+		c.Logger().Debugf("Failed to load user with uid `%s`: %v", uid, err)
 		return c.String(http.StatusInternalServerError, "Failed to load user.")
 	}
 	resp.UserData = user
@@ -44,6 +46,7 @@ func GetUser(cc echo.Context) error {
 			// If error in retrieving a given program, ignore it.
 			currentProg, err := c.LoadProgram(c.Request().Context(), p)
 			if err != nil {
+				c.Logger().Warnf("Failed to load program with pid `%s` for user with uid `%s`. User could be corrupted!", p, uid)
 				continue
 			}
 
