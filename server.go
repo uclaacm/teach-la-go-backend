@@ -18,10 +18,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// Default port to serve on, as provided by
-// the operating system.
-var defaultPort = os.Getenv("PORT")
-
 func serve(c *cli.Context) error {
 	e := echo.New()
 	e.HideBanner = true
@@ -44,7 +40,7 @@ func serve(c *cli.Context) error {
 	// - JSON
 	// - .env
 	// - TLACFG
-	jsonPath, dotenvPath := c.String("json"), c.String("env")
+	jsonPath, dotenvPath := c.String("json"), c.String("dotenv")
 	var (
 		d   *db.DB
 		err error
@@ -54,7 +50,7 @@ func serve(c *cli.Context) error {
 		d, err = db.OpenFromJSON(context.Background(), jsonPath)
 	case dotenvPath != "":
 		if err := godotenv.Load(dotenvPath); err != nil {
-			e.Logger.Fatal(errors.Wrap(err, "failed to open .env file"))
+			e.Logger.Error(errors.Wrap(err, "failed to open .env file"))
 		}
 		d, err = db.Open(context.Background(), os.Getenv(db.DefaultEnvVar))
 	default:
@@ -99,7 +95,12 @@ func serve(c *cli.Context) error {
 	e.GET("/collab/join/:id", d.JoinCollab)
 
 	// check for PORT variable.
-	port := c.String("port")
+	var port string
+	if osPort := os.Getenv("PORT"); osPort != "" {
+		port = osPort
+	} else {
+		port = c.String("port")
+	}
 
 	// server configuration
 	s := &http.Server{
@@ -136,7 +137,6 @@ func main() {
 			&cli.StringFlag{
 				Name:     "dotenv",
 				Aliases:  []string{"e"},
-				Value:    ".env",
 				Required: false,
 				Usage:    "Specify a path to a dotenv file to specify credentials",
 			},
@@ -155,7 +155,7 @@ func main() {
 			&cli.StringFlag{
 				Name:    "port",
 				Aliases: []string{"p"},
-				Value:   defaultPort,
+				Value:   "8081",
 				Usage:   "Change the port number",
 			},
 		},
