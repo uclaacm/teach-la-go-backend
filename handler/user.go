@@ -11,6 +11,7 @@ import (
 //
 // Query Parameters:
 //  - uid string: UID of user to GET
+//	- programs string: Whether to acquire programs.
 //
 // Returns: Status 200 with marshalled User and programs.
 func GetUser(cc echo.Context) error {
@@ -36,7 +37,7 @@ func GetUser(cc echo.Context) error {
 	user, err := c.LoadUser(c.Request().Context(), uid)
 	if err != nil {
 		c.Logger().Debugf("Failed to load user with uid `%s`: %v", uid, err)
-		return c.String(http.StatusInternalServerError, "Failed to load user.")
+		return c.String(http.StatusNotFound, "Failed to load user.")
 	}
 	resp.UserData = user
 
