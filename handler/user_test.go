@@ -100,4 +100,35 @@ func TestGetUser(t *testing.T) {
 			assert.Equal(t, "testprog", prog.UID)
 		}
 	})
+	t.Run("MissingProgram", func(t *testing.T) {
+		d := db.OpenMock()
+
+		// Insert an example user missing a program.
+		require.NoError(t, d.StoreUser(context.Background(), db.User{
+			UID:      "testuser",
+			Programs: []string{"doesnotexist"},
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/?uid=testuser&programs=true", nil)
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		resp := struct {
+			UserData db.User               `json:"userData"`
+			Programs map[string]db.Program `json:"programs"`
+		}{
+			UserData: db.User{},
+			Programs: make(map[string]db.Program),
+		}
+
+		if assert.NoError(t, handler.GetUser(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusOK, rec.Code)
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+			assert.Empty(t, resp.Programs)
+		}
+	})
 }

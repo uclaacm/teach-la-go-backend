@@ -7,7 +7,8 @@ import (
 	"github.com/uclaacm/teach-la-go-backend/db"
 )
 
-// GetUser acquires the user document with the given uid.
+// GetUser acquires the user document with the given uid. The
+// provided context must be a *db.DBContext.
 //
 // Query Parameters:
 //  - uid string: UID of user to GET
@@ -23,11 +24,7 @@ func GetUser(cc echo.Context) error {
 		Programs: make(map[string]db.Program),
 	}
 
-	c, ok := cc.(*db.DBContext)
-	if !ok {
-		c.Logger().Error("Failed to cast echo context to a db.DBContext!")
-		return c.String(http.StatusInternalServerError, "Failed to acquire database connection!")
-	}
+	c := cc.(*db.DBContext)
 
 	// Lookup user information.
 	uid, programsRequested := c.QueryParam("uid"), c.QueryParam("programs")
