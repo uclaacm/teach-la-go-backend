@@ -24,6 +24,7 @@ type User struct {
 	PhotoName         string   `firestore:"photoName" json:"photoName"`
 	Programs          []string `firestore:"programs" json:"programs"`
 	UID               string   `json:"uid"`
+	DeveloperAcc      bool     `firestore:"developerAcc" json:"developerAcc"`
 }
 
 // ToFirestoreUpdate returns the database update
