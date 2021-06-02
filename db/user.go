@@ -46,56 +46,6 @@ func (u *User) ToFirestoreUpdate() []firestore.Update {
 	return f
 }
 
-// GetUser acquires the userdoc with the given uid.
-//
-// Query Parameters:
-//  - uid string: UID of user to get
-//
-// Returns: Status 200 with marshalled User and programs.
-func (d *DB) GetUser(c echo.Context) error {
-	resp := struct {
-		UserData User               `json:"userData"`
-		Programs map[string]Program `json:"programs"`
-	}{
-		UserData: User{},
-		Programs: make(map[string]Program),
-	}
-
-	// get user
-	uid := c.QueryParam("uid")
-	if uid == "" {
-		return c.String(http.StatusBadRequest, "uid is a required query parameter")
-	}
-
-	// get user data
-	doc, err := d.Collection(usersPath).Doc(c.QueryParam("uid")).Get(c.Request().Context())
-	if err != nil {
-		return c.String(http.StatusNotFound, err.Error())
-	}
-	if err := doc.DataTo(&resp.UserData); err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
-	}
-
-	// get programs, if requested
-	if c.QueryParam("programs") != "" {
-		for _, p := range resp.UserData.Programs {
-			currentProg := Program{}
-
-			// If error in retrieving program, ignore it.
-			doc, err := d.Collection(programsPath).Doc(p).Get(c.Request().Context())
-			if err != nil {
-				continue
-			}
-			if err := doc.DataTo(&currentProg); err != nil {
-				continue
-			}
-
-			resp.Programs[p] = currentProg
-		}
-	}
-	return c.JSON(http.StatusOK, &resp)
-}
-
 // UpdateUser updates the doc with specified UID's fields
 // to match those of the request body.
 //

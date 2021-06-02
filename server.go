@@ -7,14 +7,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/uclaacm/teach-la-go-backend/db"
-
 	_ "github.com/heroku/x/hmetrics/onload"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"github.com/pkg/errors"
+	"github.com/uclaacm/teach-la-go-backend/db"
+	"github.com/uclaacm/teach-la-go-backend/handler"
 	"github.com/urfave/cli/v2"
 )
 
@@ -62,8 +62,18 @@ func serve(c *cli.Context) error {
 	}
 	defer d.Close()
 
+	// Register our database handler to every Echo context.
+	e.Use(func(nxt echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			return nxt(&db.DBContext{
+				Context: c,
+				TLADB:   d,
+			})
+		}
+	})
+
 	// user management
-	e.GET("/user/get", d.GetUser)
+	e.GET("/user/get", handler.GetUser)
 	e.PUT("/user/update", d.UpdateUser)
 	e.POST("/user/create", d.CreateUser)
 
