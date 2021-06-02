@@ -23,10 +23,11 @@ type stringSet map[string]bool
 
 // Session describes a collaborative coding environment.
 type Session struct {
+	*sync.Mutex
+
 	// Map UIDs to their websocket.Conn
 	Conns   map[string]*Connection
 	Teacher string
-	Lock    sync.Mutex
 }
 type Connection struct {
 	*websocket.Conn
@@ -37,17 +38,12 @@ type Connection struct {
 
 // Maps session IDs to Session object
 var (
-	sessions     map[string]Session
-	sessionsLock sync.Mutex
+	sessions sync.Map
 )
 
-func init() {
-	sessions = make(map[string]Session)
-}
-
 func (s *Session) AddConn(uid string, conn *websocket.Conn) error {
-	s.Lock.Lock()
-	defer s.Lock.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	if s.Conns[uid] != nil {
 		return errors.New("User is already connected")
 	}
@@ -57,8 +53,8 @@ func (s *Session) AddConn(uid string, conn *websocket.Conn) error {
 }
 
 func (s *Session) RemoveConn(uid string) error {
-	s.Lock.Lock()
-	defer s.Lock.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	if s.Conns[uid] != nil {
 		return errors.New("Could not remove unconnected user")
 	}
@@ -72,8 +68,8 @@ func (s *Session) RemoveConn(uid string) error {
 
 // BroadcastAll sends a message to all active connections
 func (s *Session) BroadcastAll(msg Message) (lastErr error) {
-	s.Lock.Lock()
-	defer s.Lock.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	for _, conn := range s.Conns {
 		if err := websocket.JSON.Send(conn.Conn, msg); err != nil {
 			lastErr = err
@@ -99,8 +95,8 @@ func (s *Session) BroadcastError(uid string, err string) error {
 // BroadcastTo sends a Message msg to the connections associated with the
 // provided uids
 func (s *Session) BroadcastTo(msg Message, uids ...string) (lastErr error) {
-	s.Lock.Lock()
-	defer s.Lock.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	for _, uid := range uids {
 		if err := websocket.JSON.Send(s.Conns[uid].Conn, msg); err != nil {
 			lastErr = err
@@ -112,8 +108,8 @@ func (s *Session) BroadcastTo(msg Message, uids ...string) (lastErr error) {
 // BroadcastToSet sends a Message msg to the connections associated with the
 // provided uids in a stringSet
 func (s *Session) BroadcastToSet(msg Message, uids stringSet) (lastErr error) {
-	s.Lock.Lock()
-	defer s.Lock.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	for uid := range uids {
 		if err := websocket.JSON.Send(s.Conns[uid].Conn, msg); err != nil {
 			lastErr = err
@@ -123,8 +119,8 @@ func (s *Session) BroadcastToSet(msg Message, uids stringSet) (lastErr error) {
 }
 
 func (s *Session) RequestAccess(uid string, msg Message) error {
-	s.Lock.Lock()
-	defer s.Lock.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	if msg.Author == s.Teacher {
 		if conn, ok := s.Conns[msg.Target]; ok {
 			conn.Subscriptions[uid] = true
@@ -159,29 +155,24 @@ func (d *DB) CreateCollab(c echo.Context) error {
 		sessionID = body.Name
 	}
 
-	if _, ok := sessions[sessionID]; ok {
+	if _, ok := sessions.Load(sessionID); ok {
 		return c.String(http.StatusBadRequest, "session with same name already exists")
 	}
 
-	sessionsLock.Lock()
-	sessions[sessionID] = Session{
+	sessions.Store(sessionID, Session{
 		Conns: make(map[string]*Connection),
-	}
-	sessionsLock.Unlock()
+	})
 
 	// Kill session if no connections every minute
 	go func() {
 		ticker := time.NewTicker(time.Minute)
 		for range ticker.C {
-			sessionsLock.Lock()
-			if session, ok := sessions[sessionID]; ok && len(session.Conns) == 0 {
+			if sessionIFace, ok := sessions.Load(sessionID); ok && len(sessionIFace.(Session).Conns) == 0 {
 				fmt.Printf("Deleting session")
-				delete(sessions, sessionID)
-				sessionsLock.Unlock()
+				sessions.Delete(sessionID)
 				ticker.Stop()
 				return
 			}
-			sessionsLock.Unlock()
 		}
 	}()
 
@@ -191,7 +182,8 @@ func (d *DB) CreateCollab(c echo.Context) error {
 func (d *DB) JoinCollab(c echo.Context) error {
 	sessionID := c.Param("id")
 	uid := uuid.New().String() // What will we be using as identifiers?
-	session, ok := sessions[sessionID]
+	sessionIFace, ok := sessions.Load(sessionID)
+	session := sessionIFace.(Session)
 
 	if !ok {
 		return c.String(http.StatusNotFound, "Session does not exist.")
