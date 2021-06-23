@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -89,7 +90,14 @@ func TestGetClass(t *testing.T) {
 			Context: c,
 			TLADB:   d,
 		})) {
-			assert.Equal(t, http.StatusOK, rec.Code)
+			require.Equal(t, http.StatusOK, rec.Code)
+			res := struct {
+				*db.Class
+				ProgramData []db.Program       `json:"programData"`
+				UserData    map[string]db.User `json:"userData"`
+			}{}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
+			assert.NotZero(t, res.CID)
 		}
 	})
 	t.Run("withPrograms", func(t *testing.T) {
@@ -114,7 +122,15 @@ func TestGetClass(t *testing.T) {
 			Context: c,
 			TLADB:   d,
 		})) {
-			assert.Equal(t, http.StatusOK, rec.Code)
+			require.Equal(t, http.StatusOK, rec.Code)
+			res := struct {
+				*db.Class
+				ProgramData []db.Program       `json:"programData"`
+				UserData    map[string]db.User `json:"userData"`
+			}{}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
+			assert.NotZero(t, res.CID)
+			assert.NotEmpty(t, res.ProgramData)
 		}
 	})
 	t.Run("withUsers", func(t *testing.T) {
@@ -138,8 +154,15 @@ func TestGetClass(t *testing.T) {
 			Context: c,
 			TLADB:   d,
 		})) {
-			assert.Equal(t, http.StatusOK, rec.Code)
-			require.NotEmpty(t, rec.Body)
+			require.Equal(t, http.StatusOK, rec.Code)
+			res := struct {
+				*db.Class
+				ProgramData []db.Program       `json:"programData"`
+				UserData    map[string]db.User `json:"userData"`
+			}{}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
+			assert.NotZero(t, res.CID)
+			assert.NotEmpty(t, res.UserData)
 		}
 	})
 	t.Run("withBoth", func(t *testing.T) {
@@ -157,7 +180,7 @@ func TestGetClass(t *testing.T) {
 		require.NoError(t, d.StoreProgram(context.Background(), db.Program{
 			UID: "test",
 		}))
-		req := httptest.NewRequest(http.MethodPost, "/programs=true&userData=true", strings.NewReader("{\"uid\": \"test\", \"cid\": \"test\"}"))
+		req := httptest.NewRequest(http.MethodPost, "/?programs=true&userData=true", strings.NewReader("{\"uid\": \"test\", \"cid\": \"test\"}"))
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
@@ -166,7 +189,16 @@ func TestGetClass(t *testing.T) {
 			Context: c,
 			TLADB:   d,
 		})) {
-			assert.Equal(t, http.StatusOK, rec.Code)
+			require.Equal(t, http.StatusOK, rec.Code)
+			res := struct {
+				*db.Class
+				ProgramData []db.Program       `json:"programData"`
+				UserData    map[string]db.User `json:"userData"`
+			}{}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
+			assert.NotZero(t, res.CID)
+			assert.NotEmpty(t, res.ProgramData)
+			assert.NotEmpty(t, res.UserData)
 		}
 	})
 }
