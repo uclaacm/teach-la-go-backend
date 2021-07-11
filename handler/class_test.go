@@ -72,6 +72,28 @@ func TestGetClass(t *testing.T) {
 			assert.Equal(t, http.StatusNotFound, rec.Code)
 		}
 	})
+	t.Run("userNotInClass", func(t *testing.T) {
+		d := db.OpenMock()
+		require.NoError(t, d.StoreClass(context.Background(), db.Class{
+			CID:     "test",
+			Members: []string{"test"},
+		}))
+		require.NoError(t, d.StoreUser(context.Background(), db.User{
+			UID: "notInClass",
+		}))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{\"uid\": \"notInClass\", \"cid\": \"test\"}"))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.GetClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Equal(t, "given user not in class", rec.Body.String())
+		}
+	})
 	t.Run("validClass", func(t *testing.T) {
 		d := db.OpenMock()
 		require.NoError(t, d.StoreClass(context.Background(), db.Class{
@@ -199,6 +221,28 @@ func TestGetClass(t *testing.T) {
 			assert.NotZero(t, res.CID)
 			assert.NotEmpty(t, res.ProgramData)
 			assert.NotEmpty(t, res.UserData)
+		}
+	})
+	t.Run("partialInformation", func(t *testing.T) {
+		d := db.OpenMock()
+		require.NoError(t, d.StoreClass(context.Background(), db.Class{
+			CID:      "test",
+			Members:  []string{"test"},
+			Programs: []string{"doesNotExist"},
+		}))
+		require.NoError(t, d.StoreUser(context.Background(), db.User{
+			UID: "test",
+		}))
+		req := httptest.NewRequest(http.MethodPost, "/?programs=true", strings.NewReader("{\"uid\": \"test\", \"cid\": \"test\"}"))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.GetClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusPartialContent, rec.Code)
 		}
 	})
 }

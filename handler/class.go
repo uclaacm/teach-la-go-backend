@@ -62,11 +62,12 @@ func GetClass(cc echo.Context) error {
 	}
 
 	// If program data is requested.
+	partial := false
 	if withPrograms := c.QueryParam("programs"); withPrograms != "" && withPrograms != "false" {
 		for _, p := range class.Programs {
 			program, err := c.LoadProgram(c.Request().Context(), p)
 			if err != nil {
-				continue
+				partial = true
 			}
 			res.ProgramData = append(res.ProgramData, program)
 		}
@@ -76,11 +77,15 @@ func GetClass(cc echo.Context) error {
 		for _, uid := range class.Members {
 			user, err := c.LoadUser(c.Request().Context(), uid)
 			if err != nil {
-				continue
+				partial = true
 			}
 			res.UserData[user.UID] = user
 		}
 	}
 
-	return c.JSON(http.StatusOK, res)
+	if partial {
+		return c.JSON(http.StatusPartialContent, res)
+	} else {
+		return c.JSON(http.StatusOK, res)
+	}
 }
