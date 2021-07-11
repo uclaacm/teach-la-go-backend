@@ -57,13 +57,19 @@ func GetClass(cc echo.Context) error {
 		}
 	}
 
+	// Parameters for additional data.
+	withPrograms, withUserData := c.QueryParam("programs"), c.QueryParam("userData")
+	if !isInstructor && withUserData != "" && withUserData != "false" {
+		return c.String(http.StatusBadRequest, "user is not an instructor")
+	}
+
 	if !isIn {
 		return c.String(http.StatusBadRequest, "given user not in class")
 	}
 
 	// If program data is requested.
 	partial := false
-	if withPrograms := c.QueryParam("programs"); withPrograms != "" && withPrograms != "false" {
+	if withPrograms != "" && withPrograms != "false" {
 		for _, p := range class.Programs {
 			program, err := c.LoadProgram(c.Request().Context(), p)
 			if err != nil {
@@ -73,7 +79,8 @@ func GetClass(cc echo.Context) error {
 		}
 	}
 
-	if withUserData := c.QueryParam("userData"); isInstructor && withUserData != "" && withUserData != "false" {
+	// Retrieve userData if requested.
+	if isInstructor && withUserData != "" && withUserData != "false" {
 		for _, uid := range class.Members {
 			user, err := c.LoadUser(c.Request().Context(), uid)
 			if err != nil {
@@ -83,6 +90,7 @@ func GetClass(cc echo.Context) error {
 		}
 	}
 
+	// Indicate whether the response is partial.
 	if partial {
 		return c.JSON(http.StatusPartialContent, res)
 	} else {
