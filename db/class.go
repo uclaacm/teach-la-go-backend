@@ -22,9 +22,9 @@ type Class struct {
 	Creator     string   `firestore:"creator" json:"creator"`
 	Instructors []string `firestore:"instructors" json:"instructors"`
 	Members     []string `firestore:"members" json:"members"`
-	Programs    []string `json:"programs"`
-	CID         string   `json:"cid"`
-	WID         string   `json:"wid"`
+	Programs    []string `firestore:"programs" json:"programs"`
+	CID         string   `firestore:"CID" json:"cid"`
+	WID         string   `firestore:"WID" json:"wid"`
 }
 
 // AddClassToUser takes a uid and a pid,
