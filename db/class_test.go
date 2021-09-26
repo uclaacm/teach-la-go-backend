@@ -156,14 +156,14 @@ func DeleteTestClass(t *testing.T, o *TestObj, classIndex int) {
 	t.Logf(colorInfo+"Removed class %s"+colorEnd, o.Class[classIndex].CID)
 }
 
-func IsIn(str string, list []string) bool {
-	for _, s := range list {
-		if s == str {
-			return true
-		}
-	}
-	return false
-}
+// func IsIn(str string, list []string) bool {
+// 	for _, s := range list {
+// 		if s == str {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 // Ensure classes can be created w/o any errors
 func TestCreateClass(t *testing.T) {
