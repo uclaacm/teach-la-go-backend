@@ -155,19 +155,21 @@ func TestGetClass(t *testing.T) {
 			assert.NotEmpty(t, res.ProgramData)
 		}
 	})
-	t.Run("withUsers", func(t *testing.T) {
+
+	t.Run("withUsersStudent", func(t *testing.T) {
 		d := db.OpenMock()
 		require.NoError(t, d.StoreClass(context.Background(), db.Class{
 			CID:         "test",
-			Instructors: []string{"test"},
-			Members:     []string{"test"},
-			Programs:    []string{"test"},
+			Instructors: []string{"testInstructor"},
+			Members:     []string{"testStudent"},
 		}))
 		require.NoError(t, d.StoreUser(context.Background(), db.User{
-			UID:         "test",
-			DisplayName: "Test Account",
+			UID: "testStudent",
 		}))
-		req := httptest.NewRequest(http.MethodPost, "/?userData=true", strings.NewReader("{\"uid\": \"test\", \"cid\": \"test\"}"))
+		require.NoError(t, d.StoreUser(context.Background(), db.User{
+			UID: "testInstructor",
+		}))
+		req := httptest.NewRequest(http.MethodPost, "/?userData=true", strings.NewReader("{\"uid\": \"testStudent\", \"cid\": \"test\"}"))
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
@@ -185,6 +187,43 @@ func TestGetClass(t *testing.T) {
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
 			assert.NotZero(t, res.CID)
 			assert.NotEmpty(t, res.UserData)
+			assert.Contains(t, res.UserData, "testInstructor")
+			assert.NotContains(t, res.UserData, "testStudent")
+		}
+	})
+	t.Run("withUsersInstructor", func(t *testing.T) {
+		d := db.OpenMock()
+		require.NoError(t, d.StoreClass(context.Background(), db.Class{
+			CID:         "test",
+			Instructors: []string{"testInstructor"},
+			Members:     []string{"testStudent"},
+		}))
+		require.NoError(t, d.StoreUser(context.Background(), db.User{
+			UID: "testStudent",
+		}))
+		require.NoError(t, d.StoreUser(context.Background(), db.User{
+			UID: "testInstructor",
+		}))
+		req := httptest.NewRequest(http.MethodPost, "/?userData=true", strings.NewReader("{\"uid\": \"testInstructor\", \"cid\": \"test\"}"))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.GetClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusOK, rec.Code)
+			res := struct {
+				*db.Class
+				ProgramData []db.Program       `json:"programData"`
+				UserData    map[string]db.User `json:"userData"`
+			}{}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res))
+			assert.NotZero(t, res.CID)
+			assert.NotEmpty(t, res.UserData)
+			assert.Contains(t, res.UserData, "testInstructor")
+			assert.Contains(t, res.UserData, "testStudent")
 		}
 	})
 	t.Run("withBoth", func(t *testing.T) {
@@ -265,28 +304,6 @@ func TestGetClass(t *testing.T) {
 			TLADB:   d,
 		})) {
 			require.Equal(t, http.StatusPartialContent, rec.Code)
-		}
-	})
-	t.Run("userIsNotInstructor", func(t *testing.T) {
-		d := db.OpenMock()
-		require.NoError(t, d.StoreClass(context.Background(), db.Class{
-			CID:     "test",
-			Members: []string{"test", "doesNotExist"},
-		}))
-		require.NoError(t, d.StoreUser(context.Background(), db.User{
-			UID: "test",
-		}))
-		req := httptest.NewRequest(http.MethodPost, "/?userData=true", strings.NewReader("{\"uid\": \"test\", \"cid\": \"test\"}"))
-		rec := httptest.NewRecorder()
-		assert.NotNil(t, req, rec)
-		c := echo.New().NewContext(req, rec)
-
-		if assert.NoError(t, handler.GetClass(&db.DBContext{
-			Context: c,
-			TLADB:   d,
-		})) {
-			assert.Equal(t, http.StatusBadRequest, rec.Code)
-			assert.Equal(t, rec.Body.String(), "user is not an instructor")
 		}
 	})
 }
