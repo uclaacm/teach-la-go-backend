@@ -59,9 +59,6 @@ func GetClass(cc echo.Context) error {
 
 	// Parameters for additional data.
 	withPrograms, withUserData := c.QueryParam("programs"), c.QueryParam("userData")
-	if !isInstructor && withUserData != "" && withUserData != "false" {
-		return c.String(http.StatusBadRequest, "user is not an instructor")
-	}
 
 	if !isIn {
 		return c.String(http.StatusBadRequest, "given user not in class")
@@ -80,8 +77,19 @@ func GetClass(cc echo.Context) error {
 	}
 
 	// Retrieve userData if requested.
-	if isInstructor && withUserData != "" && withUserData != "false" {
-		for _, uid := range class.Members {
+	if withUserData != "" && withUserData != "false" {
+		if isInstructor {
+			for _, uid := range class.Members {
+				user, err := c.LoadUser(c.Request().Context(), uid)
+				if err != nil {
+					partial = true
+				}
+				res.UserData[user.UID] = user
+			}
+		}
+
+		// Students should see Instructor data
+		for _, uid := range class.Instructors {
 			user, err := c.LoadUser(c.Request().Context(), uid)
 			if err != nil {
 				partial = true
