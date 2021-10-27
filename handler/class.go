@@ -7,6 +7,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/uclaacm/teach-la-go-backend/db"
 	"github.com/uclaacm/teach-la-go-backend/httpext"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // GetClass takes the UID (either of a member or an instructor)
@@ -104,4 +106,37 @@ func GetClass(cc echo.Context) error {
 	} else {
 		return c.JSON(http.StatusOK, res)
 	}
+}
+
+// DeleteClass takes a wid and deletes it.
+// Any programs associated with the class will also be deleted.
+// Users that are in the class will still contain a reference to this class,
+// thus it is the user's responsibility to remove references to a deleted class.
+func DeleteClass(cc echo.Context) error {
+	var req struct {
+		CID string `json:"cid"`
+	}
+	
+	c := cc.(*db.DBContext)
+	
+	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
+	}
+	if req.CID == "" {
+		return c.String(http.StatusBadRequest, "cid is required")
+	}
+
+	class, err := c.LoadClass(c.Request().Context(), req.CID)
+	if err != nil {
+		return c.String(http.StatusNotFound, err.Error())
+	}
+
+	if err := c.DeleteClass(c.Request().Context(), class); err != nil {
+		if status.Code(err) == codes.NotFound {
+			return c.String(http.StatusNotFound, "could not find class")
+		}
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to delete class").Error())
+	}
+
+	return c.String(http.StatusOK, "")
 }
