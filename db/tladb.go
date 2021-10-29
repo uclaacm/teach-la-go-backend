@@ -20,6 +20,7 @@ type DBContext struct {
 type TLADB interface {
 	LoadProgram(context.Context, string) (Program, error)
 	StoreProgram(context.Context, Program) error
+	// Rename to DeleteProgram after moving API handler out of db/program.go
 	RemoveProgram(context.Context, string) error
 
 	LoadClass(context.Context, string) (Class, error)
