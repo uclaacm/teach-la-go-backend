@@ -133,34 +133,3 @@ func TestCreateUser(t *testing.T) {
 		}
 	}
 }
-
-func TestDeleteUser(t *testing.T) {
-	d, err := Open(context.Background(), os.Getenv("TLACFG"))
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	t.Run("MissingUID", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPut, "/", nil)
-		rec := httptest.NewRecorder()
-		assert.NotNil(t, req, rec)
-		c := echo.New().NewContext(req, rec)
-
-		if assert.NoError(t, d.DeleteUser(c)) {
-			assert.Equal(t, http.StatusBadRequest, rec.Code)
-		}
-	})
-	t.Run("BadUID", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPut, "/", strings.NewReader("{\"uid\":\"fakeUID\"}"))
-		rec := httptest.NewRecorder()
-		assert.NotNil(t, req, rec)
-		assert.NotNil(t, req.Body)
-		c := echo.New().NewContext(req, rec)
-
-		if assert.NoError(t, d.DeleteUser(c)) {
-			assert.Equal(t, http.StatusNotFound, rec.Code)
-		}
-	})
-
-	// TODO: live tests
-}

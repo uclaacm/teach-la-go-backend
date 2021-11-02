@@ -82,28 +82,28 @@ func CreateTestUser(t *testing.T, o *TestObj, i int) {
 	t.Logf(colorInfo+"Created user: %s"+colorEnd, o.User[i].UID)
 }
 
-func DeleteTestUser(t *testing.T, o *TestObj, i int) {
-	pr := struct {
-		UID string
-	}{
-		o.User[i].UID,
-	}
-	pro, err := json.Marshal(&pr)
-	require.NoError(t, err)
+// func DeleteTestUser(t *testing.T, o *TestObj, i int) {
+// 	pr := struct {
+// 		UID string
+// 	}{
+// 		o.User[i].UID,
+// 	}
+// 	pro, err := json.Marshal(&pr)
+// 	require.NoError(t, err)
 
-	par := ReqParam{
-		"DELETE",
-		"/",
-		bytes.NewBuffer(pro),
-		o.D.DeleteUser,
-		http.StatusOK,
-		false,
-	}
-	_, close := CallFunc(t, &par)
-	defer assert.NoError(t, close())
+// 	par := ReqParam{
+// 		"DELETE",
+// 		"/",
+// 		bytes.NewBuffer(pro),
+// 		o.D.DeleteUser,
+// 		http.StatusOK,
+// 		false,
+// 	}
+// 	_, close := CallFunc(t, &par)
+// 	defer assert.NoError(t, close())
 
-	t.Logf(colorInfo+"Removed user %s"+colorEnd, o.User[i].UID)
-}
+// 	t.Logf(colorInfo+"Removed user %s"+colorEnd, o.User[i].UID)
+// }
 
 func CreateTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int) {
 	pr := struct {
@@ -182,6 +182,6 @@ func TestCreateClass(t *testing.T) {
 	CreateTestUser(t, &obj, 0)
 	CreateTestClass(t, &obj, 0, 0)
 
-	DeleteTestClass(t, &obj, 0)
-	DeleteTestUser(t, &obj, 0)
+	// DeleteTestClass(t, &obj, 0)
+	// DeleteTestUser(t, &obj, 0)
 }
