@@ -133,28 +133,28 @@ func CreateTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int) {
 	t.Logf(colorInfo+"CreateClass returned: \n%s"+colorEnd, string([]byte(b)))
 }
 
-func DeleteTestClass(t *testing.T, o *TestObj, classIndex int) {
-	pr := struct {
-		Cid string
-	}{
-		o.Class[classIndex].CID,
-	}
-	pro, err := json.Marshal(&pr)
-	require.NoError(t, err)
+// func DeleteTestClass(t *testing.T, o *TestObj, classIndex int) {
+// 	pr := struct {
+// 		Cid string
+// 	}{
+// 		o.Class[classIndex].CID,
+// 	}
+// 	pro, err := json.Marshal(&pr)
+// 	require.NoError(t, err)
 
-	par := ReqParam{
-		"DELETE",
-		"/",
-		bytes.NewBuffer(pro),
-		o.D.DeleteClass,
-		http.StatusOK,
-		false,
-	}
-	_, close := CallFunc(t, &par)
-	defer assert.NoError(t, close())
+// 	par := ReqParam{
+// 		"DELETE",
+// 		"/",
+// 		bytes.NewBuffer(pro),
+// 		o.D.DeleteClass,
+// 		http.StatusOK,
+// 		false,
+// 	}
+// 	_, close := CallFunc(t, &par)
+// 	defer assert.NoError(t, close())
 
-	t.Logf(colorInfo+"Removed class %s"+colorEnd, o.Class[classIndex].CID)
-}
+// 	t.Logf(colorInfo+"Removed class %s"+colorEnd, o.Class[classIndex].CID)
+// }
 
 // func IsIn(str string, list []string) bool {
 // 	for _, s := range list {
