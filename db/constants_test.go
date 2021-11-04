@@ -6,6 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestLangString(t *testing.T) {
+	assert.Equal(t, langString(python), "python")
+	assert.Equal(t, langString(processing), "processing")
+	assert.Equal(t, langString(html), "html")
+	assert.Equal(t, langString(langCount), "DNE")
+}
+
 func TestDefaultProgram(t *testing.T) {
 	p := defaultProgram(langString(python))
 	assert.NotEmpty(t, p)
