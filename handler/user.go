@@ -5,6 +5,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/uclaacm/teach-la-go-backend/db"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // GetUser acquires the user document with the given uid. The
@@ -52,4 +54,53 @@ func GetUser(cc echo.Context) error {
 		}
 	}
 	return c.JSON(http.StatusOK, &resp)
+}
+
+// DeleteUser deletes an user along with all their programs
+// from the database.
+//
+// Request Body:
+// {
+//     "uid": REQUIRED
+// }
+//
+// Returns: status 200 on deletion.
+func DeleteUser(cc echo.Context) error {
+	resp := struct {
+		UserData db.User               `json:"userData"`
+		Programs map[string]db.Program `json:"programs"`
+	}{
+		UserData: db.User{},
+		Programs: make(map[string]db.Program),
+	}
+
+	c := cc.(*db.DBContext)
+
+	// Lookup user information.
+	uid := c.QueryParam("uid")
+
+	if uid == "" {
+		return c.String(http.StatusBadRequest, "`uid` is a required query parameter.")
+	}
+
+	user, err := c.LoadUser(c.Request().Context(), uid)
+
+	if err != nil {
+		return c.String(http.StatusNotFound, "could not find user")
+	}
+
+	resp.UserData = user
+
+	// Delete all programs
+	for _, prog := range user.Programs {
+		if err := c.RemoveProgram(c.Request().Context(), prog); err != nil && status.Code(err) != codes.NotFound {
+			return c.String(http.StatusInternalServerError, "failed to delete user.")
+		}
+	}
+
+	if err := c.DeleteUser(c.Request().Context(), user); err != nil {
+		return c.String(http.StatusInternalServerError, "failed to delete user.")
+	}
+
+	return c.String(http.StatusOK, "user deleted successfully")
 }

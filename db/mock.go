@@ -23,6 +23,11 @@ func (d *MockDB) StoreProgram(_ context.Context, p Program) error {
 	return nil
 }
 
+func (d *MockDB) RemoveProgram(_ context.Context, pid string) error {
+	delete(d.db[programsPath], pid)
+	return nil
+}
+
 func (d *MockDB) LoadClass(_ context.Context, cid string) (c Class, err error) {
 	c, ok := d.db[classesPath][cid].(Class)
 	if !ok {
@@ -54,6 +59,11 @@ func (d *MockDB) LoadUser(_ context.Context, uid string) (u User, err error) {
 
 func (d *MockDB) StoreUser(_ context.Context, u User) error {
 	d.db[usersPath][u.UID] = u
+	return nil
+}
+
+func (d *MockDB) DeleteUser(_ context.Context, u User) error {
+	delete(d.db[usersPath], u.UID)
 	return nil
 }
 

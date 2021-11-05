@@ -38,6 +38,13 @@ func (d *DB) StoreProgram(ctx context.Context, p Program) error {
 	return nil
 }
 
+func (d *DB) RemoveProgram(ctx context.Context, pid string) error {
+	if _, err := d.Collection(programsPath).Doc(pid).Delete(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (d *DB) LoadClass(ctx context.Context, cid string) (Class, error) {
 	doc, err := d.Collection(classesPath).Doc(cid).Get(ctx)
 	if err != nil {
@@ -102,6 +109,13 @@ func (d *DB) LoadUser(ctx context.Context, uid string) (User, error) {
 
 func (d *DB) StoreUser(ctx context.Context, u User) error {
 	if _, err := d.Collection(usersPath).Doc(u.UID).Set(ctx, &u); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *DB) DeleteUser(ctx context.Context, u User) error {
+	if _, err := d.Collection(usersPath).Doc(u.UID).Delete(ctx); err != nil {
 		return err
 	}
 	return nil
