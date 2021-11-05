@@ -126,6 +126,7 @@ func DeleteClass(cc echo.Context) error {
 		return c.String(http.StatusBadRequest, "cid is required")
 	}
 
+	// Confirm class exists
 	class, err := c.LoadClass(c.Request().Context(), req.CID)
 	if err != nil {
 		return c.String(http.StatusNotFound, err.Error())
@@ -141,7 +142,7 @@ func DeleteClass(cc echo.Context) error {
 
 	/* 	TODO: since this is no longer a transaction, potential for Class to not be
 		deleted, but all the programs were still deleted 	*/
-	if err := c.DeleteClass(c.Request().Context(), class); err != nil {
+	if err := c.DeleteClass(c.Request().Context(), class.CID); err != nil {
 		if status.Code(err) == codes.NotFound {
 			return c.String(http.StatusNotFound, "could not find class")
 		}

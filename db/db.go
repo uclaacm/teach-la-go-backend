@@ -63,8 +63,8 @@ func (d *DB) StoreClass(ctx context.Context, c Class) error {
 	return nil
 }
 
-func (d *DB) DeleteClass(ctx context.Context, c Class) error {
-	if _, err := d.Collection(classesPath).Doc(c.CID).Delete(ctx); err != nil {
+func (d *DB) DeleteClass(ctx context.Context, cid string) error {
+	if _, err := d.Collection(classesPath).Doc(cid).Delete(ctx); err != nil {
 		return err
 	}
 	

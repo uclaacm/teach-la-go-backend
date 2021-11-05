@@ -41,8 +41,8 @@ func (d *MockDB) StoreClass(_ context.Context, c Class) error {
 	return nil
 }
 
-func (d *MockDB) DeleteClass(_ context.Context, c Class) error {
-	delete(d.db[classesPath], c.CID)
+func (d *MockDB) DeleteClass(_ context.Context, cid string) error {
+	delete(d.db[classesPath], cid)
 	return nil
 }
 
