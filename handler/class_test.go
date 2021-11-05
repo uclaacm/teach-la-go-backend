@@ -307,3 +307,92 @@ func TestGetClass(t *testing.T) {
 		}
 	})
 }
+
+func TestDeleteClass(t *testing.T) {
+	t.Run("missingCID", func(t *testing.T) {
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPost, "/", nil)
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.DeleteClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
+	t.Run("improperBody", func(t *testing.T) {
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{"))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.DeleteClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		}
+	})
+	t.Run("classDNE", func(t *testing.T) {
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{\"cid\": \"does not exist\"}"))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.DeleteClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			assert.Equal(t, http.StatusNotFound, rec.Code)
+		}
+	})
+	t.Run("validClass", func(t *testing.T) {
+		d := db.OpenMock()
+		require.NoError(t, d.StoreClass(context.Background(), db.Class{
+			CID:     "test",
+		}))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{\"cid\": \"test\"}"))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.DeleteClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusOK, rec.Code)
+			_, err := d.LoadClass(context.Background(), "test")
+			require.Error(t, err)
+		}
+	})
+	t.Run("withPrograms", func(t *testing.T) {
+		d := db.OpenMock()
+		require.NoError(t, d.StoreClass(context.Background(), db.Class{
+			CID:      "test",
+			Programs: []string{"test"},
+		}))
+		require.NoError(t, d.StoreProgram(context.Background(), db.Program{
+			UID: "test",
+		}))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{\"cid\": \"test\"}"))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.DeleteClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusOK, rec.Code)
+			_, err := d.LoadClass(context.Background(), "test")
+			require.Error(t, err)
+			_, err = d.LoadProgram(context.Background(), "test")
+			require.Error(t, err)
+		}
+	})
+}
