@@ -37,6 +37,9 @@ func (d *MockDB) StoreClass(_ context.Context, c Class) error {
 }
 
 func (d *MockDB) DeleteClass(_ context.Context, c Class) error {
+	for _, prog := range c.Programs {
+		delete(d.db[programsPath], prog)
+	}
 	delete(d.db[classesPath], c.CID)
 	return nil
 }

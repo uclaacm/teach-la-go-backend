@@ -180,7 +180,7 @@ func TestCreateClass(t *testing.T) {
 	require.NoError(t, err)
 
 	CreateTestUser(t, &obj, 0)
-	CreateTestClass(t, &obj, 0, 0)
+	//CreateTestClass(t, &obj, 0, 0)
 
 	//DeleteTestClass(t, &obj, 0)
 	DeleteTestUser(t, &obj, 0)
