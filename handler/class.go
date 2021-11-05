@@ -131,10 +131,21 @@ func DeleteClass(cc echo.Context) error {
 		return c.String(http.StatusNotFound, err.Error())
 	}
 
+	for _, prog := range class.Programs {
+		if err := c.RemoveProgram(c.Request().Context(), prog); 
+		// if we can't find a program, then it's not a problem.
+		err != nil && status.Code(err) != codes.NotFound {
+			return err
+		}
+	}
+
+	/* 	TODO: since this is no longer a transaction, potential for Class to not be
+		deleted, but all the programs were still deleted 	*/
 	if err := c.DeleteClass(c.Request().Context(), class); err != nil {
 		if status.Code(err) == codes.NotFound {
 			return c.String(http.StatusNotFound, "could not find class")
 		}
+
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to delete class").Error())
 	}
 

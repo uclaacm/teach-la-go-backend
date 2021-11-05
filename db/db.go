@@ -7,8 +7,6 @@ import (
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
 	"google.golang.org/api/option"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // DB implements the TLADB interface on a Firestore
@@ -66,28 +64,7 @@ func (d *DB) StoreClass(ctx context.Context, c Class) error {
 }
 
 func (d *DB) DeleteClass(ctx context.Context, c Class) error {
-	classRef := d.Collection(classesPath).Doc(c.CID)
-	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		classSnap, err := tx.Get(classRef)
-		if err != nil {
-			return err
-		}
-
-		class := Class{}
-		if err := classSnap.DataTo(&class); err != nil {
-			return err
-		}
-		for _, prog := range class.Programs {
-			progRef := d.Collection(programsPath).Doc(prog)
-			// if we can't find a program, then it's not a problem.
-			if err := tx.Delete(progRef); status.Code(err) != codes.NotFound {
-				return err
-			}
-		}
-
-		return tx.Delete(classRef)
-	})
-	if err != nil {
+	if _, err := d.Collection(classesPath).Doc(c.CID).Delete(ctx); err != nil {
 		return err
 	}
 	
