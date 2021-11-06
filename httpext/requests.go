@@ -6,8 +6,9 @@ import (
 	"net/http"
 )
 
-// RequestBodyTo reads the request body with ioutil.ReadAll
-// and marshals it into the interface described by i.
+// RequestBodyTo reads the request body and marshals it into
+// the interface described by i. The request body is consumed.
+//
 // As opposed to binding (see echo.Bind), BodyTo will return
 // successfully in the event of partial filling. Empty bodies
 // are also accepted.
