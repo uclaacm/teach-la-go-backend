@@ -2,28 +2,22 @@ package httpext
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
-// RequestBodyTo reads the request body with ioutil.ReadAll
-// and marshals it into the interface described by i.
+// RequestBodyTo reads the request body and marshals it into
+// the interface described by i. The request body is consumed.
+//
 // As opposed to binding (see echo.Bind), BodyTo will return
 // successfully in the event of partial filling. Empty bodies
 // are also accepted.
 // Returns error on failure.
-// If body is empty, nil is returned, and i is untouched. 
+// If body is empty, nil is returned, and i is untouched.
 func RequestBodyTo(r *http.Request, i interface{}) error {
-	var body = r.Body
-	if body == nil {
+	if err := json.NewDecoder(r.Body).Decode(i); err == io.EOF {
 		return nil
-	} 
-	if bytesBody, err := ioutil.ReadAll(body); err != nil {
-		return err
-	} else if len(bytesBody) == 0 {
-		return nil
-	} else if err := json.Unmarshal(bytesBody, i); err != nil {
+	} else {
 		return err
 	}
-	return nil
 }
