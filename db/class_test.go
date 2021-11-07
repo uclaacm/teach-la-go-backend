@@ -41,10 +41,9 @@ type ReqParam struct {
 }
 
 func CallFunc(t *testing.T, par *ReqParam) ([]byte, func() error) {
-	req, err := http.NewRequest(par.HTTPMethod,
+	req := httptest.NewRequest(par.HTTPMethod,
 		par.Path,
 		par.Body)
-	require.NoError(t, err)
 	rec := httptest.NewRecorder()
 	assert.NotNil(t, req, rec)
 	req.Header.Set("Content-Type", "application/json")
@@ -55,6 +54,7 @@ func CallFunc(t *testing.T, par *ReqParam) ([]byte, func() error) {
 	var b []byte
 	if par.Returns == true {
 		assert.NotEmpty(t, rec.Result().Body)
+		var err error
 		b, err = ioutil.ReadAll(rec.Result().Body)
 		require.NoError(t, err)
 		assert.NoError(t, err)
