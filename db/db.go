@@ -83,8 +83,8 @@ func (d *DB) StoreUser(ctx context.Context, u User) error {
 	return nil
 }
 
-func (d *DB) DeleteUser(ctx context.Context, u User) error {
-	if _, err := d.Collection(usersPath).Doc(u.UID).Delete(ctx); err != nil {
+func (d *DB) DeleteUser(ctx context.Context, uid string) error {
+	if _, err := d.Collection(usersPath).Doc(uid).Delete(ctx); err != nil {
 		return err
 	}
 	return nil
