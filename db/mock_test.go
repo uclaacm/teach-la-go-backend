@@ -30,13 +30,13 @@ func TestMockUser(t *testing.T) {
 		_, err := d.LoadUser(context.Background(), "invalid")
 		assert.Error(t, err)
 	})
-	// t.Run("delete", func(t *testing.T) {
-	// 	d := db.OpenMock()
-	// 	require.NoError(t, d.StoreUser(context.Background(), db.User{
-	// 		UID: "test",
-	// 	}))
-	// 	assert.NoError(t, d.DeleteUser(context.Background(), "test"))
-	// })
+	t.Run("delete", func(t *testing.T) {
+		d := db.OpenMock()
+		require.NoError(t, d.StoreUser(context.Background(), db.User{
+			UID: "test",
+		}))
+		assert.NoError(t, d.DeleteUser(context.Background(), "test"))
+	})
 }
 
 func TestMockProgram(t *testing.T) {
