@@ -2,6 +2,7 @@ package db
 
 import (
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -45,6 +46,8 @@ const (
 	msgTypeRead  = "READ"
 	msgTypeError = "ERROR"
 )
+
+var EnableBetaFeatures = os.Getenv("ENABLE_BETA_FEATURES")
 
 func langString(langCode int) string {
 	switch langCode {
