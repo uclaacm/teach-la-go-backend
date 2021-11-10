@@ -2,13 +2,11 @@ package db
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"os"
 
 	"testing"
 
@@ -65,22 +63,22 @@ func CallFunc(t *testing.T, par *ReqParam) ([]byte, func() error) {
 	return b, rec.Result().Body.Close
 }
 
-func CreateTestUser(t *testing.T, o *TestObj, i int) {
+// func CreateTestUser(t *testing.T, o *TestObj, i int) {
 
-	par := ReqParam{
-		"POST",
-		"/",
-		nil,
-		o.D.CreateUser,
-		http.StatusCreated,
-		true,
-	}
-	b, close := CallFunc(t, &par)
-	defer assert.NoError(t, close())
+// 	par := ReqParam{
+// 		"POST",
+// 		"/",
+// 		nil,
+// 		o.D.CreateUser,
+// 		http.StatusCreated,
+// 		true,
+// 	}
+// 	b, close := CallFunc(t, &par)
+// 	defer assert.NoError(t, close())
 
-	assert.NoError(t, json.Unmarshal([]byte(b), &o.User[i]))
-	t.Logf(colorInfo+"Created user: %s"+colorEnd, o.User[i].UID)
-}
+// 	assert.NoError(t, json.Unmarshal([]byte(b), &o.User[i]))
+// 	t.Logf(colorInfo+"Created user: %s"+colorEnd, o.User[i].UID)
+// }
 
 func DeleteTestUser(t *testing.T, o *TestObj, i int) {
 	pr := struct {
@@ -166,22 +164,22 @@ func DeleteTestClass(t *testing.T, o *TestObj, classIndex int) {
 // }
 
 // Ensure classes can be created w/o any errors
-func TestCreateClass(t *testing.T) {
+// func TestCreateClass(t *testing.T) {
 
-	obj := TestObj{
-		nil,
-		make([]Class, 1),
-		make([]Class, 1),
-		make([]User, 1),
-	}
+// 	obj := TestObj{
+// 		nil,
+// 		make([]Class, 1),
+// 		make([]Class, 1),
+// 		make([]User, 1),
+// 	}
 
-	ptr, err := Open(context.Background(), os.Getenv("TLACFG"))
-	obj.D = ptr
-	require.NoError(t, err)
+// 	ptr, err := Open(context.Background(), os.Getenv("TLACFG"))
+// 	obj.D = ptr
+// 	require.NoError(t, err)
 
-	CreateTestUser(t, &obj, 0)
-	CreateTestClass(t, &obj, 0, 0)
+// 	CreateTestUser(t, &obj, 0)
+// 	CreateTestClass(t, &obj, 0, 0)
 
-	DeleteTestClass(t, &obj, 0)
-	DeleteTestUser(t, &obj, 0)
-}
+// 	DeleteTestClass(t, &obj, 0)
+// 	DeleteTestUser(t, &obj, 0)
+// }

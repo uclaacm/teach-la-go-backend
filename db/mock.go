@@ -36,6 +36,16 @@ func (d *MockDB) StoreClass(_ context.Context, c Class) error {
 	return nil
 }
 
+func (d *MockDB) NewUser(context context.Context, uid string) (u User, err error) {
+	newUser, newProgs := defaultData()
+	d.db[usersPath][uid] = newUser
+
+	for _, prog := range newProgs {
+		d.StoreProgram(context, prog)
+	}
+	return newUser, nil
+}
+
 func (d *MockDB) LoadUser(_ context.Context, uid string) (u User, err error) {
 	u, ok := d.db[usersPath][uid].(User)
 	if !ok {

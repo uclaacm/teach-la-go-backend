@@ -2,9 +2,12 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 	"github.com/uclaacm/teach-la-go-backend/db"
+	"github.com/uclaacm/teach-la-go-backend/httpext"
 )
 
 // GetUser acquires the user document with the given uid. The
@@ -52,4 +55,36 @@ func GetUser(cc echo.Context) error {
 		}
 	}
 	return c.JSON(http.StatusOK, &resp)
+}
+
+// CreateUser creates a new user object corresponding to either
+// the provided UID or a random new one if none is provided
+// with the default data.
+//
+// Request Body:
+// {
+//     "uid": string <optional>
+// }
+//
+// Returns: Status 200 with a marshalled User struct on success.
+func CreateUser(cc echo.Context) error {
+	var body struct {
+		UID string `json:"uid"`
+	}
+
+	c := cc.(*db.DBContext)
+
+	if err := httpext.RequestBodyTo(c.Request(), &body); err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to marshal request body").Error())
+	}
+
+	newUser, err := c.NewUser(c.Request().Context(), body.UID)
+	if err != nil {
+		if strings.Contains(err.Error(), "user document with uid '") {
+			return c.String(http.StatusBadRequest, err.Error())
+		}
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to create user").Error())
+	}
+
+	return c.JSON(http.StatusCreated, &newUser)
 }

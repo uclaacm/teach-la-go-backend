@@ -2,10 +2,10 @@ package db
 
 import (
 	"context"
-	"errors"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
+	"github.com/pkg/errors"
 	"google.golang.org/api/option"
 )
 
@@ -54,6 +54,46 @@ func (d *DB) StoreClass(ctx context.Context, c Class) error {
 		return err
 	}
 	return nil
+}
+
+func (d *DB) NewUser(ctx context.Context, uid string) (User, error) {
+	// create new doc for user if necessary
+	ref := d.Collection(usersPath).NewDoc()
+	if uid != "" {
+		ref = d.Collection(usersPath).Doc(uid)
+	}
+
+	// create structures to be used as default data
+	newUser, newProgs := defaultData()
+	newUser.UID = ref.ID
+
+	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		// if the user exists, then we have a problem.
+		userSnap, _ := tx.Get(ref)
+		if userSnap.Exists() {
+			return errors.Errorf("user document with uid '%s' already initialized", uid)
+		}
+
+		// create all new programs and associate them to the user.
+		for _, prog := range newProgs {
+			// create program in database.
+			newProg := d.Collection(programsPath).NewDoc()
+			if err := tx.Create(newProg, prog); err != nil {
+				return err
+			}
+
+			// establish association in user doc.
+			newUser.Programs = append(newUser.Programs, newProg.ID)
+		}
+
+		// set MRP and return
+		newUser.MostRecentProgram = newUser.Programs[0]
+		return tx.Create(ref, newUser)
+	})
+	if err != nil {
+		return newUser, err
+	}
+	return newUser, nil
 }
 
 func (d *DB) LoadUser(ctx context.Context, uid string) (User, error) {

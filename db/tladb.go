@@ -24,6 +24,7 @@ type TLADB interface {
 	LoadClass(context.Context, string) (Class, error)
 	StoreClass(context.Context, Class) error
 
+	NewUser(context.Context, string) (User, error)
 	LoadUser(context.Context, string) (User, error)
 	StoreUser(context.Context, User) error
 }
