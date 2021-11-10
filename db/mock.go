@@ -41,6 +41,11 @@ func (d *MockDB) StoreClass(_ context.Context, c Class) error {
 	return nil
 }
 
+func (d *MockDB) DeleteClass(_ context.Context, cid string) error {
+	delete(d.db[classesPath], cid)
+	return nil
+}
+
 func (d *MockDB) LoadUser(_ context.Context, uid string) (u User, err error) {
 	u, ok := d.db[usersPath][uid].(User)
 	if !ok {

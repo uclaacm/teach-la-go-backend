@@ -63,6 +63,14 @@ func (d *DB) StoreClass(ctx context.Context, c Class) error {
 	return nil
 }
 
+func (d *DB) DeleteClass(ctx context.Context, cid string) error {
+	if _, err := d.Collection(classesPath).Doc(cid).Delete(ctx); err != nil {
+		return err
+	}
+	
+	return nil
+}
+
 func (d *DB) LoadUser(ctx context.Context, uid string) (User, error) {
 	doc, err := d.Collection(usersPath).Doc(uid).Get(ctx)
 	if err != nil {
