@@ -98,7 +98,7 @@ func DeleteUser(cc echo.Context) error {
 		}
 	}
 
-	if err := c.DeleteUser(c.Request().Context(), user); err != nil {
+	if err := c.DeleteUser(c.Request().Context(), uid); err != nil {
 		return c.String(http.StatusInternalServerError, "failed to delete user.")
 	}
 

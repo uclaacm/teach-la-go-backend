@@ -59,8 +59,8 @@ func (d *MockDB) StoreUser(_ context.Context, u User) error {
 	return nil
 }
 
-func (d *MockDB) DeleteUser(_ context.Context, u User) error {
-	delete(d.db[usersPath], u.UID)
+func (d *MockDB) DeleteUser(_ context.Context, uid string) error {
+	delete(d.db[usersPath], uid)
 	return nil
 }
 
