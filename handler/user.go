@@ -38,6 +38,11 @@ func GetUser(cc echo.Context) error {
 		c.Logger().Debugf("Failed to load user with uid `%s`: %v", uid, err)
 		return c.String(http.StatusNotFound, "Failed to load user.")
 	}
+
+	if db.EnableBetaFeatures == "true" {
+		user.DeveloperAcc = true
+	}
+
 	resp.UserData = user
 
 	// Get programs, if requested.
