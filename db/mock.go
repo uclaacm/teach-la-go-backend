@@ -74,12 +74,20 @@ func (d *MockDB) CreateUser(_ context.Context, u User) (User, error) {
 			return u, errors.Errorf("user document with uid '%s' already initialized", u.UID)
 		}
 	} else {
-		// Create a uid for the user
+		// Create a UID for the user
 		u.UID = uuid.New().String()
 	}
 	// Create the user in the database
 	d.db[usersPath][u.UID] = u
 	return u, nil
+}
+
+func (d *MockDB) CreateProgram(_ context.Context, p Program) (Program, error) {
+	// Give the program a UID
+	p.UID = uuid.New().String()
+	d.db[programsPath][p.UID] = p
+
+	return p, nil
 }
 
 // Creates a new MockDB.
