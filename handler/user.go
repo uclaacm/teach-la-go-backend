@@ -156,7 +156,11 @@ func CreateUser(cc echo.Context) error {
 	}
 
 	// set most recent program
-	user.MostRecentProgram = newUser.Programs[0]
-	c.StoreUser(c.Request().Context(), user)
+	user.MostRecentProgram = user.Programs[0]
+	if err := c.StoreUser(c.Request().Context(), user); err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to create user").Error())
+	}
+
+	return c.JSON(http.StatusCreated, &user)
 
 }
