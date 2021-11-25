@@ -111,7 +111,7 @@ func (d *DB) CreateUser(c echo.Context) error {
 	}
 
 	// create structures to be used as default data
-	newUser, newProgs := defaultData()
+	newUser, newProgs := DefaultData()
 	newUser.UID = ref.ID
 
 	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {

@@ -96,7 +96,7 @@ func defaultProgram(language string) (defaultProg Program) {
 // and its associated Programs. Associations
 // between said UserData and Programs are not
 // automatically applied in the database.
-func defaultData() (User, []Program) {
+func DefaultData() (User, []Program) {
 	defaultProgs := make([]Program, 0)
 	for i := python; i < langCount; i++ {
 		defaultProgs = append(defaultProgs, defaultProgram(langString(i)))

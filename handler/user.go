@@ -2,9 +2,12 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 	"github.com/uclaacm/teach-la-go-backend/db"
+	"github.com/uclaacm/teach-la-go-backend/httpext"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -108,4 +111,52 @@ func DeleteUser(cc echo.Context) error {
 	}
 
 	return c.String(http.StatusOK, "user deleted successfully")
+}
+
+// CreateUser creates a new user object corresponding to either
+// the provided UID or a random new one if none is provided
+// with the default data.
+//
+// Request Body:
+// {
+//     "uid": string <optional>
+// }
+//
+// Returns: Status 200 with a marshalled User struct on success.
+func CreateUser(cc echo.Context) error {
+	var body struct {
+		UID string `json:"uid"`
+	}
+
+	if err := httpext.RequestBodyTo(cc.Request(), &body); err != nil {
+		return cc.String(http.StatusInternalServerError, errors.Wrap(err, "failed to marshal request body").Error())
+	}
+
+	// create structures to be used as default data
+	newUser, newProgs := db.DefaultData()
+	newUser.UID = body.UID
+
+	c := cc.(*db.DBContext)
+	user, err := c.CreateUser(c.Request().Context(), newUser)
+	if err != nil {
+		if strings.Contains(err.Error(), "user document with uid '") {
+			return c.String(http.StatusBadRequest, err.Error())
+		}
+	}
+
+	for _, prog := range newProgs {
+		// create program in database
+		p, err := c.CreateProgram(c.Request().Context(), prog)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to create user").Error())
+		}
+
+		// establish association in user doc.
+		user.Programs = append(user.Programs, p.UID)
+	}
+
+	// set most recent program
+	user.MostRecentProgram = newUser.Programs[0]
+	c.StoreUser(c.Request().Context(), user)
+
 }

@@ -30,4 +30,7 @@ type TLADB interface {
 	LoadUser(context.Context, string) (User, error)
 	StoreUser(context.Context, User) error
 	DeleteUser(context.Context, string) error
+
+	CreateUser(context.Context, User) (User, error)
+	CreateProgram(context.Context, Program) (Program, error)
 }
