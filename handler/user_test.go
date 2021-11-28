@@ -218,3 +218,7 @@ func TestDeleteUser(t *testing.T) {
 		}
 	})
 }
+
+func TestCreateUser(t *testing.T) {
+
+}
