@@ -162,5 +162,4 @@ func CreateUser(cc echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, &user)
-
 }

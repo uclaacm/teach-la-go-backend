@@ -75,7 +75,7 @@ func serve(c *cli.Context) error {
 	// user management
 	e.GET("/user/get", handler.GetUser)
 	e.PUT("/user/update", d.UpdateUser)
-	e.POST("/user/create", d.CreateUser)
+	e.POST("/user/create", handler.CreateUser)
 
 	// program management
 	e.GET("/program/get", d.GetProgram)

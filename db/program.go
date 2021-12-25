@@ -197,7 +197,7 @@ func (d *DB) CreateProgram(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-	}
+	e
 
 	// create the program doc.
 	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
