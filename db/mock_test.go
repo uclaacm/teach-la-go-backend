@@ -22,6 +22,9 @@ func TestMockUser(t *testing.T) {
 		_, err := d.LoadUser(context.Background(), "test")
 		assert.NoError(t, err)
 	})
+	t.Run("create", func(t *testing.T) {
+		d := db.OpenMock()
+	})
 	t.Run("invalidLoad", func(t *testing.T) {
 		d := db.OpenMock()
 		require.NoError(t, d.StoreUser(context.Background(), db.User{
@@ -75,6 +78,10 @@ func TestMockClass(t *testing.T) {
 		}))
 		_, err := d.LoadClass(context.Background(), "test")
 		assert.NoError(t, err)
+	})
+	t.Run("create", func(t *testing.T) {
+		d := db.OpenMock()
+		assert.NoError(t, d.StoreClass(context.Background(), db.Class{}))
 	})
 	t.Run("invalidLoad", func(t *testing.T) {
 		d := db.OpenMock()
