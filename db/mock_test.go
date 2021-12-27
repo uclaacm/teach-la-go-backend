@@ -24,6 +24,8 @@ func TestMockUser(t *testing.T) {
 	})
 	t.Run("create", func(t *testing.T) {
 		d := db.OpenMock()
+		_, err := d.CreateUser(context.Background(), db.User{})
+		assert.NoError(t, err)
 	})
 	t.Run("invalidLoad", func(t *testing.T) {
 		d := db.OpenMock()
