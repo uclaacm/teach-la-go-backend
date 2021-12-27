@@ -220,20 +220,21 @@ func TestDeleteUser(t *testing.T) {
 }
 
 func TestCreateUser(t *testing.T) {
-	if !assert.NoError(t, err) {
-		return
-	}
+	d := db.OpenMock()
 	req := httptest.NewRequest(http.MethodPut, "/", nil)
 	rec := httptest.NewRecorder()
 	assert.NotNil(t, req, rec)
 	c := echo.New().NewContext(req, rec)
 
-	if assert.NoError(t, d.CreateUser(c)) {
+	if assert.NoError(t, handler.CreateUser(&db.DBContext{
+		Context: c,
+		TLADB:   d,
+	})) {
 		assert.Equal(t, http.StatusCreated, rec.Code)
 		assert.NotEmpty(t, rec.Result().Body)
 
 		// try to marshall result into an user struct
-		u := User{}
+		u := db.User{}
 		if assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &u)) {
 			assert.NotZero(t, u)
 		}

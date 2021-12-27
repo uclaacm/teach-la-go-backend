@@ -141,7 +141,7 @@ func TestCreateProgram(t *testing.T) {
 
 		req, rec := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(string(b))), httptest.NewRecorder()
 		c := echo.New().NewContext(req, rec)
-		if assert.NoError(t, d.CreateProgram(c)) {
+		if assert.NoError(t, d.CreateProgramTemp(c)) {
 			assert.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			assert.NotEmpty(t, rec.Result().Body)
 		}

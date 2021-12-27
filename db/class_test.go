@@ -2,13 +2,11 @@ package db
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"os"
 
 	"testing"
 
@@ -65,13 +63,13 @@ func CallFunc(t *testing.T, par *ReqParam) ([]byte, func() error) {
 	return b, rec.Result().Body.Close
 }
 
-func CreateTestUser(t *testing.T, o *TestObj, i int) {
+/* func CreateTestUser(t *testing.T, o *TestObj, i int) {
 
 	par := ReqParam{
 		"POST",
 		"/",
 		nil,
-		o.D.CreateUser,
+		handler.CreateUser,
 		http.StatusCreated,
 		true,
 	}
@@ -80,7 +78,7 @@ func CreateTestUser(t *testing.T, o *TestObj, i int) {
 
 	assert.NoError(t, json.Unmarshal([]byte(b), &o.User[i]))
 	t.Logf(colorInfo+"Created user: %s"+colorEnd, o.User[i].UID)
-}
+} */
 
 // func DeleteTestUser(t *testing.T, o *TestObj, i int) {
 // 	pr := struct {
@@ -166,7 +164,7 @@ func CreateTestClass(t *testing.T, o *TestObj, classIndex int, userIndex int) {
 // }
 
 // Ensure classes can be created w/o any errors
-func TestCreateClass(t *testing.T) {
+/* func TestCreateClass(t *testing.T) {
 
 	obj := TestObj{
 		nil,
@@ -184,4 +182,4 @@ func TestCreateClass(t *testing.T) {
 
 	// DeleteTestClass(t, &obj, 0)
 	// DeleteTestUser(t, &obj, 0)
-}
+} */
