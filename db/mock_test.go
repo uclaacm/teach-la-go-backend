@@ -55,6 +55,11 @@ func TestMockProgram(t *testing.T) {
 		_, err := d.LoadProgram(context.Background(), "test")
 		assert.NoError(t, err)
 	})
+	t.Run("create", func(t *testing.T) {
+		d := db.OpenMock()
+		_, err := d.CreateProgram(context.Background(), db.Program{})
+		require.NoError(t, err)
+	})
 	t.Run("invalidLoad", func(t *testing.T) {
 		d := db.OpenMock()
 		require.NoError(t, d.StoreProgram(context.Background(), db.Program{
