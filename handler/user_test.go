@@ -273,10 +273,10 @@ func TestCreateUser(t *testing.T) {
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
 
-		handler.CreateUser(&db.DBContext{
+		assert.NoError(t, handler.CreateUser(&db.DBContext{
 			Context: c,
 			TLADB:   d,
-		})
+		}))
 
 		req = httptest.NewRequest(http.MethodPut, "/", strings.NewReader(`{"uid": "abcdef123"}`))
 		rec = httptest.NewRecorder()
