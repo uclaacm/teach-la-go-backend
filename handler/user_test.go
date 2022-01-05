@@ -220,24 +220,25 @@ func TestDeleteUser(t *testing.T) {
 }
 
 func TestCreateUser(t *testing.T) {
-	d := db.OpenMock()
-	req := httptest.NewRequest(http.MethodPut, "/", nil)
-	rec := httptest.NewRecorder()
-	assert.NotNil(t, req, rec)
-	c := echo.New().NewContext(req, rec)
+	t.Run("EmptyBody", func(t *testing.T) {
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPut, "/", nil)
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
 
-	if assert.NoError(t, handler.CreateUser(&db.DBContext{
-		Context: c,
-		TLADB:   d,
-	})) {
-		assert.Equal(t, http.StatusCreated, rec.Code)
-		assert.NotEmpty(t, rec.Result().Body)
+		if assert.NoError(t, handler.CreateUser(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			assert.Equal(t, http.StatusCreated, rec.Code)
+			assert.NotEmpty(t, rec.Result().Body)
 
-		// try to marshall result into an user struct
-		u := db.User{}
-		if assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &u)) {
-			assert.NotZero(t, u)
+			// try to marshall result into an user struct
+			u := db.User{}
+			if assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &u)) {
+				assert.NotZero(t, u)
+			}
 		}
-	}
-
+	})
 }
