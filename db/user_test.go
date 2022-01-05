@@ -110,26 +110,3 @@ func TestUpdateUser(t *testing.T) {
 		t.Run("Programs", func(t *testing.T) {})
 	})
 }
-
-func TestCreateUser(t *testing.T) {
-	d, err := Open(context.Background(), os.Getenv("TLACFG"))
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	req := httptest.NewRequest(http.MethodPut, "/", nil)
-	rec := httptest.NewRecorder()
-	assert.NotNil(t, req, rec)
-	c := echo.New().NewContext(req, rec)
-
-	if assert.NoError(t, d.CreateUser(c)) {
-		assert.Equal(t, http.StatusCreated, rec.Code)
-		assert.NotEmpty(t, rec.Result().Body)
-
-		// try to marshall result into an user struct
-		u := User{}
-		if assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &u)) {
-			assert.NotZero(t, u)
-		}
-	}
-}

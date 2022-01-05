@@ -25,7 +25,7 @@ func TestDefaultProgram(t *testing.T) {
 }
 
 func TestDefaultData(t *testing.T) {
-	u, p := defaultData()
+	u, p := DefaultData()
 	assert.NotEmpty(t, p)
 	assert.NotEmpty(t, u)
 }

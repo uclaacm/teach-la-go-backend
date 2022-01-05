@@ -2,7 +2,8 @@ package db
 
 import (
 	"context"
-	"errors"
+	// "errors"
+	"github.com/pkg/errors"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
@@ -36,6 +37,37 @@ func (d *DB) StoreProgram(ctx context.Context, p Program) error {
 	return nil
 }
 
+func (d *DB) CreateUser(ctx context.Context, u User) (User, error) {
+	// create a new doc for the user if necessary
+	ref := d.Collection(usersPath).NewDoc()
+	if u.UID != "" {
+		ref = d.Collection(usersPath).Doc(u.UID)
+	}
+	u.UID = ref.ID
+
+	userSnap, _ := ref.Get(ctx)
+	if userSnap.Exists() {
+		return u, errors.Errorf("user document with uid '%s' already initialized", u.UID)
+	}
+	// If there was an error in creating the user, return the error
+	if _, err := ref.Create(ctx, u); err != nil {
+		return u, err
+	}
+
+	// Return the user
+	return u, nil
+}
+
+func (d *DB) CreateProgram(ctx context.Context, p Program) (Program, error) {
+	newProg := d.Collection(programsPath).NewDoc()
+	p.UID = newProg.ID
+	if _, err := newProg.Create(ctx, p); err != nil {
+		return p, err
+	}
+
+	return p, nil
+}
+
 func (d *DB) RemoveProgram(ctx context.Context, pid string) error {
 	if _, err := d.Collection(programsPath).Doc(pid).Delete(ctx); err != nil {
 		return err
@@ -67,7 +99,7 @@ func (d *DB) DeleteClass(ctx context.Context, cid string) error {
 	if _, err := d.Collection(classesPath).Doc(cid).Delete(ctx); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 

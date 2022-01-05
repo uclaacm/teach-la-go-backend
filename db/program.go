@@ -151,7 +151,7 @@ func (d *DB) UpdateProgram(c echo.Context) error {
 // }
 //
 // Returns 201 created on success. TODO: postman docs
-func (d *DB) CreateProgram(c echo.Context) error {
+func (d *DB) CreateProgramTemp(c echo.Context) error {
 	var requestBody struct {
 		UID  string  `json:"uid"`
 		WID  string  `json:"wid"`
