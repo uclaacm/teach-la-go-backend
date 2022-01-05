@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/labstack/echo/v4"
@@ -220,7 +221,7 @@ func TestDeleteUser(t *testing.T) {
 }
 
 func TestCreateUser(t *testing.T) {
-	t.Run("EmptyBody", func(t *testing.T) {
+	t.Run("emptyUID", func(t *testing.T) {
 		d := db.OpenMock()
 		req := httptest.NewRequest(http.MethodPut, "/", nil)
 		rec := httptest.NewRecorder()
@@ -241,4 +242,28 @@ func TestCreateUser(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("providedUID", func(t *testing.T) {
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(`{"uid": "abcdef123"}`))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.CreateUser(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			assert.Equal(t, http.StatusCreated, rec.Code)
+			assert.NotEmpty(t, rec.Result().Body)
+
+			// try to marshall result into an user struct
+			u := db.User{}
+			if assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &u)) {
+				assert.NotZero(t, u)
+				assert.Equal(t, u.UID, "abcdef123")
+			}
+		}
+	})
+
 }
