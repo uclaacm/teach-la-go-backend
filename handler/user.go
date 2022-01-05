@@ -139,7 +139,7 @@ func CreateUser(cc echo.Context) error {
 	c := cc.(*db.DBContext)
 	user, err := c.CreateUser(c.Request().Context(), newUser)
 	if err != nil {
-		if strings.Contains(err.Error(), "user document with uid '") {
+		if strings.Contains(err.Error(), "user document with uid") {
 			return c.String(http.StatusBadRequest, err.Error())
 		}
 	}
