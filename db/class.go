@@ -82,7 +82,7 @@ func (d *DB) RemoveClassFromUser(ctx context.Context, uid string, cid string) er
 }
 
 // loadClass takes a cid, and returns a Class struct with its parameters populated
-// The retuned value is a pointer to the struct instantiated in this function
+// The returned value is a pointer to the struct instantiated in this function
 func (d *DB) loadClass(ctx context.Context, cid string) (*Class, error) {
 	// get the class doc
 	doc, err := d.Collection(classesPath).Doc(cid).Get(ctx)
