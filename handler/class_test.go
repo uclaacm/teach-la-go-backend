@@ -402,13 +402,19 @@ func TestJoinClass(t *testing.T) {
 		require.NoError(t, d.StoreClass(context.Background(), db.Class{}))
 		/* req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": ""}`)) */
 	})
-	t.Run("missingUser", func(t *testing.T) {
+	t.Run("missingUID", func(t *testing.T) {
 
 	})
-	t.Run("missingProgram", func(t *testing.T) {
+	t.Run("missingCID", func(t *testing.T) {
+
+	})
+	t.Run("improperBody", func(t *testing.T) {
 
 	})
 	t.Run("userAlreadyInClass", func(t *testing.T) {
+
+	})
+	t.Run("classAlreadyWithUser", func(t *testing.T) {
 
 	})
 }
