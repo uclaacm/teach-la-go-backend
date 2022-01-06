@@ -154,7 +154,6 @@ func DeleteClass(cc echo.Context) error {
 // JoinClass takes a UID and cid(wid) as a JSON, and attempts to
 // add the UID to the class given by cid. The updated struct of the class is returned as a
 // JSON
-
 func JoinClass(cc echo.Context) error {
 	req := struct {
 		UID string `json:"uid"`
