@@ -354,13 +354,12 @@ func TestDeleteClass(t *testing.T) {
 	t.Run("validClass", func(t *testing.T) {
 		d := db.OpenMock()
 		require.NoError(t, d.StoreClass(context.Background(), db.Class{
-			CID:     "test",
+			CID: "test",
 		}))
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{\"cid\": \"test\"}"))
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
-
 		if assert.NoError(t, handler.DeleteClass(&db.DBContext{
 			Context: c,
 			TLADB:   d,
@@ -394,5 +393,17 @@ func TestDeleteClass(t *testing.T) {
 			_, err = d.LoadProgram(context.Background(), "test")
 			require.Error(t, err)
 		}
+	})
+}
+
+func TestJoinClass(t *testing.T) {
+	t.Run("validJoin", func(t *testing.T) {
+
+	})
+	t.Run("missingUser", func(t *testing.T) {
+
+	})
+	t.Run("missingProgram", func(t *testing.T) {
+
 	})
 }
