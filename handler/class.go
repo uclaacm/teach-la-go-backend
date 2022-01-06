@@ -151,18 +151,31 @@ func DeleteClass(cc echo.Context) error {
 	return c.String(http.StatusOK, "")
 }
 
-func addClassToUser(u *db.User, c string) {
+func addClassToUser(u *db.User, cid string) {
 	alreadyAssociated := false
 	for _, class := range (*u).Classes {
-		if class == c {
+		if class == cid {
 			alreadyAssociated = true
 			break
 		}
 	}
 	if !alreadyAssociated {
-		(*u).Classes = append((*u).Classes, c)
+		(*u).Classes = append((*u).Classes, cid)
+	}
+}
+
+func addUserToClass(uid string, c *db.Class) {
+	alreadyAssociated := false
+	for _, user := range (*c).Members {
+		if user == uid {
+			alreadyAssociated = true
+			break
+		}
 	}
 
+	if !alreadyAssociated {
+		(*c).Members = append((*c).Members, uid)
+	}
 }
 
 // JoinClass takes a UID and cid(wid) as a JSON, and attempts to
