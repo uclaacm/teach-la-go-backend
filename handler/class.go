@@ -213,14 +213,14 @@ func JoinClass(cc echo.Context) error {
 	}
 
 	// add user to the class
-	user.Programs = append(user.Programs, req.CID)
+	addUserToClass(user.UID, &class)
 	err = c.StoreUser(c.Request().Context(), user)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "Failed to add user to class").Error())
 	}
 
 	// add this class to the user's "Classes" list
-	class.Members = append(class.Members, req.UID)
+	addClassToUser(&user, class.CID)
 	err = c.StoreClass(c.Request().Context(), class)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "Failed to add user to class").Error())
