@@ -151,6 +151,20 @@ func DeleteClass(cc echo.Context) error {
 	return c.String(http.StatusOK, "")
 }
 
+func addClassToUser(u *db.User, c string) {
+	alreadyAssociated := false
+	for _, class := range (*u).Classes {
+		if class == c {
+			alreadyAssociated = true
+			break
+		}
+	}
+	if !alreadyAssociated {
+		(*u).Classes = append((*u).Classes, c)
+	}
+
+}
+
 // JoinClass takes a UID and cid(wid) as a JSON, and attempts to
 // add the UID to the class given by cid. The updated struct of the class is returned as a
 // JSON
@@ -196,7 +210,7 @@ func JoinClass(cc echo.Context) error {
 	class.Members = append(class.Members, req.UID)
 	err = c.StoreClass(c.Request().Context(), class)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, errors.Wrap(err, "Failed to add user to class list").Error())
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "Failed to add user to class").Error())
 	}
 
 	return c.JSON(http.StatusOK, class)

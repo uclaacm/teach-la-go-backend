@@ -400,7 +400,7 @@ func TestJoinClass(t *testing.T) {
 	t.Run("validJoin", func(t *testing.T) {
 		d := db.OpenMock()
 		require.NoError(t, d.StoreClass(context.Background(), db.Class{}))
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": ""}`))
+		/* req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": ""}`)) */
 	})
 	t.Run("missingUser", func(t *testing.T) {
 
