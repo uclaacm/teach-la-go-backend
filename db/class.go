@@ -171,61 +171,6 @@ func (d *DB) CreateClass(c echo.Context) error {
 	return c.JSON(http.StatusOK, class)
 }
 
-// JoinClass takes a UID and cid(wid) as a JSON, and attempts to
-// add the UID to the class given by cid. The updated struct of the class is returned as a
-// JSON
-// func (d *DB) JoinClass(c echo.Context) error {
-// 	req := struct {
-// 		UID string `json:"uid"`
-// 		CID string `json:"cid"`
-// 	}{}
-
-// 	// read JSON from request body
-// 	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
-// 		return c.String(http.StatusInternalServerError, err.Error())
-// 	}
-// 	if req.UID == "" {
-// 		return c.String(http.StatusBadRequest, "uid is required")
-// 	}
-// 	if req.CID == "" {
-// 		return c.String(http.StatusBadRequest, "cid is required")
-// 	}
-
-// 	// get the class as a struct
-// 	class, err := d.loadClass(c.Request().Context(), req.CID)
-// 	if err != nil || class == nil {
-// 		return c.String(http.StatusNotFound, "class does not exist")
-// 	}
-
-// 	// check if user exists
-// 	if err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
-// 		userDoc, err := tx.Get(d.Collection(usersPath).Doc(req.UID))
-// 		if err != nil {
-// 			return err
-// 		}
-// 		if !userDoc.Exists() {
-// 			return errors.New("user does not exist")
-// 		}
-// 		return nil
-// 	}); err != nil {
-// 		return c.String(http.StatusNotFound, "user does not exist")
-// 	}
-
-// 	// add user to the class
-// 	err = d.AddUserToClass(c.Request().Context(), req.UID, req.CID)
-// 	if err != nil {
-// 		return c.String(http.StatusNotFound, "failed to add user to class")
-// 	}
-
-// 	// add this class to the user's "Classes" list
-// 	err = d.AddClassToUser(c.Request().Context(), req.UID, req.CID)
-// 	if err != nil {
-// 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to add user to class list").Error())
-// 	}
-
-// 	return c.JSON(http.StatusOK, class)
-// }
-
 // LeaveClass takes a UID and CID through the request body, and
 // attempts to remove user UID from the provided class CID.
 func (d *DB) LeaveClass(c echo.Context) error {
