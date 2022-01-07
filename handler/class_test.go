@@ -458,7 +458,18 @@ func TestJoinClass(t *testing.T) {
 		}
 	})
 	t.Run("improperBody", func(t *testing.T) {
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{"))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
 
+		if assert.NoError(t, handler.JoinClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		}
 	})
 	t.Run("userAlreadyInClass", func(t *testing.T) {
 
