@@ -444,7 +444,18 @@ func TestJoinClass(t *testing.T) {
 		}
 	})
 	t.Run("missingCID", func(t *testing.T) {
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test"}`))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
 
+		if assert.NoError(t, handler.JoinClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusBadRequest, rec.Code)
+		}
 	})
 	t.Run("improperBody", func(t *testing.T) {
 
