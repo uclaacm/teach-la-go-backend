@@ -399,8 +399,35 @@ func TestDeleteClass(t *testing.T) {
 func TestJoinClass(t *testing.T) {
 	t.Run("validJoin", func(t *testing.T) {
 		d := db.OpenMock()
-		require.NoError(t, d.StoreClass(context.Background(), db.Class{}))
-		/* req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": ""}`)) */
+		require.NoError(t, d.StoreClass(context.Background(), db.Class{
+			CID: "test",
+		}))
+		require.NoError(t, d.StoreUser(context.Background(), db.User{
+			UID: "test",
+		}))
+
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "cid": "test"}`))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.JoinClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusOK, rec.Code)
+		}
+		class, err := d.LoadClass(context.Background(), "test")
+		assert.Nil(t, err)
+		assert.NotZero(t, class)
+		assert.Equal(t, len(class.Members), 1)
+		assert.Equal(t, class.Members[0], "test")
+
+		user, err := d.LoadUser(context.Background(), "test")
+		assert.Nil(t, err)
+		assert.NotZero(t, user)
+		assert.Equal(t, len(user.Classes), 1)
+		assert.Equal(t, user.Classes[0], "test")
 	})
 	t.Run("missingUID", func(t *testing.T) {
 
