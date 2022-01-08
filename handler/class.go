@@ -166,7 +166,6 @@ func addUserToClass(uid string, c *db.Class) {
 			return
 		}
 	}
-
 	(*c).Members = append((*c).Members, uid)
 }
 
