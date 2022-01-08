@@ -156,7 +156,7 @@ func addClassToUser(u *db.User, cid string) {
 	for _, class := range (*u).Classes {
 		if class == cid {
 			alreadyAssociated = true
-			break
+			return
 		}
 	}
 	if !alreadyAssociated {
@@ -169,7 +169,7 @@ func addUserToClass(uid string, c *db.Class) {
 	for _, user := range (*c).Members {
 		if user == uid {
 			alreadyAssociated = true
-			break
+			return
 		}
 	}
 
