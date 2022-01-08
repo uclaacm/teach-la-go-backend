@@ -152,30 +152,22 @@ func DeleteClass(cc echo.Context) error {
 }
 
 func addClassToUser(u *db.User, cid string) {
-	alreadyAssociated := false
 	for _, class := range (*u).Classes {
 		if class == cid {
-			alreadyAssociated = true
 			return
 		}
 	}
-	if !alreadyAssociated {
-		(*u).Classes = append((*u).Classes, cid)
-	}
+	(*u).Classes = append((*u).Classes, cid)
 }
 
 func addUserToClass(uid string, c *db.Class) {
-	alreadyAssociated := false
 	for _, user := range (*c).Members {
 		if user == uid {
-			alreadyAssociated = true
 			return
 		}
 	}
 
-	if !alreadyAssociated {
-		(*c).Members = append((*c).Members, uid)
-	}
+	(*c).Members = append((*c).Members, uid)
 }
 
 // JoinClass takes a UID and cid(wid) as a JSON, and attempts to

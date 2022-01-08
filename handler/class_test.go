@@ -416,6 +416,12 @@ func TestJoinClass(t *testing.T) {
 			TLADB:   d,
 		})) {
 			require.Equal(t, http.StatusOK, rec.Code)
+			class := db.Class{}
+			if assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &class)) {
+				assert.NotZero(t, class)
+				assert.Equal(t, len(class.Members), 1)
+				assert.Equal(t, class.Members[0], "test")
+			}
 		}
 	})
 	t.Run("missingUID", func(t *testing.T) {
@@ -513,6 +519,12 @@ func TestJoinClass(t *testing.T) {
 			TLADB:   d,
 		})) {
 			require.Equal(t, http.StatusOK, rec.Code)
+			class := db.Class{}
+			if assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &class)) {
+				assert.NotZero(t, class)
+				assert.Equal(t, len(class.Members), 1)
+				assert.Equal(t, class.Members[0], "test")
+			}
 		}
 		class, err := d.LoadClass(context.Background(), "test")
 		assert.Nil(t, err)
@@ -545,6 +557,12 @@ func TestJoinClass(t *testing.T) {
 			TLADB:   d,
 		})) {
 			require.Equal(t, http.StatusOK, rec.Code)
+			class := db.Class{}
+			if assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &class)) {
+				assert.NotZero(t, class)
+				assert.Equal(t, len(class.Members), 1)
+				assert.Equal(t, class.Members[0], "test")
+			}
 		}
 		class, err := d.LoadClass(context.Background(), "test")
 		assert.Nil(t, err)
