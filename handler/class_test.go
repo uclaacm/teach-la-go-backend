@@ -354,13 +354,12 @@ func TestDeleteClass(t *testing.T) {
 	t.Run("validClass", func(t *testing.T) {
 		d := db.OpenMock()
 		require.NoError(t, d.StoreClass(context.Background(), db.Class{
-			CID:     "test",
+			CID: "test",
 		}))
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{\"cid\": \"test\"}"))
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
-
 		if assert.NoError(t, handler.DeleteClass(&db.DBContext{
 			Context: c,
 			TLADB:   d,
@@ -394,5 +393,187 @@ func TestDeleteClass(t *testing.T) {
 			_, err = d.LoadProgram(context.Background(), "test")
 			require.Error(t, err)
 		}
+	})
+}
+
+func TestJoinClass(t *testing.T) {
+	t.Run("validJoin", func(t *testing.T) {
+		d := db.OpenMock()
+		require.NoError(t, d.StoreClass(context.Background(), db.Class{
+			CID: "test",
+		}))
+		require.NoError(t, d.StoreUser(context.Background(), db.User{
+			UID: "test",
+		}))
+
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "cid": "test"}`))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.JoinClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusOK, rec.Code)
+			class := db.Class{}
+			if assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &class)) {
+				assert.NotZero(t, class)
+				assert.Equal(t, len(class.Members), 1)
+				assert.Equal(t, class.Members[0], "test")
+			}
+		}
+	})
+	t.Run("missingUID", func(t *testing.T) {
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"cid": "test"}`))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.JoinClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
+	t.Run("missingCID", func(t *testing.T) {
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"cid": "test"}`))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.JoinClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
+	t.Run("userDNE", func(t *testing.T) {
+		d := db.OpenMock()
+		require.NoError(t, d.StoreClass(context.Background(), db.Class{
+			CID: "test",
+		}))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "cid": "test"}`))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.JoinClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusNotFound, rec.Code)
+		}
+	})
+	t.Run("classDNE", func(t *testing.T) {
+		d := db.OpenMock()
+		require.NoError(t, d.StoreUser(context.Background(), db.User{
+			UID: "test",
+		}))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "cid": "test"}`))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.JoinClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusNotFound, rec.Code)
+		}
+	})
+	t.Run("improperBody", func(t *testing.T) {
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{"))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.JoinClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		}
+	})
+	t.Run("userAlreadyInClass", func(t *testing.T) {
+		d := db.OpenMock()
+		require.NoError(t, d.StoreClass(context.Background(), db.Class{
+			CID:     "test",
+			Members: []string{"test"},
+		}))
+		require.NoError(t, d.StoreUser(context.Background(), db.User{
+			UID: "test",
+		}))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "cid": "test"}`))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.JoinClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusOK, rec.Code)
+			class := db.Class{}
+			if assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &class)) {
+				assert.NotZero(t, class)
+				assert.Equal(t, len(class.Members), 1)
+				assert.Equal(t, class.Members[0], "test")
+			}
+		}
+		class, err := d.LoadClass(context.Background(), "test")
+		assert.Nil(t, err)
+		assert.NotZero(t, class)
+		assert.Equal(t, len(class.Members), 1)
+		assert.Equal(t, class.Members[0], "test")
+
+		user, err := d.LoadUser(context.Background(), "test")
+		assert.Nil(t, err)
+		assert.NotZero(t, user)
+		assert.Equal(t, len(user.Classes), 1)
+		assert.Equal(t, user.Classes[0], "test")
+	})
+	t.Run("classAlreadyWithUser", func(t *testing.T) {
+		d := db.OpenMock()
+		require.NoError(t, d.StoreClass(context.Background(), db.Class{
+			CID: "test",
+		}))
+		require.NoError(t, d.StoreUser(context.Background(), db.User{
+			UID:     "test",
+			Classes: []string{"test"},
+		}))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "cid": "test"}`))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.JoinClass(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})) {
+			require.Equal(t, http.StatusOK, rec.Code)
+			class := db.Class{}
+			if assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &class)) {
+				assert.NotZero(t, class)
+				assert.Equal(t, len(class.Members), 1)
+				assert.Equal(t, class.Members[0], "test")
+			}
+		}
+		class, err := d.LoadClass(context.Background(), "test")
+		assert.Nil(t, err)
+		assert.NotZero(t, class)
+		assert.Equal(t, len(class.Members), 1)
+		assert.Equal(t, class.Members[0], "test")
+
+		user, err := d.LoadUser(context.Background(), "test")
+		assert.Nil(t, err)
+		assert.NotZero(t, user)
+		assert.Equal(t, len(user.Classes), 1)
+		assert.Equal(t, user.Classes[0], "test")
 	})
 }

@@ -116,9 +116,9 @@ func DeleteClass(cc echo.Context) error {
 	var req struct {
 		CID string `json:"cid"`
 	}
-	
+
 	c := cc.(*db.DBContext)
-	
+
 	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
 	}
@@ -133,7 +133,7 @@ func DeleteClass(cc echo.Context) error {
 	}
 
 	for _, prog := range class.Programs {
-		if err := c.RemoveProgram(c.Request().Context(), prog); 
+		if err := c.RemoveProgram(c.Request().Context(), prog);
 		// if we can't find a program, then it's not a problem.
 		err != nil && status.Code(err) != codes.NotFound {
 			return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to delete class").Error())
@@ -149,4 +149,73 @@ func DeleteClass(cc echo.Context) error {
 	}
 
 	return c.String(http.StatusOK, "")
+}
+
+func addClassToUser(u *db.User, cid string) {
+	for _, class := range (*u).Classes {
+		if class == cid {
+			return
+		}
+	}
+	(*u).Classes = append((*u).Classes, cid)
+}
+
+func addUserToClass(uid string, c *db.Class) {
+	for _, user := range (*c).Members {
+		if user == uid {
+			return
+		}
+	}
+	(*c).Members = append((*c).Members, uid)
+}
+
+// JoinClass takes a UID and cid(wid) as a JSON, and attempts to
+// add the UID to the class given by cid. The updated struct of the class is returned as a
+// JSON
+func JoinClass(cc echo.Context) error {
+	req := struct {
+		UID string `json:"uid"`
+		CID string `json:"cid"`
+	}{}
+
+	c := cc.(*db.DBContext)
+
+	// read JSON from request body
+	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	if req.UID == "" {
+		return c.String(http.StatusBadRequest, "uid is required")
+	}
+	if req.CID == "" {
+		return c.String(http.StatusBadRequest, "cid is required")
+	}
+
+	// get the class as a struct
+	class, err := c.LoadClass(c.Request().Context(), req.CID)
+	if err != nil {
+		return c.String(http.StatusNotFound, "class does not exist")
+	}
+
+	// check if user exists
+	user, err := c.LoadUser(c.Request().Context(), req.UID)
+	if err != nil {
+		return c.String(http.StatusNotFound, "user does not exist")
+	}
+
+	// add user to the class
+	addUserToClass(user.UID, &class)
+	err = c.StoreClass(c.Request().Context(), class)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "Failed to add user to class").Error())
+	}
+
+	// add this class to the user's "Classes" list
+	addClassToUser(&user, class.CID)
+	err = c.StoreUser(c.Request().Context(), user)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "Failed to add user to class").Error())
+	}
+
+	return c.JSON(http.StatusOK, class)
 }
