@@ -175,7 +175,7 @@ func addUserToClass(uid string, c *db.Class) {
 func JoinClass(cc echo.Context) error {
 	req := struct {
 		UID string `json:"uid"`
-		WID string `json:"cid"`
+		WID string `json:"wid"`
 	}{}
 
 	c := cc.(*db.DBContext)
