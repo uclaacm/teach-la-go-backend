@@ -406,7 +406,7 @@ func TestJoinClass(t *testing.T) {
 			UID: "test",
 		}))
 
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "cid": "test"}`))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "wid": "test"}`))
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
@@ -426,7 +426,7 @@ func TestJoinClass(t *testing.T) {
 	})
 	t.Run("missingUID", func(t *testing.T) {
 		d := db.OpenMock()
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"cid": "test"}`))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"wid": "test"}`))
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
@@ -440,7 +440,7 @@ func TestJoinClass(t *testing.T) {
 	})
 	t.Run("missingCID", func(t *testing.T) {
 		d := db.OpenMock()
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"cid": "test"}`))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"wid": "test"}`))
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
@@ -457,7 +457,7 @@ func TestJoinClass(t *testing.T) {
 		require.NoError(t, d.StoreClass(context.Background(), db.Class{
 			CID: "test",
 		}))
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "cid": "test"}`))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "wid": "test"}`))
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
@@ -474,7 +474,7 @@ func TestJoinClass(t *testing.T) {
 		require.NoError(t, d.StoreUser(context.Background(), db.User{
 			UID: "test",
 		}))
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "cid": "test"}`))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "wid": "test"}`))
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
@@ -509,7 +509,7 @@ func TestJoinClass(t *testing.T) {
 		require.NoError(t, d.StoreUser(context.Background(), db.User{
 			UID: "test",
 		}))
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "cid": "test"}`))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "wid": "test"}`))
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
@@ -547,7 +547,7 @@ func TestJoinClass(t *testing.T) {
 			UID:     "test",
 			Classes: []string{"test"},
 		}))
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "cid": "test"}`))
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"uid": "test", "wid": "test"}`))
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)

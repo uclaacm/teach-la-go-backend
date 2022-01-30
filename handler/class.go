@@ -175,7 +175,7 @@ func addUserToClass(uid string, c *db.Class) {
 func JoinClass(cc echo.Context) error {
 	req := struct {
 		UID string `json:"uid"`
-		CID string `json:"cid"`
+		WID string `json:"wid"`
 	}{}
 
 	c := cc.(*db.DBContext)
@@ -187,12 +187,12 @@ func JoinClass(cc echo.Context) error {
 	if req.UID == "" {
 		return c.String(http.StatusBadRequest, "uid is required")
 	}
-	if req.CID == "" {
-		return c.String(http.StatusBadRequest, "cid is required")
+	if req.WID == "" {
+		return c.String(http.StatusBadRequest, "wid is required")
 	}
 
 	// get the class as a struct
-	class, err := c.LoadClass(c.Request().Context(), req.CID)
+	class, err := c.LoadClass(c.Request().Context(), req.WID)
 	if err != nil {
 		return c.String(http.StatusNotFound, "class does not exist")
 	}
