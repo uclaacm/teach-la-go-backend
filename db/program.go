@@ -43,33 +43,6 @@ func (p *Program) ToFirestoreUpdate() (up []firestore.Update) {
 	return
 }
 
-// GetProgram retrieves information about a single program.
-//
-// Query parameters: pid
-//
-// Returns status 200 OK with a marshalled Program struct.
-func (d *DB) GetProgram(c echo.Context) error {
-	pid := c.QueryParam("pid")
-	if pid == "" {
-		return c.String(http.StatusBadRequest, "pid is required")
-	}
-
-	// attempt to acquire doc.
-	p := Program{}
-	ref := d.Collection(programsPath).Doc(pid)
-	doc, err := ref.Get(c.Request().Context())
-	if err != nil {
-		return c.String(http.StatusNotFound, errors.Wrap(err, "failed to locate program").Error())
-	}
-	if err := doc.DataTo(&p); err != nil {
-		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to marshal data").Error())
-	}
-
-	// update UID field and respond.
-	p.UID = ref.ID
-	return c.JSON(http.StatusOK, &p)
-}
-
 // UpdateProgram expects an array of partial Program structs
 // and a UID of the user they belong to. If the user pointed
 // to by UID does not own the programs passed to update,
