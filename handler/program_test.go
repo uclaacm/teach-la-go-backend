@@ -19,15 +19,14 @@ func TestGetProgram(t *testing.T) {
 		c := echo.New().NewContext(req, rec)
 		d := db.OpenMock()
 
-		if assert.NoError(
-			t,
+		if assert.NoError(t,
 			handler.GetProgram(
 				&db.DBContext{
-				Context: c,
-				TLADB:   d,
-			}),
+					Context: c,
+					TLADB:   d,
+				}),
 		) {
-			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Equal(t, http.StatusNotFound, rec.Code)
 		}
 	})
 
@@ -39,12 +38,12 @@ func TestGetProgram(t *testing.T) {
 		d := db.OpenMock()
 
 		if assert.NoError(
-			t, 
+			t,
 			handler.GetProgram(
 				&db.DBContext{
-				Context: c,
-				TLADB:   d,
-			}),
+					Context: c,
+					TLADB:   d,
+				}),
 		) {
 			assert.Equal(t, http.StatusNotFound, rec.Code)
 		}
@@ -54,30 +53,30 @@ func TestGetProgram(t *testing.T) {
 
 	// add this test when createProgram gets refactored
 	/*
-	t.Run("TypicalRequest", func(t *testing.T) {
-		// get some random doc
-		
-		iter := d.Collection(d.programsPath).Documents(context.Background())
-		defer iter.Stop()
-		randomDoc, err := iter.Next()
-		assert.NoError(t, err)
-		t.Logf("using doc ID (%s)", randomDoc.Ref.ID)
+	   t.Run("TypicalRequest", func(t *testing.T) {
+	           // get some random doc
 
-		req := httptest.NewRequest(http.MethodGet, "/?pid="+randomDoc.Ref.ID, nil)
-		rec := httptest.NewRecorder()
-		assert.NotNil(t, req, rec)
-		c := echo.New().NewContext(req, rec)
+	           iter := d.Collection(d.programsPath).Documents(context.Background())
+	           defer iter.Stop()
+	           randomDoc, err := iter.Next()
+	           assert.NoError(t, err)
+	           t.Logf("using doc ID (%s)", randomDoc.Ref.ID)
 
-		if assert.NoError(t, handler.GetProgram(c)) {
-			assert.Equal(t, http.StatusOK, rec.Code)
-			assert.NotEmpty(t, rec.Result().Body)
-			p := db.Program()
-			bytes, err := ioutil.ReadAll(rec.Result().Body)
-			assert.NoError(t, err)
-			assert.NoError(t, json.Unmarshal(bytes, &p))
-			assert.NotZero(t, p)
-			assert.Equal(t, randomDoc.Ref.ID, p.UID) // check that the UID match
-		}
-	})
+	           req := httptest.NewRequest(http.MethodGet, "/?pid="+randomDoc.Ref.ID, nil)
+	           rec := httptest.NewRecorder()
+	           assert.NotNil(t, req, rec)
+	           c := echo.New().NewContext(req, rec)
+
+	           if assert.NoError(t, handler.GetProgram(c)) {
+	                   assert.Equal(t, http.StatusOK, rec.Code)
+	                   assert.NotEmpty(t, rec.Result().Body)
+	                   p := db.Program()
+	                   bytes, err := ioutil.ReadAll(rec.Result().Body)
+	                   assert.NoError(t, err)
+	                   assert.NoError(t, json.Unmarshal(bytes, &p))
+	                   assert.NotZero(t, p)
+	                   assert.Equal(t, randomDoc.Ref.ID, p.UID) // check that the UID match
+	           }
+	   })
 	*/
 }
