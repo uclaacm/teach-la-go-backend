@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -17,59 +16,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-func TestGetProgram(t *testing.T) {
-	d, err := Open(context.Background(), os.Getenv("TLACFG"))
-	require.NoError(t, err)
-
-	t.Run("MissingPID", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		rec := httptest.NewRecorder()
-		assert.NotNil(t, req, rec)
-		c := echo.New().NewContext(req, rec)
-
-		if assert.NoError(t, d.GetProgram(c)) {
-			assert.Equal(t, http.StatusBadRequest, rec.Code)
-		}
-	})
-	t.Run("BadPID", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/?pid=fakePID", nil)
-		rec := httptest.NewRecorder()
-		assert.NotNil(t, req, rec)
-		c := echo.New().NewContext(req, rec)
-
-		if assert.NoError(t, d.GetProgram(c)) {
-			assert.Equal(t, http.StatusNotFound, rec.Code)
-		}
-	})
-
-	dbConsistencyWarning(t)
-
-	t.Run("TypicalRequest", func(t *testing.T) {
-		// get some random doc
-		iter := d.Collection(programsPath).Documents(context.Background())
-		defer iter.Stop()
-		randomDoc, err := iter.Next()
-		assert.NoError(t, err)
-		t.Logf("using doc ID (%s)", randomDoc.Ref.ID)
-
-		req := httptest.NewRequest(http.MethodGet, "/?pid="+randomDoc.Ref.ID, nil)
-		rec := httptest.NewRecorder()
-		assert.NotNil(t, req, rec)
-		c := echo.New().NewContext(req, rec)
-
-		if assert.NoError(t, d.GetProgram(c)) {
-			assert.Equal(t, http.StatusOK, rec.Code)
-			assert.NotEmpty(t, rec.Result().Body)
-			p := Program{}
-			bytes, err := ioutil.ReadAll(rec.Result().Body)
-			assert.NoError(t, err)
-			assert.NoError(t, json.Unmarshal(bytes, &p))
-			assert.NotZero(t, p)
-			assert.Equal(t, randomDoc.Ref.ID, p.UID) // check that the UID match
-		}
-	})
-}
 
 func TestUpdateProgram(t *testing.T) {
 	d, err := Open(context.Background(), os.Getenv("TLACFG"))
