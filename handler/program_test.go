@@ -7,6 +7,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/uclaacm/teach-la-go-backend/db"
 	"github.com/uclaacm/teach-la-go-backend/handler"
 )
 
@@ -16,8 +17,16 @@ func TestGetProgram(t *testing.T) {
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
+		d := db.OpenMock()
 
-		if assert.NoError(t, handler.GetProgram(c)) {
+		if assert.NoError(
+			t,
+			handler.GetProgram(
+				&db.DBContext{
+				Context: c,
+				TLADB:   d,
+			}),
+		) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
 		}
 	})
@@ -27,8 +36,16 @@ func TestGetProgram(t *testing.T) {
 		rec := httptest.NewRecorder()
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
+		d := db.OpenMock()
 
-		if assert.NoError(t, handler.GetProgram(c)) {
+		if assert.NoError(
+			t, 
+			handler.GetProgram(
+				&db.DBContext{
+				Context: c,
+				TLADB:   d,
+			}),
+		) {
 			assert.Equal(t, http.StatusNotFound, rec.Code)
 		}
 	})
