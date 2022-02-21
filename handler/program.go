@@ -76,7 +76,7 @@ func (d *DB) CreateProgramTemp(c echo.Context) error {
 	}
 
 	// create the program doc.
-	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
+	err := d.RunTransaction(c.Request().Context()) error {
 		// create program
 		pRef := d.CreateProgram(c.Request().Context(), Prog)
 
@@ -86,24 +86,17 @@ func (d *DB) CreateProgramTemp(c echo.Context) error {
 		//***may need to write a new function for this code!!
 		u.Programs = append(u.Programs, pRef.ID)
 		if wid != "" {
-			classRef := d.Collection(classesPath).Doc(cid)
-			err := tx.Update(classRef, []firestore.Update{
-				{Path: "programs", Value: firestore.ArrayUnion(pRef.ID)},
-			})
+			classRef := d.loadClass(c.Request().Context(), cid)
+			p.programs = classRef;
 
 			p.WID = class.WID
-			if err != nil {
-				return err
-			}
 		}
-		if err := tx.Set(uRef, u); err != nil {
-			return err
-		}
+		err := d.StoreClass(c.Request().Context(), u) error;
 
 		p.UID = pRef.ID
-
-		return tx.Create(pRef, p)
+		return pRef;
 	})
+
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
 			return c.String(http.StatusNotFound, errors.Wrap(err, "failed to find user document").Error())
