@@ -14,13 +14,13 @@ func TestLangString(t *testing.T) {
 }
 
 func TestDefaultProgram(t *testing.T) {
-	p := defaultProgram(langString(python))
+	p := DefaultProgram(langString(python))
 	assert.NotEmpty(t, p)
-	p = defaultProgram(langString(processing))
+	p = DefaultProgram(langString(processing))
 	assert.NotEmpty(t, p)
-	p = defaultProgram(langString(html))
+	p = DefaultProgram(langString(html))
 	assert.NotEmpty(t, p)
-	p = defaultProgram("not a language")
+	p = DefaultProgram("not a language")
 	assert.Empty(t, p)
 }
 

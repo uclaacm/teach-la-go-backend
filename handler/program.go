@@ -1,12 +1,12 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 	
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/uclaacm/teach-la-go-backend/httpext"
+	"github.com/uclaacm/teach-la-go-backend/db"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -27,24 +27,27 @@ import (
 // }
 //
 // Returns 201 created on success. TODO: postman docs
-func (d *DB) CreateProgramTemp(c echo.Context) error {
+func CreateProgramTemp(cc echo.Context) error {
 	var requestBody struct {
 		UID  string  `json:"uid"`
 		WID  string  `json:"wid"`
-		Prog Program `json:"program"`
+		Prog db.Program `json:"program"`
 	}
+
+	c := cc.(*db.DBContext)
+
 	if err := httpext.RequestBodyTo(c.Request(), &requestBody); err != nil {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
 	}
 
 	// check that language exists.
-	p := defaultProgram(requestBody.Prog.Language)
+	p := db.DefaultProgram(requestBody.Prog.Language)
 	if p.Code == "" {
 		return c.String(http.StatusBadRequest, "language does not exist")
 	}
 
 	// thumbnail should be within range.
-	if requestBody.Prog.Thumbnail > thumbnailCount || requestBody.Prog.Thumbnail < 0 {
+	if requestBody.Prog.Thumbnail > db.ThumbnailCount || requestBody.Prog.Thumbnail < 0 {
 		return c.String(http.StatusBadRequest, "thumbnail index out of bounds")
 	}
 	p.Thumbnail = requestBody.Prog.Thumbnail
@@ -61,7 +64,7 @@ func (d *DB) CreateProgramTemp(c echo.Context) error {
 
 	wid := requestBody.WID
 	var cid string
-	var class *Class
+	var class db.Class
 	if wid != "" {
 		var err error
 		cid, err = d.GetUIDFromWID(c.Request().Context(), wid, classesAliasPath)
@@ -69,33 +72,29 @@ func (d *DB) CreateProgramTemp(c echo.Context) error {
 			return err
 		}
 
-		class, err = d.loadClass(c.Request().Context(), cid)
+		class, err = c.LoadClass(c.Request().Context(), cid)
 		if err != nil {
 			return err
 		}
 	}
 
-	// create the program doc.
-	err := d.RunTransaction(c.Request().Context()) error {
-		// create program
-		pRef := d.CreateProgram(c.Request().Context(), Prog)
+	// create program
+	pRef, err := c.CreateProgram(c.Request().Context(), requestBody.Prog)
 
-		// associate to user, if they exist
-		u := d.LoadUser(c.Request().Context(), requestBody.UID)
+	// associate to user, if they exist
+	u, uerr := c.LoadUser(c.Request().Context(), requestBody.UID)
 
-		//***may need to write a new function for this code!!
-		u.Programs = append(u.Programs, pRef.ID)
-		if wid != "" {
-			classRef := d.loadClass(c.Request().Context(), cid)
-			p.programs = classRef;
+	u.Programs = append(u.Programs, pRef.UID)
+	if wid != "" {
+		classRef := c.LoadClass(c.Request().Context(), cid)
+		classRef.Programs.append(pRef.UID)
 
-			p.WID = class.WID
-		}
-		err := d.StoreClass(c.Request().Context(), u) error;
+		p.WID = class.WID
 
-		p.UID = pRef.ID
-		return pRef;
-	})
+		cerr := c.StoreClass(c.Request().Context(), classRef);
+	}
+
+	p.UID = pRef.ID
 
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
