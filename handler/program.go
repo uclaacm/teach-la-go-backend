@@ -86,15 +86,15 @@ func CreateProgramTemp(cc echo.Context) error {
 
 	u.Programs = append(u.Programs, pRef.UID)
 	if wid != "" {
-		classRef := c.LoadClass(c.Request().Context(), cid)
-		classRef.Programs.append(pRef.UID)
+		classRef, err := c.LoadClass(c.Request().Context(), cid)
+		classRef.Programs = append(classRef.Programs, pRef.UID)
 
 		p.WID = class.WID
 
 		cerr := c.StoreClass(c.Request().Context(), classRef);
 	}
 
-	p.UID = pRef.ID
+	p.UID = pRef.UID
 
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
