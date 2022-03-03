@@ -33,7 +33,7 @@ const (
 	classesPath = "classes"
 
 	// classesAliasPath describes the path to the collection with 3 word id => hash mapping for classes
-	classesAliasPath = "classes_alias"
+	ClassesAliasPath = "classes_alias"
 
 	shardName    = "--shards--"
 	numShards    = 8                                 // number of shards

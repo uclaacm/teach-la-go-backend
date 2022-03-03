@@ -2,11 +2,11 @@ package handler
 
 import (
 	"net/http"
-	
+
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"github.com/uclaacm/teach-la-go-backend/httpext"
 	"github.com/uclaacm/teach-la-go-backend/db"
+	"github.com/uclaacm/teach-la-go-backend/httpext"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -27,10 +27,10 @@ import (
 // }
 //
 // Returns 201 created on success. TODO: postman docs
-func CreateProgramTemp(cc echo.Context) error {
+func CreateProgram(cc echo.Context) error {
 	var requestBody struct {
-		UID  string  `json:"uid"`
-		WID  string  `json:"wid"`
+		UID  string     `json:"uid"`
+		WID  string     `json:"wid"`
 		Prog db.Program `json:"program"`
 	}
 
@@ -65,9 +65,10 @@ func CreateProgramTemp(cc echo.Context) error {
 	wid := requestBody.WID
 	var cid string
 	var class db.Class
+	var err error
+
 	if wid != "" {
-		var err error
-		cid, err = d.GetUIDFromWID(c.Request().Context(), wid, classesAliasPath)
+		cid, err = c.GetUIDFromWID(c.Request().Context(), wid, db.ClassesAliasPath)
 		if err != nil {
 			return err
 		}
@@ -79,19 +80,19 @@ func CreateProgramTemp(cc echo.Context) error {
 	}
 
 	// create program
-	pRef, err := c.CreateProgram(c.Request().Context(), requestBody.Prog)
+	pRef, _ := c.CreateProgram(c.Request().Context(), requestBody.Prog)
 
 	// associate to user, if they exist
-	u, uerr := c.LoadUser(c.Request().Context(), requestBody.UID)
+	u, _ := c.LoadUser(c.Request().Context(), requestBody.UID)
 
 	u.Programs = append(u.Programs, pRef.UID)
 	if wid != "" {
-		classRef, err := c.LoadClass(c.Request().Context(), cid)
+		classRef, _ := c.LoadClass(c.Request().Context(), cid)
 		classRef.Programs = append(classRef.Programs, pRef.UID)
 
 		p.WID = class.WID
 
-		cerr := c.StoreClass(c.Request().Context(), classRef);
+		c.StoreClass(c.Request().Context(), classRef)
 	}
 
 	p.UID = pRef.UID

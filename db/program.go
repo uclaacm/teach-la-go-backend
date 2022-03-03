@@ -195,7 +195,7 @@ func (d *DB) DeleteProgram(c echo.Context) error {
 			return err
 		}
 		if programDoc.WID != "" {
-			cid, err := d.GetUIDFromWID(c.Request().Context(), programDoc.WID, classesAliasPath)
+			cid, err := d.GetUIDFromWID(c.Request().Context(), programDoc.WID, ClassesAliasPath)
 			if err != nil {
 				return err
 			}

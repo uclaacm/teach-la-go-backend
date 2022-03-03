@@ -144,7 +144,7 @@ func (d *DB) CreateClass(c echo.Context) error {
 	}
 
 	// create an wid for this class
-	wid, err := d.MakeAlias(c.Request().Context(), class.CID, classesAliasPath)
+	wid, err := d.MakeAlias(c.Request().Context(), class.CID, ClassesAliasPath)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
