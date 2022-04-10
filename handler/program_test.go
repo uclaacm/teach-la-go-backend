@@ -80,3 +80,36 @@ func TestGetProgram(t *testing.T) {
 	   })
 	*/
 }
+
+func TestCreateProgram(t *testing.T) {
+
+	//dbConsistencyWarning(t) - needed?
+
+	t.Run("BaseCase", func(t *testing.T) {
+		// get some random user doc to pull UID from
+		userDoc, err := d.Collection(usersPath).DocumentRefs(context.Background()).Next()
+		require.NoError(t, err)
+		d := db.OpenMock()
+
+		sampleDoc := struct {
+			UID  string  `json:"uid"`
+			Prog Program `json:"program"`
+		}{
+			UID: userDoc.ID,
+			Prog: Program{
+				Language:  "python",
+				Name:      "some random name",
+				Thumbnail: 0,
+			},
+		}
+		b, err := json.Marshal(&sampleDoc)
+		require.NoError(t, err)
+
+		req, rec := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(string(b))), httptest.NewRecorder()
+		c := echo.New().NewContext(req, rec)
+		if assert.NoError(t, d.CreateProgramTemp(c)) {
+			assert.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+			assert.NotEmpty(t, rec.Result().Body)
+		}
+	})
+}
