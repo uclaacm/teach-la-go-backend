@@ -83,8 +83,6 @@ func TestGetProgram(t *testing.T) {
 
 func TestCreateProgram(t *testing.T) {
 
-	//dbConsistencyWarning(t) - needed?
-
 	t.Run("BaseCase", func(t *testing.T) {
 		// get some random user doc to pull UID from
 		userDoc, err := d.Collection(usersPath).DocumentRefs(context.Background()).Next()
