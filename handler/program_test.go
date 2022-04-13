@@ -108,7 +108,8 @@ func TestCreateProgram(t *testing.T) {
 		if assert.NoError(t, handler.CreateProgram(&db.DBContext{
 			context: c,
 			TLADb: d,
-		})), {
+		}),
+		){
 			assert.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			assert.NotEmpty(t, rec.Result().Body)
 		}
