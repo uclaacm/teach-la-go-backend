@@ -4,6 +4,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"encoding/json"
+	"github.com/stretchr/testify/require"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -84,17 +87,28 @@ func TestGetProgram(t *testing.T) {
 func TestCreateProgram(t *testing.T) {
 
 	t.Run("BaseCase", func(t *testing.T) {
-		// get some random user doc to pull UID from
-		userDoc, err := d.Collection(usersPath).DocumentRefs(context.Background()).Next()
-		require.NoError(t, err)
+		//createUser test
 		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPut, "/", nil)
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		handler.CreateUser(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		})
+
+			// try to marshall result into an user struct
+		u := db.User{}
+		json.Unmarshal(rec.Body.Bytes(), &u)
 
 		sampleDoc := struct {
 			UID  string  `json:"uid"`
-			Prog Program `json:"program"`
+			Prog db.Program `json:"program"`
 		}{
-			UID: userDoc.ID,
-			Prog: Program{
+			UID: u.UID,
+			Prog: db.Program{
 				Language:  "python",
 				Name:      "some random name",
 				Thumbnail: 0,
@@ -103,11 +117,11 @@ func TestCreateProgram(t *testing.T) {
 		b, err := json.Marshal(&sampleDoc)
 		require.NoError(t, err)
 
-		req, rec := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(string(b))), httptest.NewRecorder()
-		c := echo.New().NewContext(req, rec)
+		req, rec = httptest.NewRequest(http.MethodPost, "/", strings.NewReader(string(b))), httptest.NewRecorder()
+		c = echo.New().NewContext(req, rec)
 		if assert.NoError(t, handler.CreateProgram(&db.DBContext{
-			context: c,
-			TLADb: d,
+			Context: c,
+			TLADB: d,
 		}),
 		){
 			assert.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())

@@ -112,7 +112,7 @@ func CreateProgram(cc echo.Context) error {
 		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to create program and associate to user or class").Error())
 	}
 
-	return c.JSON(http.StatusOK, &p)
+	return c.JSON(http.StatusCreated, &p)
 
 }
 	
