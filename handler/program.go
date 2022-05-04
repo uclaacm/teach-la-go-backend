@@ -8,9 +8,12 @@
 package handler
 
 import (
+	"context"
 	"net/http"
-
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 	"github.com/uclaacm/teach-la-go-backend/db"
 	"github.com/uclaacm/teach-la-go-backend/httpext"
 	"google.golang.org/grpc/codes"
@@ -117,3 +120,87 @@ func CreateProgram(cc echo.Context) error {
 }
 	
 
+func DeleteProgram(cc echo.Context) error {
+	c := cc.(*db.DBContext)
+	// acquire parameters via anonymous struct.
+	var req struct {
+		UID string `json:"uid"`
+		PID string `json:"pid"`
+	}
+	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
+	}
+	if req.UID == "" || req.PID == "" {
+		return c.String(http.StatusBadRequest, "uid and idx fields are both required")
+	}
+
+	// err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
+		// remove program from user list
+		// uref := d.Collection(usersPath).Doc(req.UID)
+		// uSnap, err := tx.Get(uref)
+		// if err != nil {
+		// 	return err
+		// }
+		// userDoc := User{}
+		// if err := uSnap.DataTo(&userDoc); err != nil {
+		// 	return err
+		// }
+		u,err := c.LoadUser(c.Request().Context(), req.UID)
+
+		// get pid to delete then remove the entry
+		idx := 0
+		for i, p := range u.Programs {
+			if p == req.PID {
+				idx = i
+				break
+			}
+		}
+		if idx >= len(u.Programs) {
+			return errors.New("invalid PID")
+		}
+		toDelete := u.Programs[idx]
+		u.Programs = append(u.Programs[:idx], u.Programs[idx+1:]...)
+
+		// pref := d.Collection(programsPath).Doc(toDelete)
+		c.StoreUser(c.Request().Context(), u)
+
+		// remove program from class if is in class
+		p, err :=c.LoadProgram(c.Request().Context(), toDelete)
+		//pSnap, err := tx.Get(pref)
+		// if err != nil {
+		// 	return err
+		// }
+		// programDoc := Program{}
+		// if err := pSnap.DataTo(&programDoc); err != nil {
+		// 	return err
+		// }
+		if p.WID != "" {
+			cid, err := d.GetUIDFromWID(c.Request().Context(), programDoc.WID, classesAliasPath)
+			if err != nil {
+				return err
+			}
+			c, err := c.LoadClass(c.Request().Context(), cid)
+			c.RemoveProgram(context.Context, toDelete)
+			classRef := c.Collection(classesPath).Doc(cid)
+			if err := tx.Update(classRef, []firestore.Update{
+				{Path: "programs", Value: firestore.ArrayRemove(toDelete)},
+			}); err != nil {
+				return err
+			}
+		}
+
+		// attempt to delete program doc
+		// if err := tx.Set(uref, &userDoc); err != nil {
+		// 	return err
+		// }
+		return c.RemoveProgram(c.Request().Context(), req.PID)
+	// })
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return c.String(http.StatusNotFound, "user or program does not exist")
+		}
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to commit transaction to database").Error())
+	}
+
+	return c.String(http.StatusOK, "")
+}
