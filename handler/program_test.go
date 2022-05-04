@@ -127,5 +127,72 @@ func TestCreateProgram(t *testing.T) {
 			assert.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			assert.NotEmpty(t, rec.Result().Body)
 		}
+
+		programToDelete := d.Collection(programsPath).Doc(request.PID)
+		b, err := json.Marshal(&request)
+		require.NoError(t, err)
+
+		// try to delete it
+		req, rec := httptest.NewRequest(http.MethodDelete, "/", strings.NewReader(string(b))), httptest.NewRecorder()
+		c := echo.New().NewContext(req, rec)
+		
+		if assert.NoError(t, handler.DeleteProgram(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		}) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+
+			// check that the program actually was deleted
+			_, err := programToDelete.Get(context.Background())
+			assert.Equal(t, codes.NotFound, status.Code(err))
+		}
+	})
+}
+
+func TestDeleteProgram(t *testing.T) {
+	d := db.OpenMock()
+	
+	t.Log("this test will assume that the first userdoc pulled from staging has at least one program")
+
+	t.Run("TypicalRequest", func(t *testing.T) {
+		randomUser := User{}
+
+		err = d.RunTransaction(context.Background(), func(ctx context.Context, tx *firestore.Transaction) error {
+			// get some random user with more than one program
+			userDoc, err := d.Collection(usersPath).DocumentRefs(context.Background()).Next()
+			if err != nil {
+				return err
+			}
+			userSnap, err := tx.Get(userDoc)
+			if err != nil {
+				return err
+			}
+			return userSnap.DataTo(&randomUser)
+		})
+		require.NoError(t, err)
+
+		// request struct
+		request := struct {
+			UID string `json:"uid"`
+			PID string `json:"pid"`
+		}{
+			UID: randomUser.UID,
+			PID: randomUser.Programs[0],
+		}
+		t.Logf("trying to delete program with pid (%s)", request.PID)
+		programToDelete := d.Collection(programsPath).Doc(request.PID)
+		b, err := json.Marshal(&request)
+		require.NoError(t, err)
+
+		// try to delete it
+		req, rec := httptest.NewRequest(http.MethodDelete, "/", strings.NewReader(string(b))), httptest.NewRecorder()
+		c := echo.New().NewContext(req, rec)
+		if assert.NoError(t, d.DeleteProgram(c)) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+
+			// check that the program actually was deleted
+			_, err := programToDelete.Get(context.Background())
+			assert.Equal(t, codes.NotFound, status.Code(err))
+		}
 	})
 }
