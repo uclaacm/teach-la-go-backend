@@ -11,11 +11,11 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 	"github.com/uclaacm/teach-la-go-backend/db"
 	"github.com/uclaacm/teach-la-go-backend/httpext"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/pkg/errors"
 )
 
 // GetProgram retrieves information about a single program.
@@ -99,8 +99,10 @@ func CreateProgram(cc echo.Context) error {
 		classRef.Programs = append(classRef.Programs, pRef.UID)
 
 		p.WID = class.WID
-
-		c.StoreClass(c.Request().Context(), classRef)
+		err := c.StoreClass(c.Request().Context(), classRef)
+		if err != nil {
+			return err
+		}
 	}
 
 	p.UID = pRef.UID
@@ -115,5 +117,3 @@ func CreateProgram(cc echo.Context) error {
 	return c.JSON(http.StatusCreated, &p)
 
 }
-	
-

@@ -1,12 +1,13 @@
 package handler_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"testing"
-	"encoding/json"
-	"github.com/stretchr/testify/require"
 	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -94,17 +95,24 @@ func TestCreateProgram(t *testing.T) {
 		assert.NotNil(t, req, rec)
 		c := echo.New().NewContext(req, rec)
 
-		handler.CreateUser(&db.DBContext{
-			Context: c,
-			TLADB:   d,
-		})
+		if assert.NoError(
+			t,
+			handler.CreateUser(
+				&db.DBContext{
+					Context: c,
+					TLADB:   d,
+				}),
+		) {
+			assert.Equal(t, http.StatusNotFound, rec.Code)
+		}
 
-			// try to marshall result into an user struct
+		// try to marshall result into an user struct
 		u := db.User{}
-		json.Unmarshal(rec.Body.Bytes(), &u)
+		err := json.Unmarshal(rec.Body.Bytes(), &u)
+		require.NoError(t, err)
 
 		sampleDoc := struct {
-			UID  string  `json:"uid"`
+			UID  string     `json:"uid"`
 			Prog db.Program `json:"program"`
 		}{
 			UID: u.UID,
@@ -121,9 +129,9 @@ func TestCreateProgram(t *testing.T) {
 		c = echo.New().NewContext(req, rec)
 		if assert.NoError(t, handler.CreateProgram(&db.DBContext{
 			Context: c,
-			TLADB: d,
+			TLADB:   d,
 		}),
-		){
+		) {
 			assert.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			assert.NotEmpty(t, rec.Result().Body)
 		}
