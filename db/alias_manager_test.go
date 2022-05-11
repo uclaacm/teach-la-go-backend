@@ -20,7 +20,7 @@ func TestAliasManagement(t *testing.T) {
 
 	// Initialize the shards
 	t.Run("CreateShards", func(t *testing.T) {
-		err := d.InitShards(context.Background(), classesAliasPath)
+		err := d.InitShards(context.Background(), ClassesAliasPath)
 		assert.Nil(t, err)
 	})
 

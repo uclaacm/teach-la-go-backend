@@ -80,7 +80,7 @@ func serve(c *cli.Context) error {
 	// program management
 	e.GET("/program/get", handler.GetProgram)
 	e.PUT("/program/update", d.UpdateProgram)
-	e.POST("/program/create", d.CreateProgramTemp)
+	e.POST("/program/create", handler.CreateProgram)
 	e.DELETE("/program/delete", d.DeleteProgram)
 
 	// class management

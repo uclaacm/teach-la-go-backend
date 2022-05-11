@@ -1,9 +1,13 @@
 package handler_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -79,4 +83,57 @@ func TestGetProgram(t *testing.T) {
 	           }
 	   })
 	*/
+}
+
+func TestCreateProgram(t *testing.T) {
+
+	t.Run("BaseCase", func(t *testing.T) {
+		//createUser test
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPut, "/", nil)
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(
+			t,
+			handler.CreateUser(
+				&db.DBContext{
+					Context: c,
+					TLADB:   d,
+				}),
+		) {
+			assert.Equal(t, http.StatusCreated, rec.Code)
+		}
+
+		// try to marshall result into an user struct
+		u := db.User{}
+		err := json.Unmarshal(rec.Body.Bytes(), &u)
+		require.NoError(t, err)
+
+		sampleDoc := struct {
+			UID  string     `json:"uid"`
+			Prog db.Program `json:"program"`
+		}{
+			UID: u.UID,
+			Prog: db.Program{
+				Language:  "python",
+				Name:      "some random name",
+				Thumbnail: 0,
+			},
+		}
+		b, err := json.Marshal(&sampleDoc)
+		require.NoError(t, err)
+
+		req, rec = httptest.NewRequest(http.MethodPost, "/", strings.NewReader(string(b))), httptest.NewRecorder()
+		c = echo.New().NewContext(req, rec)
+		if assert.NoError(t, handler.CreateProgram(&db.DBContext{
+			Context: c,
+			TLADB:   d,
+		}),
+		) {
+			assert.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+			assert.NotEmpty(t, rec.Result().Body)
+		}
+	})
 }

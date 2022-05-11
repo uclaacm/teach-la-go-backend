@@ -18,7 +18,7 @@ const (
 	langCount
 
 	// the number of program thumbnails available to choose from.
-	thumbnailCount = 58
+	ThumbnailCount = 58
 
 	// programsPath describes the path to the program
 	// management endpoint.
@@ -33,7 +33,7 @@ const (
 	classesPath = "classes"
 
 	// classesAliasPath describes the path to the collection with 3 word id => hash mapping for classes
-	classesAliasPath = "classes_alias"
+	ClassesAliasPath = "classes_alias"
 
 	shardName    = "--shards--"
 	numShards    = 8                                 // number of shards
@@ -67,7 +67,7 @@ func langString(langCode int) string {
 // defaultProgram returns a Program struct initialized to
 // default values for a given Language.
 // if the language does not exist, it returns nil.
-func defaultProgram(language string) (defaultProg Program) {
+func DefaultProgram(language string) (defaultProg Program) {
 	defaultCode := ""
 
 	switch language {
@@ -87,7 +87,7 @@ func defaultProgram(language string) (defaultProg Program) {
 	defaultProg.Language = language
 	defaultProg.Name = language
 	defaultProg.DateCreated = time.Now().UTC().String()
-	defaultProg.Thumbnail = rand.Int63n(thumbnailCount)
+	defaultProg.Thumbnail = rand.Int63n(ThumbnailCount)
 	return defaultProg
 }
 
@@ -99,7 +99,7 @@ func defaultProgram(language string) (defaultProg Program) {
 func DefaultData() (User, []Program) {
 	defaultProgs := make([]Program, 0)
 	for i := python; i < langCount; i++ {
-		defaultProgs = append(defaultProgs, defaultProgram(langString(i)))
+		defaultProgs = append(defaultProgs, DefaultProgram(langString(i)))
 	}
 
 	u := User{

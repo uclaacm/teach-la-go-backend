@@ -90,6 +90,15 @@ func (d *MockDB) CreateProgram(_ context.Context, p Program) (Program, error) {
 	return p, nil
 }
 
+// Temporary stand-ins to allow other refactors to function
+func (d *MockDB) MakeAlias(ctx context.Context, uid string, path string) (string, error) {
+	return "", nil
+}
+
+func (d *MockDB) GetUIDFromWID(ctx context.Context, wid string, path string) (string, error) {
+	return wid, nil
+}
+
 // Creates a new MockDB.
 func OpenMock() *MockDB {
 	m := MockDB{db: make(map[string]map[string]interface{})}

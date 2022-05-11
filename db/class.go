@@ -119,7 +119,7 @@ func (d *DB) CreateClass(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "uid is required")
 	case req.Name == "":
 		return c.String(http.StatusBadRequest, "class name is required")
-	case req.Thumbnail < 0 || req.Thumbnail >= thumbnailCount:
+	case req.Thumbnail < 0 || req.Thumbnail >= ThumbnailCount:
 		return c.String(http.StatusBadRequest, "bad thumbnail id")
 	}
 
@@ -144,7 +144,7 @@ func (d *DB) CreateClass(c echo.Context) error {
 	}
 
 	// create an wid for this class
-	wid, err := d.MakeAlias(c.Request().Context(), class.CID, classesAliasPath)
+	wid, err := d.MakeAlias(c.Request().Context(), class.CID, ClassesAliasPath)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
