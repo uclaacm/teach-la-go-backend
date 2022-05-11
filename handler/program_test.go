@@ -103,7 +103,7 @@ func TestCreateProgram(t *testing.T) {
 					TLADB:   d,
 				}),
 		) {
-			assert.Equal(t, http.StatusNotFound, rec.Code)
+			assert.Equal(t, http.StatusCreated, rec.Code)
 		}
 
 		// try to marshall result into an user struct
