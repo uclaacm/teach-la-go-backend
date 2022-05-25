@@ -133,7 +133,7 @@ func DeleteProgram(cc echo.Context) error {
 	}
 
 	u, err := c.LoadUser(c.Request().Context(), req.UID)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
@@ -151,12 +151,14 @@ func DeleteProgram(cc echo.Context) error {
 	toDelete := u.Programs[idx]
 	u.Programs = append(u.Programs[:idx], u.Programs[idx+1:]...)
 
-	// pref := d.Collection(programsPath).Doc(toDelete)
-	c.StoreUser(c.Request().Context(), u)
+	err = c.StoreUser(c.Request().Context(), u)
+	if err != nil {
+		return err
+	}
 
 	// remove program from class if is in class
 	p, err := c.LoadProgram(c.Request().Context(), toDelete)
-	
+
 	if err != nil {
 		return err
 	}
@@ -185,7 +187,10 @@ func DeleteProgram(cc echo.Context) error {
 		}
 		cls.Programs = append(cls.Programs[:idx], cls.Programs[idx+1:]...)
 
-		c.StoreClass(c.Request().Context(), cls)
+		err = c.StoreClass(c.Request().Context(), cls)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = c.RemoveProgram(c.Request().Context(), req.PID)
