@@ -99,8 +99,10 @@ func CreateProgram(cc echo.Context) error {
 		classRef.Programs = append(classRef.Programs, pRef.UID)
 
 		p.WID = class.WID
-
-		c.StoreClass(c.Request().Context(), classRef)
+		err := c.StoreClass(c.Request().Context(), classRef)
+		if err != nil {
+			return err
+		}
 	}
 
 	p.UID = pRef.UID
