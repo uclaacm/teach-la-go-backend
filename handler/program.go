@@ -117,3 +117,90 @@ func CreateProgram(cc echo.Context) error {
 	return c.JSON(http.StatusCreated, &p)
 
 }
+
+func DeleteProgram(cc echo.Context) error {
+	c := cc.(*db.DBContext)
+	// acquire parameters via anonymous struct.
+	var req struct {
+		UID string `json:"uid"`
+		PID string `json:"pid"`
+	}
+	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
+	}
+	if req.UID == "" || req.PID == "" {
+		return c.String(http.StatusBadRequest, "uid and idx fields are both required")
+	}
+
+	u, err := c.LoadUser(c.Request().Context(), req.UID)
+	if err != nil {
+		return err
+	}
+
+	// get pid to delete then remove the entry
+	idx := 0
+	for i, p := range u.Programs {
+		if p == req.PID {
+			idx = i
+			break
+		}
+	}
+	if idx >= len(u.Programs) {
+		return errors.New("invalid PID")
+	}
+	toDelete := u.Programs[idx]
+	u.Programs = append(u.Programs[:idx], u.Programs[idx+1:]...)
+
+	err = c.StoreUser(c.Request().Context(), u)
+	if err != nil {
+		return err
+	}
+
+	// remove program from class if is in class
+	p, err := c.LoadProgram(c.Request().Context(), toDelete)
+
+	if err != nil {
+		return err
+	}
+
+	if p.WID != "" {
+		cid, err := c.GetUIDFromWID(c.Request().Context(), p.WID, db.ClassesAliasPath)
+		if err != nil {
+			return err
+		}
+		cls, err := c.LoadClass(c.Request().Context(), cid)
+		if err != nil {
+			if status.Code(err) == codes.NotFound {
+				return c.String(http.StatusNotFound, "class or program does not exist")
+			}
+			return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to commit transaction to database").Error())
+		}
+		idx := 0
+		for i, p := range cls.Programs {
+			if p == req.PID {
+				idx = i
+				break
+			}
+		}
+		if idx >= len(cls.Programs) {
+			return errors.New("invalid PID")
+		}
+		cls.Programs = append(cls.Programs[:idx], cls.Programs[idx+1:]...)
+
+		err = c.StoreClass(c.Request().Context(), cls)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = c.RemoveProgram(c.Request().Context(), req.PID)
+
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return c.String(http.StatusNotFound, "user or program does not exist")
+		}
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to commit transaction to database").Error())
+	}
+
+	return c.String(http.StatusOK, "")
+}

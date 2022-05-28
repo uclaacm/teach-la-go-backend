@@ -81,7 +81,7 @@ func serve(c *cli.Context) error {
 	e.GET("/program/get", handler.GetProgram)
 	e.PUT("/program/update", d.UpdateProgram)
 	e.POST("/program/create", handler.CreateProgram)
-	e.DELETE("/program/delete", d.DeleteProgram)
+	e.DELETE("/program/delete", handler.DeleteProgram)
 
 	// class management
 	e.POST("/class/get", handler.GetClass)

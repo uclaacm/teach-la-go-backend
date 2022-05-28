@@ -135,5 +135,25 @@ func TestCreateProgram(t *testing.T) {
 			assert.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			assert.NotEmpty(t, rec.Result().Body)
 		}
+		// TODO : FIX DELETE PROGRAM TESTS
+
+		// programToDelete := d.Collection(programsPath).Doc(request.PID)
+		// b, err := json.Marshal(&request)
+		// require.NoError(t, err)
+
+		// // try to delete it
+		// req, rec := httptest.NewRequest(http.MethodDelete, "/", strings.NewReader(string(b))), httptest.NewRecorder()
+		// c := echo.New().NewContext(req, rec)
+
+		// if assert.NoError(t, handler.DeleteProgram(&db.DBContext{
+		// 	Context: c,
+		// 	TLADB:   d,
+		// })) {
+		// 	assert.Equal(t, http.StatusOK, rec.Code)
+
+		// 	// check that the program actually was deleted
+		// 	_, err := programToDelete.Get(context.Background())
+		// 	assert.Equal(t, codes.NotFound, status.Code(err))
+		// }
 	})
 }
