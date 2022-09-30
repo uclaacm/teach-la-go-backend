@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/heroku/x v0.0.25
 	github.com/joho/godotenv v1.3.0
-	github.com/labstack/echo/v4 v4.7.2
+	github.com/labstack/echo/v4 v4.9.0
 	github.com/labstack/gommon v0.3.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
