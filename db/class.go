@@ -2,7 +2,7 @@ package db
 
 import (
 	"context"
-	"fmt"
+i	"fmt"
 	"net/http"
 
 	"cloud.google.com/go/firestore"
@@ -25,6 +25,8 @@ type Class struct {
 	Programs    []string `firestore:"programs" json:"programs"`
 	CID         string   `firestore:"CID" json:"cid"`
 	WID         string   `firestore:"WID" json:"wid"`
+	description string   `firestore:"description:"description"`
+
 }
 
 // AddClassToUser takes a uid and a pid,
