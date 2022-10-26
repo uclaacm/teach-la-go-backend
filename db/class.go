@@ -25,7 +25,7 @@ type Class struct {
 	Programs    []string `firestore:"programs" json:"programs"`
 	CID         string   `firestore:"CID" json:"cid"`
 	WID         string   `firestore:"WID" json:"wid"`
-	description string   `firestore:"description:"description"`
+	Description string   `firestore:"description" json:"description"`
 
 }
 
