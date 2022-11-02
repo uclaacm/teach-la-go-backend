@@ -11,8 +11,10 @@ To run the backend locally, you can download the latest build for your system fr
 doing so, follow along with the guide below!
 
 ```sh
+$ # compile the server
+$ make
 $ # run the server
-$ ./tlabe -h
+$ ./bin/tlabe -h
 NAME:
    Teach LA Go Backend - tlabe [options]
 
@@ -33,7 +35,7 @@ GLOBAL OPTIONS:
    --help, -h                Show help (default: false)
    --version, -V             Print the version and exit (default: false)
 
-$ ./tlabe -j credentials.json
+$ ./bin/tlabe -j credentials.json
 ⇨ http server started on [::]:8081
 
 $ # from here, you can start up the frontend using your own backend!
