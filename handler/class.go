@@ -222,10 +222,10 @@ func JoinClass(cc echo.Context) error {
 
 func SubmitAssignment(cc echo.Context) error {
 	req := struct {
-		submissionPID: string,  // PID of the program being submitted
-		assignmentPID: string, // PID of the program/assignment this is being submitted to. Potentially optional
-		uid: string, // UID of the submitting user
-		cid: string, // Class ID
+		submissionPID string `json:"submissionPID"`// PID of the program being submitted
+		assignmentPID string `json:"assignmentPID"` // PID of the program/assignment this is being submitted to. Potentially optional
+		uid string `json:"uid"` // UID of the submitting user
+		cid string `json:"cid"` // Class ID
 	}{}
 
 	c := cc.(*db.DBContext)
