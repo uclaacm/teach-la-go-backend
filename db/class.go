@@ -25,6 +25,8 @@ type Class struct {
 	Programs    []string `firestore:"programs" json:"programs"`
 	CID         string   `firestore:"CID" json:"cid"`
 	WID         string   `firestore:"WID" json:"wid"`
+	Description string   `firestore:"description" json:"description"`
+
 }
 
 // AddClassToUser takes a uid and a pid,
