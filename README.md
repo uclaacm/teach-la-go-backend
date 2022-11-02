@@ -83,7 +83,7 @@ To **run** the project for live development - not just build it - one needs to b
 Once you have acquired a copy of `credentials.json` or otherwise, you can specify the credentials file location:
 
 ```sh
-./tlabe -j credentials.json
+./bin/tlabe -j credentials.json
 ```
 
 You can now run the server you built!
