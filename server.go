@@ -88,7 +88,7 @@ func serve(c *cli.Context) error {
 	e.POST("/class/create", d.CreateClass)
 	e.PUT("/class/join", handler.JoinClass)
 	e.PUT("/class/leave", d.LeaveClass)
-	e.POST("/class/members", d.GetClassMembers)
+	e.POST("/class/members", handler.GetClassMembers)
 
 	// collaborative coding management
 	e.POST("/collab/create", d.CreateCollab)
