@@ -234,10 +234,10 @@ func SubmitAssignment(cc echo.Context) error {
 	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
-	if submissionPID.uid == "" {
+	if req.submissionPID.uid == "" {
 		return c.String(http.StatusBadRequest, "submission PID is required")
 	}
-	if assignmentPID.uid == "" {
+	if req.assignmentPID.uid == "" {
 		return c.String(http.StatusBadRequest, "assignment PID is required")
 	}
 	if req.uid == "" {
@@ -246,4 +246,5 @@ func SubmitAssignment(cc echo.Context) error {
 	if req.cid == "" {
 		return c.String(http.StatusBadRequest, "cid is required")
 	}
+	return nil
 }
