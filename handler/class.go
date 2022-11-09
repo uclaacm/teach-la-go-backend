@@ -17,7 +17,6 @@ func GetClassMembers(cc echo.Context) error {
 	var req struct {
 		CID string `json:"cid"`
 		UID string `json:"uid"`
-		UserData db.User `json:"userData"`
 	}
 
 	c := cc.(*db.DBContext)
@@ -55,11 +54,11 @@ func GetClassMembers(cc echo.Context) error {
 	res := make(map[string]db.User)
 
 	for _, uid := range class.Members {
-		userSnap, err := c.LoadUser(c.Request().Context(), c.QueryParam(uid))
+		user, err := c.LoadUser(c.Request().Context(), c.QueryParam(uid))
 		if err != nil {
 			continue
 		}
-		req.UserData = userSnap
+		res[uid] = user
 	}
 
 	// convert to JSON and return
