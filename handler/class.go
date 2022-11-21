@@ -219,3 +219,32 @@ func JoinClass(cc echo.Context) error {
 
 	return c.JSON(http.StatusOK, class)
 }
+
+func SubmitAssignment(cc echo.Context) error {
+	req := struct {
+		submissionPID string `json:"submissionPID"`// PID of the program being submitted
+		assignmentPID string `json:"assignmentPID"` // PID of the program/assignment this is being submitted to. Potentially optional
+		uid string `json:"uid"` // UID of the submitting user
+		cid string `json:"cid"` // Class ID
+	}{}
+
+	c := cc.(*db.DBContext)
+
+	// read JSON from request body
+	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	if req.submissionPID.uid == "" {
+		return c.String(http.StatusBadRequest, "submission PID is required")
+	}
+	if req.assignmentPID.uid == "" {
+		return c.String(http.StatusBadRequest, "assignment PID is required")
+	}
+	if req.uid == "" {
+		return c.String(http.StatusBadRequest, "uid is required")
+	}
+	if req.cid == "" {
+		return c.String(http.StatusBadRequest, "cid is required")
+	}
+	return nil
+}
