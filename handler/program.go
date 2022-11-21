@@ -88,12 +88,18 @@ func CreateProgram(cc echo.Context) error {
 	}
 
 	// create program
-	pRef, _ := c.CreateProgram(c.Request().Context(), requestBody.Prog)
+	pRef, _ := c.CreateProgram(c.Request().Context(), p)
 
 	// associate to user, if they exist
 	u, _ := c.LoadUser(c.Request().Context(), requestBody.UID)
 
 	u.Programs = append(u.Programs, pRef.UID)
+
+	if err := c.StoreUser(c.Request().Context(), u); err != nil {
+		return err
+	}
+
+	// associate to class, if they exist
 	if wid != "" {
 		classRef, _ := c.LoadClass(c.Request().Context(), cid)
 		classRef.Programs = append(classRef.Programs, pRef.UID)
