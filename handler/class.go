@@ -2,7 +2,7 @@ package handler
 
 import (
 	"net/http"
-
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/uclaacm/teach-la-go-backend/db"
@@ -10,6 +10,60 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// GetClassMembers returns the user IDs and display names of each member in the requested class.
+// It takes a class id and checks that the given uid is in the class first
+func GetClassMembers(cc echo.Context) error {
+	var req struct {
+		CID string `json:"cid"`
+		UID string `json:"uid"`
+	}
+
+	c := cc.(*db.DBContext)
+
+	if err := httpext.RequestBodyTo(c.Request(), &req); err != nil {
+		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to read request body").Error())
+	}
+
+	uid := req.UID
+	cid := req.CID
+
+	if uid == "" || cid == "" {
+		return c.String(http.StatusBadRequest, "uid and cid fields are both required")
+	}
+	
+	// get the class as a struct (pointer)
+	class, err := c.LoadClass(c.Request().Context(), cid)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to get class: %s", err))
+	}
+
+	// Check if user is in class
+	isIn := false
+	for _, m := range class.Members {
+		if m == uid {
+			isIn = true
+			break
+		}
+	}
+
+	if !isIn {
+		return c.String(http.StatusNotFound, "given user not in class")
+	}
+
+	res := make(map[string]db.User)
+
+	for _, uid := range class.Members {
+		user, err := c.LoadUser(c.Request().Context(), c.QueryParam(uid))
+		if err != nil {
+			continue
+		}
+		res[uid] = user
+	}
+
+	// convert to JSON and return
+	return c.JSON(http.StatusOK, res)
+}
 
 // GetClass takes the UID (either of a member or an instructor)
 // and a CID (wid) as a JSON, and returns an object representing the class.
