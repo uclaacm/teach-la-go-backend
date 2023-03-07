@@ -16,9 +16,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/uclaacm/teach-la-go-backend-tinycrypt v1.0.0
 	github.com/urfave/cli/v2 v2.11.0
-	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
-	golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6 // indirect
-	golang.org/x/tools v0.0.0-20200725200936-102e7d357031 // indirect
+	golang.org/x/net v0.7.0
 	google.golang.org/api v0.29.0
 	google.golang.org/genproto v0.0.0-20200724131911-43cab4749ae7 // indirect
 	google.golang.org/grpc v1.30.0
