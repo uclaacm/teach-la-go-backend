@@ -92,6 +92,14 @@ You can now run the server you built!
 
 Development is test-focused. Any code you contribute should have tests to go with it. Tests should be placed in another file in the same directory with the naming convention `my_file_name_test.go`.
 
+**Note:** Before tests can be run, you must configure the `TLACFG` environment variable
+to store the contents of `credentials.json`, like below. This might be changed in the future
+([see here](https://github.com/uclaacm/teach-la-go-backend/pull/10#issuecomment-1596011496)).
+
+```sh
+export TLACFG="$(cat credentials.json)"
+```
+
 Run tests with the following commands:
 
 ```sh
