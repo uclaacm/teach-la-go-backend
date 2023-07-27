@@ -220,3 +220,20 @@ func (d *DB) GetUIDFromWID(ctx context.Context, wid string, path string) (string
 
 	return t.Target, err
 }
+
+func (d *DB) GetUIDFromWIDTransact(tx *firestore.Transaction, wid string, path string) (string, error) {
+
+	// get the document with the mapping
+	doc, err := tx.Get(d.Collection(path).Doc(wid))
+	if err != nil {
+		return "", err
+	}
+
+	t := struct {
+		Target string `firestore:"target"`
+	}{}
+
+	err = doc.DataTo(&t)
+
+	return t.Target, err
+}

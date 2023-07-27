@@ -10,6 +10,11 @@ import (
 	"google.golang.org/api/option"
 )
 
+/// NOTE:
+/// The *Xyz*Transact() functions are equivalent in behavior to *Xyz*(),
+/// except they operate on a transaction instead of a context and should
+/// be called within a RunTransaction() callback
+
 // DB implements the TLADB interface on a Firestore
 // database.
 type DB struct {
@@ -68,6 +73,71 @@ func (d *DB) CreateProgram(ctx context.Context, p Program) (Program, error) {
 	return p, nil
 }
 
+func (d *DB) CreateProgramTransact(tx *firestore.Transaction, p Program) (Program, error) {
+	newProg := d.Collection(programsPath).NewDoc()
+	p.UID = newProg.ID
+	if err := tx.Create(newProg, p); err != nil {
+		return p, err
+	}
+
+	return p, nil
+}
+
+// Create a program and associate it with a user and a class.
+//
+// If wid == "", will not attempt to join a class.
+func (d *DB) CreateProgramAndAssociate(ctx context.Context, p Program, uid string, wid string) error {
+	err := d.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		// create program
+		pRef, err := d.CreateProgramTransact(tx, p)
+		if err != nil {
+			return err
+		}
+
+		// associate to user, if they exist
+		u, err := d.LoadUserTransact(tx, uid)
+		if err != nil {
+			return err
+		}
+
+		u.Programs = append(u.Programs, pRef.UID)
+
+		if err := d.StoreUserTransact(tx, u); err != nil {
+			return err
+		}
+
+		// associate to class, if they exist
+		var cid string
+		var class Class
+		if wid != "" {
+			cid, err = d.GetUIDFromWIDTransact(tx, wid, ClassesAliasPath)
+			if err != nil {
+				return err
+			}
+
+			class, err = d.LoadClassTransact(tx, cid)
+			if err != nil {
+				return err
+			}
+
+			class.Programs = append(class.Programs, pRef.UID)
+
+			p.WID = class.WID
+
+			err := d.StoreClassTransact(tx, class)
+			if err != nil {
+				return err
+			}
+		}
+
+		p.UID = pRef.UID
+
+		return nil
+	})
+
+	return err
+}
+
 func (d *DB) RemoveProgram(ctx context.Context, pid string) error {
 	if _, err := d.Collection(programsPath).Doc(pid).Delete(ctx); err != nil {
 		return err
@@ -88,8 +158,28 @@ func (d *DB) LoadClass(ctx context.Context, cid string) (Class, error) {
 	return c, nil
 }
 
+func (d *DB) LoadClassTransact(tx *firestore.Transaction, cid string) (Class, error) {
+	doc, err := tx.Get(d.Collection(classesPath).Doc(cid))
+	if err != nil {
+		return Class{}, err
+	}
+
+	c := Class{}
+	if err := doc.DataTo(&c); err != nil {
+		return Class{}, err
+	}
+	return c, nil
+}
+
 func (d *DB) StoreClass(ctx context.Context, c Class) error {
 	if _, err := d.Collection(classesPath).Doc(c.CID).Set(ctx, &c); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *DB) StoreClassTransact(tx *firestore.Transaction, c Class) error {
+	if err := tx.Set(d.Collection(classesPath).Doc(c.CID), &c); err != nil {
 		return err
 	}
 	return nil
@@ -116,8 +206,28 @@ func (d *DB) LoadUser(ctx context.Context, uid string) (User, error) {
 	return u, nil
 }
 
+func (d *DB) LoadUserTransact(tx *firestore.Transaction, uid string) (User, error) {
+	doc, err := tx.Get(d.Collection(usersPath).Doc(uid))
+	if err != nil {
+		return User{}, err
+	}
+
+	u := User{}
+	if err := doc.DataTo(&u); err != nil {
+		return User{}, err
+	}
+	return u, nil
+}
+
 func (d *DB) StoreUser(ctx context.Context, u User) error {
 	if _, err := d.Collection(usersPath).Doc(u.UID).Set(ctx, &u); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *DB) StoreUserTransact(tx *firestore.Transaction, u User) error {
+	if err := tx.Set(d.Collection(usersPath).Doc(u.UID), &u); err != nil {
 		return err
 	}
 	return nil

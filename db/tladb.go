@@ -33,6 +33,7 @@ type TLADB interface {
 
 	CreateUser(context.Context, User) (User, error)
 	CreateProgram(context.Context, Program) (Program, error)
+	CreateProgramAndAssociate(context.Context, Program, string, string) error
 
 	MakeAlias(context.Context, string, string) (string, error)
 	GetUIDFromWID(context.Context, string, string) (string, error)

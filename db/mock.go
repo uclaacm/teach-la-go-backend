@@ -90,6 +90,29 @@ func (d *MockDB) CreateProgram(_ context.Context, p Program) (Program, error) {
 	return p, nil
 }
 
+func (d *MockDB) CreateProgramAndAssociate(ctx context.Context, p Program, uid string, wid string) error {
+	// create program
+	pRef, _ := d.CreateProgram(ctx, p)
+
+	// associate to user, if they exist
+	u, _ := d.LoadUser(ctx, uid)
+
+	u.Programs = append(u.Programs, pRef.UID)
+
+	if err := d.StoreUser(ctx, u); err != nil {
+		return err
+	}
+
+	if wid != "" {
+		// do nothing for now
+		// TODO: associate with class
+	}
+
+	p.UID = pRef.UID
+
+	return nil
+}
+
 // Temporary stand-ins to allow other refactors to function
 func (d *MockDB) MakeAlias(ctx context.Context, uid string, path string) (string, error) {
 	return "", nil
