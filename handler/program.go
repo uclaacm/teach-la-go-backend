@@ -70,48 +70,8 @@ func CreateProgram(cc echo.Context) error {
 		p.Name = requestBody.Prog.Name
 	}
 
-	wid := requestBody.WID
-	var cid string
-	var class db.Class
-	var err error
-
-	if wid != "" {
-		cid, err = c.GetUIDFromWID(c.Request().Context(), wid, db.ClassesAliasPath)
-		if err != nil {
-			return err
-		}
-
-		class, err = c.LoadClass(c.Request().Context(), cid)
-		if err != nil {
-			return err
-		}
-	}
-
-	// create program
-	pRef, _ := c.CreateProgram(c.Request().Context(), p)
-
-	// associate to user, if they exist
-	u, _ := c.LoadUser(c.Request().Context(), requestBody.UID)
-
-	u.Programs = append(u.Programs, pRef.UID)
-
-	if err := c.StoreUser(c.Request().Context(), u); err != nil {
-		return err
-	}
-
-	// associate to class, if they exist
-	if wid != "" {
-		classRef, _ := c.LoadClass(c.Request().Context(), cid)
-		classRef.Programs = append(classRef.Programs, pRef.UID)
-
-		p.WID = class.WID
-		err := c.StoreClass(c.Request().Context(), classRef)
-		if err != nil {
-			return err
-		}
-	}
-
-	p.UID = pRef.UID
+	// use the composite function to guarantee consistency
+	err := c.CreateProgramAndAssociate(c.Request().Context(), p, requestBody.UID, requestBody.WID)
 
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
