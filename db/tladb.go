@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 
+	"cloud.google.com/go/firestore"
 	"github.com/labstack/echo/v4"
 )
 
@@ -30,6 +31,7 @@ type TLADB interface {
 	LoadUser(context.Context, string) (User, error)
 	StoreUser(context.Context, User) error
 	DeleteUser(context.Context, string) error
+	UpdateUser(context.Context, string, []firestore.Update) error
 
 	CreateUser(context.Context, User) (User, error)
 	CreateProgram(context.Context, Program) (Program, error)

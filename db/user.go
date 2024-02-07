@@ -1,16 +1,7 @@
 package db
 
 import (
-	"context"
-	"net/http"
-
-	"github.com/pkg/errors"
-	"github.com/uclaacm/teach-la-go-backend/httpext"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"cloud.google.com/go/firestore"
-	"github.com/labstack/echo/v4"
 )
 
 // User is a struct representation of a user document.
@@ -43,43 +34,4 @@ func (u *User) ToFirestoreUpdate() []firestore.Update {
 	}
 
 	return f
-}
-
-// UpdateUser updates the doc with specified UID's fields
-// to match those of the request body.
-//
-// Request Body:
-// {
-//	   "uid": [REQUIRED]
-//     [User object fields]
-// }
-//
-// Returns: Status 200 on success.
-func (d *DB) UpdateUser(c echo.Context) error {
-	// unmarshal request body into an User struct.
-	requestObj := User{}
-	if err := httpext.RequestBodyTo(c.Request(), &requestObj); err != nil {
-		return err
-	}
-
-	uid := requestObj.UID
-	if uid == "" {
-		return c.String(http.StatusBadRequest, "a uid is required")
-	}
-	if len(requestObj.Programs) != 0 {
-		return c.String(http.StatusBadRequest, "program list cannot be updated via /program/update")
-	}
-
-	err := d.RunTransaction(c.Request().Context(), func(ctx context.Context, tx *firestore.Transaction) error {
-		ref := d.Collection(usersPath).Doc(uid)
-		return tx.Update(ref, requestObj.ToFirestoreUpdate())
-	})
-	if err != nil {
-		if status.Code(err) == codes.NotFound {
-			return c.String(http.StatusNotFound, "user could not be found")
-		}
-		return c.String(http.StatusInternalServerError, errors.Wrap(err, "failed to update user data").Error())
-	}
-
-	return c.String(http.StatusOK, "user updated successfully")
 }

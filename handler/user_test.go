@@ -290,3 +290,69 @@ func TestCreateUser(t *testing.T) {
 	})
 
 }
+
+func TestUpdateUser(t *testing.T) {
+	t.Run("MissingUID", func(t *testing.T) {
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPut, "/", strings.NewReader("{}"))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.UpdateUser(c)) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
+	t.Run("BadUID", func(t *testing.T) {
+		d := db.OpenMock()
+		req := httptest.NewRequest(http.MethodPut, "/", strings.NewReader("{\"uid\":\"fakeUID\"}"))
+		rec := httptest.NewRecorder()
+		assert.NotNil(t, req, rec)
+		c := echo.New().NewContext(req, rec)
+
+		if assert.NoError(t, handler.UpdateUser(c)) {
+			assert.Equal(t, http.StatusNotFound, rec.Code)
+		}
+	})
+
+	// dbConsistencyWarning(t)
+
+	t.Run("TypicalRequests", func(t *testing.T) {
+		iter := d.Collection(usersPath).Documents(context.Background())
+		defer iter.Stop()
+		randomDoc, err := iter.Next()
+		if !assert.NoError(t, err) {
+			return
+		}
+		t.Logf("using doc ID (%s)", randomDoc.Ref.ID)
+
+		u := User{}
+		if err := randomDoc.DataTo(&u); !assert.NoError(t, err) {
+			t.Fatalf("encountered a fatal error when converting random user doc to object: %s", err)
+		}
+		u.UID = randomDoc.Ref.ID
+		u.Programs = []string{}
+
+		t.Run("DisplayName", func(t *testing.T) {
+			uCopy := u
+			uCopy.DisplayName = "test"
+
+			bytes, err := json.Marshal(&uCopy)
+			assert.NoError(t, err)
+
+			req := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(string(bytes)))
+			rec := httptest.NewRecorder()
+			assert.NotNil(t, req, rec)
+			c := echo.New().NewContext(req, rec)
+
+			if assert.NoError(t, handler.UpdateUser(c)) {
+				assert.Equal(t, http.StatusOK, rec.Code)
+				// TODO: more tests required.
+			}
+
+		})
+		t.Run("MostRecentProgram", func(t *testing.T) {}) // TODO
+		t.Run("PhotoName", func(t *testing.T) {})
+		t.Run("Programs", func(t *testing.T) {})
+	})
+}
