@@ -42,6 +42,13 @@ func TestMockUser(t *testing.T) {
 		}))
 		assert.NoError(t, d.DeleteUser(context.Background(), "test"))
 	})
+	t.Run("update", func(t *testing.T) {
+		d := db.OpenMock()
+		err := d.UpdateUser(context.Background(), "test", []db.Update{{
+			Path: "photoName", Value: "test_photo_name",
+		}})
+		assert.NoError(t, err)
+	})
 }
 
 func TestMockProgram(t *testing.T) {
