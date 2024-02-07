@@ -13,6 +13,18 @@ type MockDB struct {
 	db map[string]map[string]interface{}
 }
 
+// An Update describes an update to a value referred to by a path.
+// An Update should have either a non-empty Path or a non-empty FieldPath,
+// but not both.
+//
+// See DocumentRef.Create for acceptable values.
+// To delete a field, specify firestore.Delete as the value.
+type Update struct {
+	Path      string // Will be split on dots, and must not contain any of "˜*/[]".
+	FieldPath []string
+	Value     interface{}
+}
+
 func (d *MockDB) LoadProgram(_ context.Context, pid string) (Program, error) {
 	p, ok := d.db[programsPath][pid].(Program)
 	if !ok {
@@ -80,6 +92,20 @@ func (d *MockDB) CreateUser(_ context.Context, u User) (User, error) {
 	// Create the user in the database
 	d.db[usersPath][u.UID] = u
 	return u, nil
+}
+
+func (d *MockDB) UpdateUser(_ context.Context, uid string, updates []Update) (err error) {
+	raw, ok := d.db[usersPath][uid]
+	if !ok {
+		return errors.New("invalid user ID")
+	}
+
+	u, ok := raw.(map[string]interface{})
+	for _, update := range updates {
+		u[update.Path] = update.Value
+	}
+
+	return nil
 }
 
 func (d *MockDB) CreateProgram(_ context.Context, p Program) (Program, error) {

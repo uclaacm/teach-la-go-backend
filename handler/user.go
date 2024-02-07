@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"cloud.google.com/go/firestore"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/uclaacm/teach-la-go-backend/db"
@@ -12,12 +13,44 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// User is a struct representation of a user document.
+// It provides functions for converting the struct
+// to firebase-digestible types.
+type User struct {
+	Classes           []string `firestore:"classes" json:"classes"`
+	DisplayName       string   `firestore:"displayName" json:"displayName"`
+	MostRecentProgram string   `firestore:"mostRecentProgram" json:"mostRecentProgram"`
+	PhotoName         string   `firestore:"photoName" json:"photoName"`
+	Programs          []string `firestore:"programs" json:"programs"`
+	UID               string   `json:"uid"`
+	DeveloperAcc      bool     `firestore:"developerAcc" json:"developerAcc"`
+}
+
+// ToFirestoreUpdate returns the database update
+// representation of its UserData struct.
+func (u *User) ToFirestoreUpdate() []firestore.Update {
+	f := []firestore.Update{
+		{Path: "mostRecentProgram", Value: u.MostRecentProgram},
+	}
+
+	switch {
+	case u.DisplayName != "":
+		f = append(f, firestore.Update{Path: "displayName", Value: u.DisplayName})
+	case u.PhotoName != "":
+		f = append(f, firestore.Update{Path: "photoName", Value: u.PhotoName})
+	case len(u.Programs) != 0:
+		f = append(f, firestore.Update{Path: "programs", Value: firestore.ArrayUnion(u.Programs)})
+	}
+
+	return f
+}
+
 // GetUser acquires the user document with the given uid. The
 // provided context must be a *db.DBContext.
 //
 // Query Parameters:
-//  - uid string: UID of user to GET
-//	- programs string: Whether to acquire programs.
+//   - uid string: UID of user to GET
+//   - programs string: Whether to acquire programs.
 //
 // Returns: Status 200 with marshalled User and programs.
 func GetUser(cc echo.Context) error {
@@ -68,9 +101,10 @@ func GetUser(cc echo.Context) error {
 // from the database.
 //
 // Request Body:
-// {
-//     "uid": REQUIRED
-// }
+//
+//	{
+//	    "uid": REQUIRED
+//	}
 //
 // Returns: status 200 on deletion.
 func DeleteUser(cc echo.Context) error {
@@ -118,9 +152,10 @@ func DeleteUser(cc echo.Context) error {
 // with the default data.
 //
 // Request Body:
-// {
-//     "uid": string <optional>
-// }
+//
+//	{
+//	    "uid": string <optional>
+//	}
 //
 // Returns: Status 200 with a marshalled User struct on success.
 func CreateUser(cc echo.Context) error {
@@ -162,4 +197,43 @@ func CreateUser(cc echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, &user)
+}
+
+// UpdateUser updates the doc with specified UID's fields
+// to match those of the request body.
+//
+// Request Body:
+//
+//	{
+//		   "uid": [REQUIRED]
+//	    [User object fields]
+//	}
+//
+// Returns: Status 200 on success.
+func UpdateUser(cc echo.Context) error {
+	// unmarshal request body into an User struct.
+	requestObj := User{}
+	c := cc.(*db.DBContext)
+	if err := httpext.RequestBodyTo(c.Request(), &requestObj); err != nil {
+		return err
+	}
+
+	uid := requestObj.UID
+
+	if uid == "" {
+		return c.String(http.StatusBadRequest, "a uid is required")
+	}
+	if len(requestObj.Programs) != 0 {
+		return c.String(http.StatusBadRequest, "program list cannot be updated via /program/update")
+	}
+
+	ref := c.QueryParam("uid")
+	if err := c.UpdateUser(c.Request().Context(), ref, requestObj.ToFirestoreUpdate()); err != nil {
+		if status.Code(err) == codes.NotFound {
+			return c.String(http.StatusNotFound, "could not find user")
+		}
+		return c.String(http.StatusInternalServerError, "failed to update user.")
+	}
+
+	return c.String(http.StatusOK, "user updated successfully")
 }
