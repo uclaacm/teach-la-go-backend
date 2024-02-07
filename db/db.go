@@ -130,6 +130,13 @@ func (d *DB) DeleteUser(ctx context.Context, uid string) error {
 	return nil
 }
 
+func (d *DB) UpdateUser(ctx context.Context, uid string, updates []firestore.Update) error {
+	if _, err := d.Collection(usersPath).Doc(uid).Update(ctx, updates); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Open returns a pointer to a new database client based on
 // JSON credentials given by the environment variable.
 // Returns an error if it fails at any point.
